@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Home — Gaffer’s Guide ⚽{% endblock %}
+
+{% block content %}
+
+<div class="animate-fade-in space-y-12">
+
+  <!-- HERO SECTION -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+
+    <!-- TEXT SIDE -->
+    <div class="space-y-6 fade-in-up">
+      <h1 class="text-5xl font-extrabold leading-tight text-white">
+        Gaffer’s Guide <span class="text-turf-400">⚽</span>
+      </h1>
+
+      <p class="text-lg text-muted">
+        Tactical models, pitch control heatmaps, defensive line analytics,
+        and physical metrics — powered by open data and built for football minds.
+      </p>
+
+      <a href="{{ url_for('matches') }}"
+         class="inline-block px-6 py-3 bg-turf-500 text-black font-bold rounded-xl 
+                hover:bg-turf-400 hover:shadow-glow transition">
+        Browse Matches
+      </a>
+    </div>
+
+    <!-- IMAGE SIDE -->
+    <div class="hero-img fade-in-up">
+      <img src="{{ url_for('static', filename='images/manager.png') }}"
+           alt="Manager"
+           class="rounded-xl shadow-glow w-full object-cover" />
+    </div>
+
+  </div>
+
+  <!-- SMALL SUBTEXT -->
+  <p class="text-center text-muted text-sm fade-in-up">
+    Built with passion. Designed for coaches, analysts & football lovers.
+  </p>
+
+</div>
+
+{% endblock %}

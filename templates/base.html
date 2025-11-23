@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{% block title %}Gaffer’s Guide to a Good Game ⚽{% endblock %}</title>
+
+  <!-- Tailwind CDN (no build step) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Custom small config so we can use our tactical greens -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'turf-900': '#071007',
+            'turf-800': '#0a120a',
+            'turf-600': '#12321a',
+            'turf-500': '#1c5b2a',
+            'turf-400': '#2bd97a',
+            'muted': '#9aa6a0'
+          },
+          boxShadow: {
+            'glow': '0 8px 30px rgba(36, 225, 141, 0.12)',
+          },
+          borderRadius: { 'xl': '14px' }
+        }
+      }
+    }
+  </script>
+
+  <!-- Extra CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style-tailwind.css') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body class="bg-turf-900 text-slate-100 antialiased">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <header class="flex items-center justify-between py-6">
+
+      <!-- FIXED: link to 'home' instead of 'index' -->
+      <a href="{{ url_for('home') }}" class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-turf-500 to-turf-400 shadow-glow flex items-center justify-center text-black text-xl font-bold">
+          ⚽
+        </div>
+        <div>
+          <div class="text-lg font-extrabold leading-tight">
+            Gaffer’s Guide to a Good Game <span class="text-turf-400">⚽</span>
+          </div>
+          <div class="text-sm text-muted">Open-Source Tactical Analysis</div>
+        </div>
+      </a>
+
+      <nav class="flex items-center gap-3">
+        <a href="{{ url_for('home') }}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-turf-500 hover:bg-turf-400 transition transform hover:scale-[1.02]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-black" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M6 2a1 1 0 000 2h8a1 1 0 100-2H6zM3 7a1 1 0 000 2h14a1 1 0 100-2H3zM5 12a1 1 0 000 2h10a1 1 0 100-2H5z"/>
+          </svg>
+          <span class="text-black font-semibold">Run Models</span>
+        </a>
+      </nav>
+
+    </header>
+
+    {% block content %}{% endblock %}
+
+    <footer class="mt-12 py-6 text-center text-sm text-muted">
+      Built with ❤️ • Open-source • Gaffer’s Guide — tactical research & education
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# ============================================
+# Soccer Analytics Platform - Requirements
+# ============================================
+# Python 3.13 Compatible - No Version Locks
+# This lets pip choose the best versions automatically
+
+# Web Framework
+Flask
+
+# Database
+PyMySQL
+
+# Data Processing & Analysis
+numpy
+pandas
+
+# Visualization
+matplotlib
+
+# Security
+Werkzeug
+
+# Optional but Recommended
+python-dotenv
+
+# ============================================
+# For Python 3.13, this approach works best
+# pip will automatically choose compatible versions
+# ============================================

@@ -1,0 +1,21 @@
+/* Extra Tailwind helpers: small animations & polish */
+@layer utilities {
+  .shadow-glow { box-shadow: 0 10px 30px rgba(36, 225, 141, 0.12); }
+}
+
+/* subtle entrance */
+.fade-in-up { transform: translateY(8px); opacity: 0; animation: fadeUp 420ms ease forwards; }
+@keyframes fadeUp { to { transform: translateY(0); opacity: 1; } }
+
+/* hover scale for thumbnails */
+.plot-thumb img { transition: transform .28s ease, filter .28s ease; }
+.plot-thumb:hover img { transform: scale(1.04) rotate(-0.3deg); filter: contrast(1.02) saturate(1.05); }
+
+/* input focus ring */
+.input:focus { outline: none !important; box-shadow: 0 6px 22px rgba(16, 185, 129, 0.08); border-color: #2bd97a; }
+
+/* small responsive tweaks */
+@media (max-width: 640px) {
+  .grid { grid-template-columns: 1fr !important; }
+  .hero-img { width: 100% !important; }
+}

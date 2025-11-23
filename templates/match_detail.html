@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Match {{ match_id }} — Gaffer’s Guide ⚽{% endblock %}
+
+{% block content %}
+
+<div class="space-y-10 animate-fade-in">
+
+  <!-- Match Title -->
+  <h1 class="text-4xl font-extrabold text-white tracking-tight">
+    {{ home }} <span class="text-turf-400">vs</span> {{ away }}
+  </h1>
+
+  <!-- Match Summary -->
+  <div class="p-8 bg-turf-800 border border-turf-600 rounded-xl shadow-glow space-y-4">
+    <div class="text-center text-muted">
+      <p>Match ID: {{ match_id }}</p>
+    </div>
+  </div>
+
+  <!-- Run Models Header -->
+  <h2 class="text-2xl font-bold text-white">Run Tactical Models</h2>
+
+  <!-- Grid of Models -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    <!-- MODEL 1 -->
+    <a href="{{ url_for('do_model_1', match_id=match_id) }}"
+       class="p-6 bg-turf-800 border border-turf-600 rounded-xl
+              hover:bg-turf-600 hover:shadow-glow transition">
+      <h3 class="text-xl font-semibold text-white">Model 1</h3>
+      <p class="text-muted text-sm mt-1">Defensive line height + dangerous passes.</p>
+    </a>
+
+    <!-- MODEL 2 -->
+    <a href="{{ url_for('do_model_2', match_id=match_id) }}"
+       class="p-6 bg-turf-800 border border-turf-600 rounded-xl
+              hover:bg-turf-600 hover:shadow-glow transition">
+      <h3 class="text-xl font-semibold text-white">Model 2</h3>
+      <p class="text-muted text-sm mt-1">Player physical performance metrics.</p>
+    </a>
+
+    <!-- MODEL 3 -->
+    <a href="{{ url_for('do_model_3', match_id=match_id) }}"
+       class="p-6 bg-turf-800 border border-turf-600 rounded-xl
+              hover:bg-turf-600 hover:shadow-glow transition">
+      <h3 class="text-xl font-semibold text-white">Model 3</h3>
+      <p class="text-muted text-sm mt-1">Zone focals + pitch control analysis.</p>
+    </a>
+
+  </div>
+
+</div>
+
+{% endblock %}

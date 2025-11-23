@@ -1,0 +1,13 @@
+{
+  "fps_used": 25,
+  "teams": {
+    "A": {
+      "name": "{'id': 4177, 'name': 'Auckland FC', 'short_name': 'Auckland FC', 'acronym': 'AUC'}",
+      "num_players": 14
+    },
+    "B": {
+      "name": "{'id': 1805, 'name': 'Newcastle United Jets FC', 'short_name': 'Newcastle', 'acronym': 'NEW'}",
+      "num_players": 15
+    }
+  }
+}

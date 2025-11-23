@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Matches — Gaffer's Guide ⚽{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in">
+
+  <h1 class="text-3xl font-bold mb-6 text-white">Select a Match</h1>
+  <p class="text-muted mb-8">Choose a match to analyze using our tactical AI models.</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    {% if matches|length == 0 %}
+    <div class="text-red-400 text-lg">
+      ⚠ No matches found.<br>
+      Ensure your match folders exist in <code>opendata/data/matches</code>.
+    </div>
+    {% endif %}
+
+    {% for m in matches %}
+    <a href="{{ url_for('match_page', match_id=m['id']) }}"
+       class="block p-6 rounded-xl bg-turf-800 border border-turf-600
+              hover:bg-turf-600 hover:shadow-glow transition
+              transform hover:-translate-y-1">
+
+      <div class="text-xl font-semibold text-white">
+        {{ m['home'] }} vs {{ m['away'] }}
+      </div>
+
+      <div class="text-xs text-muted mt-2">
+        Match ID: {{ m['id'] }}
+      </div>
+
+    </a>
+    {% endfor %}
+
+  </div>
+
+</div>
+{% endblock %}

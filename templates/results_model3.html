@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Model 3 Results — Gaffer’s Guide{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in space-y-6">
+  <h1 class="text-3xl font-bold text-white">Model 3 — Zone Focals & Heatmaps</h1>
+
+  {% for p in pairs %}
+  <div class="p-4 bg-turf-800 rounded-xl border border-turf-600">
+    <div class="flex items-center justify-between mb-4">
+      <div class="text-xl font-semibold text-white">{{ p.title }}</div>
+      <div class="text-sm text-muted">Match: {{ match_id }}</div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 items-start">
+      <!-- Team A -->
+      <div class="space-y-2">
+        <div class="text-sm font-semibold text-turf-400">Team A</div>
+        {% if p.A %}
+          <div class="relative overflow-hidden group">
+            <img src="{{ p.A }}" alt="{{ p.title }} A" class="w-full rounded-lg shadow-glow transform transition duration-200 group-hover:scale-105" />
+          </div>
+        {% else %}
+          <div class="text-red-400">No image for Team A</div>
+        {% endif %}
+      </div>
+
+      <!-- Team B -->
+      <div class="space-y-2">
+        <div class="text-sm font-semibold text-turf-400">Team B</div>
+        {% if p.B %}
+          <div class="relative overflow-hidden group">
+            <img src="{{ p.B }}" alt="{{ p.title }} B" class="w-full rounded-lg shadow-glow transform transition duration-200 group-hover:scale-105" />
+          </div>
+        {% else %}
+          <div class="text-red-400">No image for Team B</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

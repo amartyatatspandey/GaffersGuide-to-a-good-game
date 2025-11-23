@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Home — Gaffer’s Guide ⚽{% endblock %}
+
+{% block content %}
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+  <!-- Left: CTA -->
+  <div class="space-y-6">
+    <h1 class="text-4xl lg:text-5xl font-extrabold leading-tight">
+      Gaffer’s Guide to a Good Game <span class="text-turf-400">⚽</span>
+    </h1>
+    <p class="text-lg text-muted max-w-xl">
+      Open-source AI-powered tactical analysis for football coaches, analysts, and curious minds. Run formation finders, pitch control heatmaps and player work-rate models in seconds.
+    </p>
+
+    <div class="flex gap-3">
+      <a href="{{ url_for('home') }}" class="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-turf-500 hover:bg-turf-400 transition transform hover:-translate-y-0.5 shadow-glow">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-black" viewBox="0 0 20 20" fill="currentColor"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM2 18a6 6 0 1112 0H2z"/></svg>
+        <span class="text-black font-semibold">Start Analysis</span>
+      </a>
+
+      <a href="https://github.com/your-repo" target="_blank" class="inline-flex items-center gap-3 px-5 py-3 rounded-xl border border-slate-800 hover:border-slate-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-turf-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0a12 12 0 00-3.8 23.4c.6.1.8-.2.8-.5v-2c-3.3.7-4-1.6-4-1.6-.5-1.3-1.2-1.7-1.2-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 .1 1.6.7 1.9 1.1.1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.4 11.4 0 016 0C17 3.8 18 4.1 18 4.1c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.8 1.2 3.1 0 4.6-2.7 5.5-5.3 5.8.4.4.8 1 1 2v3c0 .3.2.6.8.5A12 12 0 0012 0z"/></svg>
+        <span class="text-sm">Open on GitHub</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Right: Manager photo (fallback to external if not provided) -->
+  <div class="flex items-center justify-center">
+    <img src="{{ url_for('static', filename='images/manager.png') }}" alt="Manager" onerror="this.src='https://images.unsplash.com/photo-1521412644187-c49fa049e84d?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=1e8d4b09d0e8b2b8b4d3c9f12e47f2b7';" class="rounded-xl shadow-glow w-full max-w-md">
+  </div>
+</section>
+{% endblock %}
