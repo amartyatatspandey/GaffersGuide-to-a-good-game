@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: gaffers-guide
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn cleaned_app:app
+
+    envVars:
+      PYTHON_VERSION: 3.10
+
+    autoDeploy: true

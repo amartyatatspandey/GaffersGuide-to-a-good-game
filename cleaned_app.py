@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, abort, send_file, send_from_directory
 from pathlib import Path
 import json
+import os
 
 # -------------------------------------------------
 # PROJECT ROOT & MATCH DIRECTORY
@@ -23,13 +24,6 @@ app = Flask(__name__)
 # -------------------------------------------------
 @app.route("/match_output/<path:subpath>")
 def match_output(subpath):
-    """
-    Serve any file inside:
-        opendata/data/matches/<match_id>/**/*
-    Ensures:
-        - No path traversal
-        - File exists
-    """
     safe_base = REPO_ROOT / "opendata" / "data" / "matches"
     full = safe_base / subpath
 
@@ -103,7 +97,7 @@ def match_page(match_id):
 
 
 # -------------------------------------------------
-# MODEL 1 — DEFENSIVE LINE (paired output)
+# MODEL 1 — WORKING VERSION
 # -------------------------------------------------
 @app.route("/run_model1/<match_id>")
 def do_model_1(match_id):
@@ -115,14 +109,12 @@ def do_model_1(match_id):
 
     result = run_model1(str(match_dir))
 
-    # Convert image paths → web route paths
     cleaned = []
     for p in result["plots"]:
         p = Path(p)
         rel = p.relative_to(REPO_ROOT / "opendata" / "data" / "matches")
         cleaned.append(f"/match_output/{rel}")
 
-    # Pairing logic
     cleaned = sorted(cleaned)
     pairs = []
 
@@ -165,18 +157,36 @@ def do_model_1(match_id):
 
 
 # -------------------------------------------------
-# MODEL 2 — PHYSICAL (already produces paired output)
+# MODEL 2 — WORKING ORIGINAL VERSION (YOU WANT THIS)
 # -------------------------------------------------
 @app.route("/run_model2/<match_id>")
 def do_model_2(match_id):
-    match_dir = MATCHES_DIR / match_id
-    result = run_model2(str(match_dir))
-    pairs = result.get("pairs", [])
-    return render_template("results_model2.html", match_id=match_id, pairs=pairs)
+    try:
+        match_folder = os.path.join("opendata", "data", "matches", match_id)
 
+        if not os.path.exists(match_folder):
+            return f"Match folder not found: {match_folder}", 404
+
+        output = run_model2(match_id, match_folder)
+
+        return render_template(
+            "results_model2.html",
+            match_id=match_id,
+            total_distance_A=output["total_distance_A"],
+            total_distance_B=output["total_distance_B"],
+            sprint_A=output["sprint_A"],
+            sprint_B=output["sprint_B"],
+            fatigue_A=output["fatigue_A"],
+            fatigue_B=output["fatigue_B"],
+            plots=output.get("served_plots", [])
+        )
+
+    except Exception as e:
+        print("MODEL 2 FAILED:", e)
+        return f"Error running Model 2: {str(e)}", 500
 
 # -------------------------------------------------
-# MODEL 3 — HEATMAPS + GRID (paired)
+# MODEL 3 — WORKING VERSION
 # -------------------------------------------------
 @app.route("/run_model3/<match_id>")
 def do_model_3(match_id):
@@ -243,8 +253,5 @@ def do_model_3(match_id):
     return render_template("results_model3.html", match_id=match_id, pairs=pairs)
 
 
-# -------------------------------------------------
-# RUN APP
-# -------------------------------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()

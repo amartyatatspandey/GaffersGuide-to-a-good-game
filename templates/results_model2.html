@@ -1,61 +1,76 @@
 {% extends "base.html" %}
-{% block title %}Model 2 Results — Physical Performance ⚽{% endblock %}
-
-{% block head_extra %}
-<style>
-  .zoom-box {
-      transition: transform 0.25s ease;
-      cursor: zoom-in;
-  }
-  .zoom-box:hover {
-      transform: scale(1.35);
-      z-index: 50;
-  }
-</style>
-{% endblock %}
-
 {% block content %}
 
-<h1 class="text-3xl font-bold text-white mb-8">
-  Model 2 — Physical Performance Comparison
-</h1>
+<style>
+    .section-box {
+        background: rgba(255,255,255,0.05);
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 40px;
+        box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+    }
+    .model-title {
+        color: #79ff8f;
+        font-size: 1.8rem;
+        margin-bottom: 25px;
+        font-weight: 600;
+    }
+    .plot-title {
+        color: #e0ffe4;
+        font-size: 1.3rem;
+        margin-bottom: 15px;
+    }
+    img.plot {
+        width: 100%;
+        border-radius: 10px;
+        background: black;
+        margin-bottom: 10px;
+        border: 1px solid rgba(255,255,255,0.15);
+    }
+</style>
 
-<div class="space-y-12">
 
-  {% for p in pairs %}
-  <div class="bg-turf-800 border border-turf-600 rounded-xl p-6 shadow-glow">
+<h1 class="model-title">Model 2 — Physical Performance (Per-Player Comparison)</h1>
 
-    <h2 class="text-xl font-semibold text-turf-400 mb-4">
-      {{ p.title }}
-    </h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- ============================================= -->
+<!-- TOTAL DISTANCE (PER PLAYER) -->
+<!-- ============================================= -->
+<div class="section-box">
+    <h2 class="plot-title">Total Distance (meters) — per player</h2>
+    <img src="{{ plots[0] }}" class="plot" alt="Total Distance per player">
+</div>
 
-      <!-- TEAM A -->
-      <div>
-        {% if p.A %}
-        <div class="text-center text-muted mb-2 font-semibold">Team A</div>
-        <img src="{{ p.A }}" class="zoom-box rounded-xl w-full" />
-        {% else %}
-        <div class="text-red-400 text-center">No image for Team A</div>
-        {% endif %}
-      </div>
 
-      <!-- TEAM B -->
-      <div>
-        {% if p.B %}
-        <div class="text-center text-muted mb-2 font-semibold">Team B</div>
-        <img src="{{ p.B }}" class="zoom-box rounded-xl w-full" />
-        {% else %}
-        <div class="text-red-400 text-center">No image for Team B</div>
-        {% endif %}
-      </div>
+<!-- ============================================= -->
+<!-- SPRINT DISTANCE (PER PLAYER) -->
+<!-- ============================================= -->
+<div class="section-box">
+    <h2 class="plot-title">Sprint Distance (speed ≥ 7.0 m/s) — per player</h2>
+    <img src="{{ plots[1] }}" class="plot" alt="Sprint Distance per player">
+</div>
 
-    </div>
 
-  </div>
-  {% endfor %}
+<!-- ============================================= -->
+<!-- FATIGUE (PER PLAYER) -->
+<!-- ============================================= -->
+<div class="section-box">
+    <h2 class="plot-title">Fatigue Score (0–100) — per player</h2>
+    <img src="{{ plots[2] }}" class="plot" alt="Fatigue per player">
+</div>
 
+
+<!-- BACK BUTTON -->
+<div style="text-align:center; margin-top:40px;">
+    <a href="/match/{{ match_id }}" class="btn btn-primary" style="
+       padding: 10px 20px;
+       background: #79ff8f;
+       color: black;
+       border-radius: 8px;
+       font-weight: bold;
+       text-decoration: none;">
+       ← Back to Match
+    </a>
 </div>
 
 {% endblock %}
