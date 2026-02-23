@@ -1,0 +1,3 @@
+# Git LFS: track large model weights if you choose to add them (e.g. git add -f yolov8n-pose.pt).
+# *.pt is in .gitignore by default; force-add only the files you want in the repo.
+*.pt filter=lfs diff=lfs merge=lfs -text

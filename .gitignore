@@ -1,1 +1,62 @@
+# --- Project reference material (already present) ---
 references/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+*.so
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+*.manifest
+*.spec
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.ipynb_checkpoints/
+.venv/
+.venv-*/
+venv/
+env/
+.env
+!.env.example
+
+# --- IDE / OS ---
+.DS_Store
+.cursor/
+*.log
+*.swp
+*.swo
+*~
+
+# --- Node / Frontend ---
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# --- Backend: generated outputs and local data ---
+backend/output/
+backend/data/*.mp4
+backend/data/frames/
+backend/models/pretrained/*.pt
+backend/models/**/weights/
+
+# --- Root-level and backend model weights (download via setup script or use Git LFS) ---
+*.pt
+
+# --- Legacy archive: large generated data and binaries ---
+_archive/**/data/frames/
+_archive/**/data/*.mp4
+_archive/**/data/*.jsonl
+_archive/**/data/roboflow_pitch/
+_archive/**/output/
+_archive/**/models/**/weights/
+_archive/**/*.pt
+
+# --- Optional: ignore entire _archive if you prefer (uncomment to stop tracking all legacy) ---
+# _archive/
