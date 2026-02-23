@@ -58,5 +58,9 @@ _archive/**/output/
 _archive/**/models/**/weights/
 _archive/**/*.pt
 
-# --- Optional: ignore entire _archive if you prefer (uncomment to stop tracking all legacy) ---
-# _archive/
+# --- User-specified ---
+_archive/
+backend/output/
+*.mp4
+*.pt
+*.zip
