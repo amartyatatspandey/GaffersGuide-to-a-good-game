@@ -1,0 +1,22 @@
+Subject: 401 Unauthorized on SoccerNet calibration downloads (pip tool, NDA password)
+
+Hello,
+
+I completed the SoccerNet NDA and received the password for API/download access (as per your confirmation email). I am using the official pip package (SoccerNet) to download data, but all calibration download attempts return HTTP 401 Unauthorized.
+
+Forensic details:
+- Tool: pip install SoccerNet (official package)
+- Password: As provided in NDA confirmation email (used via SOCCERNET_PASSWORD / script default)
+- Server (OwnCloud): https://exrcsdrive.kaust.edu.sa/public.php/webdav/
+- Tasks/splits attempted: calibration-2023 split=train, calibration split=train
+- Error: HTTP 401 Unauthorized (repeated for each requested file)
+
+URLs that would be requested (library builds these from server + filename):
+- https://exrcsdrive.kaust.edu.sa/public.php/webdav/train.zip (for calibration-2023 and calibration task, share-specific)
+- Same server used for valid.zip, test.zip; all return 401 with the NDA password.
+
+Main game labels (e.g. Labels-v2.json for a valid-split game) download successfully, so connectivity and the library work. Only the calibration (and tracking) task shares reject the credentials.
+
+Could you confirm that the NDA password is enabled for the calibration and calibration-2023 task shares, and whether any extra step is required after NDA approval?
+
+Thank you.

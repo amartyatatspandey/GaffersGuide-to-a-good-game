@@ -1,0 +1,41 @@
+# Cloud Build: build backend image and deploy to Cloud Run.
+# Trigger from repo or run: gcloud builds submit --config=infra/cloudbuild.yaml .
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/gaffers-guide-api:$COMMIT_SHA"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/gaffers-guide-api:latest"
+      - "-f"
+      - "backend/Dockerfile"
+      - "."
+    id: "build-backend"
+
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/gaffers-guide-api:$COMMIT_SHA"]
+    id: "push-backend"
+    waitFor: ["build-backend"]
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "gaffers-guide-api"
+      - "--image"
+      - "gcr.io/$PROJECT_ID/gaffers-guide-api:$COMMIT_SHA"
+      - "--region"
+      - "${_REGION}"
+      - "--platform"
+      - "managed"
+      - "--allow-unauthenticated"
+    id: "deploy-backend"
+    waitFor: ["push-backend"]
+
+substitutions:
+  _REGION: "us-central1"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
