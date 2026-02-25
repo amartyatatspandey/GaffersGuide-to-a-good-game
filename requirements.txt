@@ -11,3 +11,9 @@ scikit-learn>=1.3.0
 opencv-python>=4.8.0
 numpy>=1.24.0
 notebook>=7.0.0
+
+# Dynamic pitch calibration (SoccerNet/sn-calibration reference)
+# Existing torch, torchvision, opencv-python, numpy cover calibrator usage.
+# Optional for running reference scripts (detect_extremities, baseline_cameras):
+pillow>=9.0.0
+tqdm>=4.62.0

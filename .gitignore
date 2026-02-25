@@ -46,8 +46,20 @@ backend/data/frames/
 backend/models/pretrained/*.pt
 backend/models/**/weights/
 
-# --- Root-level and backend model weights (download via setup script or use Git LFS) ---
+# --- Heavy model / weights: do not commit (download via setup or README) ---
 *.pt
+*.pth
+*.onnx
+*.weights
+*.h5
+*.keras
+*.pkl
+*.safetensors
+*.bin
+backend/models/**/*.pt
+backend/models/**/*.pth
+backend/references/**/*.pth
+backend/references/**/*.npy
 
 # --- Legacy archive: large generated data and binaries ---
 _archive/**/data/frames/
@@ -62,5 +74,4 @@ _archive/**/*.pt
 _archive/
 backend/output/
 *.mp4
-*.pt
 *.zip
