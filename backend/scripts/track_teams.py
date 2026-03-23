@@ -12,9 +12,11 @@ Execution: python backend/scripts/track_teams.py
 
 import json
 import logging
+import math
+import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import cv2
 import numpy as np
@@ -28,6 +30,36 @@ logger = logging.getLogger(__name__)
 # Paths: script lives in backend/scripts/
 SCRIPT_DIR = Path(__file__).resolve().parent
 BACKEND_ROOT = SCRIPT_DIR.parent
+
+# Ensure sibling modules (e.g. reid_healer) resolve when run as a script or from another cwd.
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+# --- DECOUPLED REID IMPORT ---
+# Explicit fallback: pipeline keeps running if ReID deps or reid_healer.py are missing or broken.
+try:
+    from reid_healer import VisualFingerprint
+
+    REID_AVAILABLE = True
+    logger.info("reid_healer.py found. Hybrid ID Healing ONLINE.")
+except Exception as e:  # noqa: BLE001 — intentional graceful degradation
+    REID_AVAILABLE = False
+    VisualFingerprint = None  # type: ignore[misc, assignment]
+    logger.warning(
+        "Failed to load reid_healer.py: %s. ID Healing OFFLINE. Defaulting to ByteTrack.",
+        e,
+    )
+
+
+def cosine_similarity(v1: np.ndarray | Sequence[float], v2: np.ndarray | Sequence[float]) -> float:
+    """Cosine similarity between two vectors (e.g. 512-D ReID embeddings)."""
+    a = np.asarray(v1, dtype=np.float64).ravel()
+    b = np.asarray(v2, dtype=np.float64).ravel()
+    norm1 = float(np.linalg.norm(a))
+    norm2 = float(np.linalg.norm(b))
+    if norm1 == 0.0 or norm2 == 0.0:
+        return 0.0
+    return float(np.dot(a, b) / (norm1 * norm2))
 MODEL_PATH = BACKEND_ROOT / "models" / "pretrained" / "best.pt"
 VIDEO_PATH = BACKEND_ROOT / "data" / "match_test.mp4"
 OUTPUT_PATH = BACKEND_ROOT / "output" / "tracking_teams.mp4"
@@ -53,6 +85,147 @@ MIN_PLAYERS_TO_FIT = 10
 HSV_GREEN_H_LOW, HSV_GREEN_H_HIGH = 35, 85
 HSV_GREEN_S_MIN = 40
 
+# Hybrid healer: cosine ReID + tactical radar gate (scaled pitch pixels ~= meters * 10)
+REID_COSINE_THRESHOLD = 0.85
+RADAR_DISTANCE_HEAL_PX = 150.0  # ~15 m on radar at scale=10
+
+
+class HybridIDHealer:
+    """
+    Firewall between ByteTrack IDs and reid_healer: optional ReID + radar distance checks.
+    Degrades cleanly when ReID is unavailable or VisualFingerprint fails to construct.
+    """
+
+    def __init__(self) -> None:
+        self.active = REID_AVAILABLE
+        self.fingerprint_engine: Any = None
+        if self.active and VisualFingerprint is not None:
+            try:
+                self.fingerprint_engine = VisualFingerprint()
+            except Exception as e:  # noqa: BLE001 — disable healing, keep tracking
+                logger.warning(
+                    "VisualFingerprint() failed (%s). ID Healing OFFLINE. Defaulting to ByteTrack.",
+                    e,
+                )
+                self.active = False
+                self.fingerprint_engine = None
+
+        self.id_fingerprints: dict[int, np.ndarray] = {}
+        self.id_last_radar: dict[int, tuple[float, float]] = {}
+        self.id_last_seen_frame: dict[int, int] = {}
+        self.heal_map: dict[int, int] = {}
+
+    def _resolve_heal_chain(self, raw_tid: int) -> int:
+        tid = raw_tid
+        seen: set[int] = set()
+        while tid in self.heal_map and tid not in seen:
+            seen.add(tid)
+            tid = self.heal_map[tid]
+        return tid
+
+    def cleanup_ghost_ids(self, current_frame: int) -> None:
+        """Drop stale ReID / radar state for IDs not seen for >300 frames (~12 s @ 25 fps)."""
+        if not self.active:
+            return
+        dead_ids = [
+            tid for tid, last_seen in self.id_last_seen_frame.items() if current_frame - last_seen > 300
+        ]
+        for tid in dead_ids:
+            self.id_fingerprints.pop(tid, None)
+            self.id_last_radar.pop(tid, None)
+            self.id_last_seen_frame.pop(tid, None)
+
+    def process_and_heal(
+        self,
+        detections: sv.Detections,
+        frame: np.ndarray,
+        radar_pts: list[tuple[int, int] | None],
+        frame_idx: int,
+    ) -> np.ndarray | None:
+        """
+        Optionally rewrites tracker IDs on ``detections`` using ReID + radar proximity.
+        ``radar_pts[i]`` must match ``detections`` row ``i`` (precomputed image→radar projection).
+        Returns the tracker_id array (or None if tracking disabled).
+        """
+        tracker_id = getattr(detections, "tracker_id", None)
+        if not self.active or self.fingerprint_engine is None or tracker_id is None:
+            return tracker_id
+
+        n = len(detections)
+        if n == 0:
+            return tracker_id
+        if len(radar_pts) != n:
+            logger.warning(
+                "radar_pts length %d != detections %d; skipping heal for this frame",
+                len(radar_pts),
+                n,
+            )
+            return tracker_id
+
+        raw_ids = [int(detections.tracker_id[i]) for i in range(n)]
+        logical_ids = [self._resolve_heal_chain(r) for r in raw_ids]
+        on_screen = set(logical_ids)
+
+        new_tracker_ids: list[int] = []
+        for i in range(n):
+            cid = int(detections.class_id[i])
+            bbox = detections.xyxy[i]
+            raw_tid = raw_ids[i]
+            tid = logical_ids[i]
+
+            if cid == CLASS_PLAYER:
+                new_fp: np.ndarray | None = None
+                if tid not in self.id_fingerprints:
+                    new_fp = self.fingerprint_engine.extract_features(frame, bbox)
+                    pr = radar_pts[i]
+                    new_radar_pt = (float(pr[0]), float(pr[1])) if pr is not None else None
+                    best_match_id: int | None = None
+                    best_sim = 0.0
+                    if new_fp is not None and new_radar_pt is not None:
+                        for old_id, old_fp in self.id_fingerprints.items():
+                            if old_id in on_screen:
+                                continue
+                            sim = cosine_similarity(new_fp, old_fp)
+                            if sim > REID_COSINE_THRESHOLD:
+                                old_radar_pt = self.id_last_radar.get(old_id)
+                                if old_radar_pt is not None:
+                                    dist = math.dist(new_radar_pt, old_radar_pt)
+                                    if dist < RADAR_DISTANCE_HEAL_PX and sim > best_sim:
+                                        best_sim = sim
+                                        best_match_id = old_id
+                    if best_match_id is not None:
+                        logger.info(
+                            "[HEALER] ReID Match! Swapping ID %s -> %s (Sim: %.2f)",
+                            raw_tid,
+                            best_match_id,
+                            best_sim,
+                        )
+                        self.heal_map[raw_tid] = best_match_id
+                        on_screen.discard(tid)
+                        tid = best_match_id
+                        on_screen.add(tid)
+                        logical_ids[i] = tid
+                        if new_fp is not None:
+                            self.id_fingerprints[tid] = new_fp
+                    elif new_fp is not None:
+                        self.id_fingerprints[tid] = new_fp
+
+                if frame_idx % 15 == 0 or tid not in self.id_fingerprints:
+                    fp = self.fingerprint_engine.extract_features(frame, bbox)
+                    if fp is not None:
+                        self.id_fingerprints[tid] = fp
+
+                pr2 = radar_pts[i]
+                if pr2 is not None:
+                    self.id_last_radar[tid] = (float(pr2[0]), float(pr2[1]))
+                self.id_last_seen_frame[tid] = frame_idx
+
+            new_tracker_ids.append(tid)
+
+        out = np.asarray(new_tracker_ids, dtype=np.int32)
+        detections.tracker_id = out
+        return out
+
 
 class TeamClassifier:
     """
@@ -63,6 +236,7 @@ class TeamClassifier:
     def __init__(self) -> None:
         self.player_colors: defaultdict[int, list[np.ndarray]] = defaultdict(list)
         self.player_positions: defaultdict[int, list[float]] = defaultdict(list)
+        self.player_pitch_x: defaultdict[int, list[float]] = defaultdict(list)   # 2D Radar X
         self.max_history = 90
         self.global_kmeans = KMeans(n_clusters=2, random_state=42, n_init=10)
         # --- DYNAMIC ANCHOR STATE ---
@@ -162,21 +336,16 @@ class TeamClassifier:
         logger.info("Base anchors extracted. Ref ID=%s", ref_id)
 
     def _hunt_for_gk_anchors(self) -> None:
-        """Continuously scan the edges for true outliers; lazy-load GK anchors and strict-lock their IDs."""
+        """Geographical Hunt: Scans Defensive Thirds with Spatial Threshold Override."""
         if "gk_left" in self.color_anchors and "gk_right" in self.color_anchors:
             return
 
-        avg_positions: dict[int, float] = {}
-        for pid, x_coords in self.player_positions.items():
+        avg_pitch_x: dict[int, float] = {}
+        for pid, x_coords in self.player_pitch_x.items():
             if len(x_coords) > 5 and pid in self.player_colors:
-                avg_positions[pid] = float(np.mean(x_coords))
+                avg_pitch_x[pid] = float(np.mean(x_coords))
 
-        if len(avg_positions) < 4:
-            return
-
-        sorted_pids = sorted(avg_positions.keys(), key=lambda p: avg_positions[p])
-
-        def is_true_outlier(pid: int) -> bool:
+        def is_true_outlier(pid: int, x_pos: float) -> bool:
             if pid not in self.player_colors or len(self.player_colors[pid]) == 0:
                 return False
             player_color = np.median(self.player_colors[pid], axis=0).ravel()
@@ -185,22 +354,31 @@ class TeamClassifier:
                 if role in ("team_0", "team_1", "referee"):
                     dist = float(np.linalg.norm(player_color - np.asarray(anchor_color).ravel()))
                     min_dist_to_known = min(min_dist_to_known, dist)
-            return min_dist_to_known > 45.0
 
+            # THE SPATIAL OVERRIDE: 16.5m penalty box = 165 scaled pixels
+            threshold = 15.0 if (x_pos < 165.0 or x_pos > 885.0) else 45.0
+            return min_dist_to_known > threshold
+
+        # Left Defensive Third (< 35m)
         if "gk_left" not in self.color_anchors:
-            for pid in sorted_pids[:3]:
-                if is_true_outlier(pid):
+            left_candidates = [pid for pid, x in avg_pitch_x.items() if x < 350.0]
+            left_candidates.sort(key=lambda p: avg_pitch_x[p])
+            for pid in left_candidates[:3]:
+                if is_true_outlier(pid, avg_pitch_x[pid]):
                     self.color_anchors["gk_left"] = np.median(self.player_colors[pid], axis=0).astype(np.float64)
                     self.locked_role_ids["gk_left"] = pid
-                    logger.info("Lazy-loaded left GK anchor: ID=%s", pid)
+                    logger.info("Lazy-loaded Left GK in defensive third: ID=%s", pid)
                     break
 
+        # Right Defensive Third (> 70m)
         if "gk_right" not in self.color_anchors:
-            for pid in sorted_pids[-3:]:
-                if is_true_outlier(pid):
+            right_candidates = [pid for pid, x in avg_pitch_x.items() if x > 700.0]
+            right_candidates.sort(key=lambda p: avg_pitch_x[p], reverse=True)
+            for pid in right_candidates[:3]:
+                if is_true_outlier(pid, avg_pitch_x[pid]):
                     self.color_anchors["gk_right"] = np.median(self.player_colors[pid], axis=0).astype(np.float64)
                     self.locked_role_ids["gk_right"] = pid
-                    logger.info("Lazy-loaded right GK anchor: ID=%s", pid)
+                    logger.info("Lazy-loaded Right GK in defensive third: ID=%s", pid)
                     break
 
     def predict_frame(
@@ -230,11 +408,20 @@ class TeamClassifier:
                 self.player_positions[tid].append(x_center)
                 if len(self.player_positions[tid]) > self.max_history:
                     self.player_positions[tid].pop(0)
-                color = self.get_dominant_color(image, bbox)
-                if color is not None:
-                    self.player_colors[tid].append(color)
-                    if len(self.player_colors[tid]) > self.max_history:
-                        self.player_colors[tid].pop(0)
+
+                # Track physical pitch X location from radar projection when available
+                if data.get("radar_pt") is not None:
+                    self.player_pitch_x[tid].append(float(data["radar_pt"][0]))
+                    if len(self.player_pitch_x[tid]) > self.max_history:
+                        self.player_pitch_x[tid].pop(0)
+
+                # K-Means throttle: need samples until baseline (15), then refresh every 5th frame
+                if tid not in self.player_colors or len(self.player_colors[tid]) < 15 or frame_idx % 5 == 0:
+                    color = self.get_dominant_color(image, bbox)
+                    if color is not None:
+                        self.player_colors[tid].append(color)
+                        if len(self.player_colors[tid]) > self.max_history:
+                            self.player_colors[tid].pop(0)
         available_player_ids = list(available_player_ids_set)
 
         if frame_idx >= 200 and not self.anchors_extracted:
@@ -247,33 +434,58 @@ class TeamClassifier:
 
         roles: dict[Any, str] = {}
 
-        def draft_singular_role(role_name: str, threshold: float = 35.0) -> None:
+        def draft_singular_role(role_name: str) -> None:
             if role_name not in self.color_anchors:
                 return
+
+            # 1. ROAMING: If locked ID is alive, they keep the role regardless of pitch position!
             locked_id = self.locked_role_ids.get(role_name)
             if locked_id is not None and locked_id in available_player_ids:
                 roles[locked_id] = role_name
                 available_player_ids.remove(locked_id)
                 return
+
+            # 2. RE-DRAFTING: Find best replacement with spatial safeguards.
             best_id: int | None = None
             min_dist = float("inf")
+
             for tid in available_player_ids:
                 if tid not in self.player_colors or len(self.player_colors[tid]) == 0:
                     continue
+
+                current_pitch_x = 525.0
+                if tid in self.player_pitch_x and len(self.player_pitch_x[tid]) > 0:
+                    current_pitch_x = self.player_pitch_x[tid][-1]
+
+                # The Half-Pitch Safeguard
+                if role_name == "gk_left" and current_pitch_x > 525.0:
+                    continue
+                if role_name == "gk_right" and current_pitch_x < 525.0:
+                    continue
+
                 player_color = np.median(self.player_colors[tid], axis=0).ravel()
                 anchor = np.asarray(self.color_anchors[role_name]).ravel()
                 dist = float(np.linalg.norm(player_color - anchor))
-                if dist < min_dist:
+
+                # Spatial Override for Re-Drafting
+                dynamic_threshold = 35.0
+                if role_name == "gk_left" and current_pitch_x < 165.0:
+                    dynamic_threshold = 60.0
+                if role_name == "gk_right" and current_pitch_x > 885.0:
+                    dynamic_threshold = 60.0
+
+                if dist < min_dist and dist < dynamic_threshold:
                     min_dist = dist
                     best_id = tid
-            if best_id is not None and min_dist < threshold:
+
+            if best_id is not None:
                 roles[best_id] = role_name
                 self.locked_role_ids[role_name] = best_id
                 available_player_ids.remove(best_id)
 
-        draft_singular_role("referee", threshold=45.0)
-        draft_singular_role("gk_left", threshold=35.0)
-        draft_singular_role("gk_right", threshold=35.0)
+        draft_singular_role("referee")
+        draft_singular_role("gk_left")
+        draft_singular_role("gk_right")
 
         team_0_anchor = self.color_anchors.get("team_0", np.zeros(2, dtype=np.float64))
         team_1_anchor = self.color_anchors.get("team_1", np.zeros(2, dtype=np.float64))
@@ -284,7 +496,8 @@ class TeamClassifier:
             player_color = np.median(self.player_colors[tid], axis=0).ravel()
             dist_t0 = float(np.linalg.norm(player_color - np.asarray(team_0_anchor).ravel()))
             dist_t1 = float(np.linalg.norm(player_color - np.asarray(team_1_anchor).ravel()))
-            if min(dist_t0, dist_t1) > 45.0:
+            # RELAXED THRESHOLD: 65.0 accommodates shadows / compression while limiting jersey mix-ups
+            if min(dist_t0, dist_t1) > 65.0:
                 roles[tid] = "outlier"
             else:
                 roles[tid] = "team_0" if dist_t0 < dist_t1 else "team_1"
@@ -297,60 +510,114 @@ class TeamClassifier:
 
 class TacticalRadar:
     """
-    Panning-aware 2D tactical map using dynamic homographies from SoccerNet calibration.
-    Loads homography JSON (pitch -> image), inverts per frame for image -> pitch mapping.
+    Panning-aware 2D tactical map using dynamic homographies.
+    Enforces strict 720p resolution normalization and SoccerNet grass border offsets.
     """
-
-    def __init__(
-        self,
-        json_path: str | Path | None = None,
-    ) -> None:
+    def __init__(self, json_path: str | Path | None = None, video_res: tuple[int, int] = (640, 360)) -> None:
         if json_path is None:
             json_path = BACKEND_ROOT / "output" / "match_test_homographies.json"
         self.json_path = Path(json_path)
         self.scale = 10
         self.radar_w = 105 * self.scale
         self.radar_h = 68 * self.scale
-        self.homographies: dict[int, np.ndarray] = {}
-        self.current_matrix_inv: np.ndarray | None = None
 
+        # --- RESOLUTION NORMALIZER ---
+        self.video_w = max(video_res[0], 1)
+        self.video_h = max(video_res[1], 1)
+        # The Homography matrices were generated at 1080p.
+        # This prevents the vertical shift that pushes players off the top touchline.
+        self.calib_w, self.calib_h = 1920, 1080
+
+        self.inv_homographies: dict[int, np.ndarray] = {}
+        self.current_frame_idx = 0
+
+        # Load and pre-invert all matrices
         with open(self.json_path, "r") as f:
             data = json.load(f)
+
         for item in data["homographies"]:
-            self.homographies[item["frame"]] = np.array(item["homography"], dtype=np.float64)
-        self.available_frames = sorted(self.homographies.keys())
-        logger.info("Tactical Radar loaded %d dynamic camera matrices from %s", len(self.available_frames), self.json_path)
+            matrix = np.array(item["homography"], dtype=np.float64)
+            try:
+                self.inv_homographies[item["frame"]] = np.linalg.inv(matrix)
+            except np.linalg.LinAlgError:
+                pass
+
+        self.available_frames = sorted(self.inv_homographies.keys())
+        logger.info("Tactical Radar loaded %d dynamic camera matrices", len(self.available_frames))
 
     def update_camera_angle(self, current_frame_idx: int) -> None:
-        """Find the closest dynamic homography for the current frame and set inverse (image -> pitch)."""
-        if not self.available_frames:
-            return
-        closest_frame = min(self.available_frames, key=lambda x: abs(x - current_frame_idx))
-        matrix = self.homographies[closest_frame]
-        try:
-            self.current_matrix_inv = np.linalg.inv(matrix)
-        except np.linalg.LinAlgError:
-            self.current_matrix_inv = None
+        self.current_frame_idx = current_frame_idx
+
+    def draw_blank_pitch(self) -> np.ndarray:
+        pitch = np.ones((self.radar_h, self.radar_w, 3), dtype=np.uint8) * np.array([40, 130, 40], dtype=np.uint8)
+        white = (255, 255, 255)
+        thickness = 2
+        mid_x, center_y = self.radar_w // 2, self.radar_h // 2
+
+        cv2.rectangle(pitch, (0, 0), (self.radar_w, self.radar_h), white, thickness)
+        cv2.line(pitch, (mid_x, 0), (mid_x, self.radar_h), white, thickness)
+        cv2.circle(pitch, (mid_x, center_y), int(9.15 * self.scale), white, thickness)
+        cv2.circle(pitch, (mid_x, center_y), max(2, int(0.4 * self.scale)), white, -1)
+
+        pen_w, pen_h = int(16.5 * self.scale), int(40.32 * self.scale)
+        pen_y = (self.radar_h - pen_h) // 2
+        cv2.rectangle(pitch, (0, pen_y), (pen_w, pen_y + pen_h), white, thickness)
+        cv2.rectangle(pitch, (self.radar_w - pen_w, pen_y), (self.radar_w, pen_y + pen_h), white, thickness)
+
+        goal_w, goal_h = int(5.5 * self.scale), int(18.32 * self.scale)
+        goal_y = (self.radar_h - goal_h) // 2
+        cv2.rectangle(pitch, (0, goal_y), (goal_w, goal_y + goal_h), white, thickness)
+        cv2.rectangle(pitch, (self.radar_w - goal_w, goal_y), (self.radar_w, goal_y + goal_h), white, thickness)
+
+        spot_r = max(2, int(0.4 * self.scale))
+        cv2.circle(pitch, (int(11 * self.scale), center_y), spot_r, white, -1)
+        cv2.circle(pitch, (self.radar_w - int(11 * self.scale), center_y), spot_r, white, -1)
+        return pitch
 
     def map_to_2d(self, bbox: np.ndarray) -> tuple[int, int] | None:
-        """
-        Map image bbox (feet) to radar pixel (x, y). Uses current_matrix_inv (image -> pitch).
-        SoccerNet pitch is centered at (0,0) in meters; we shift to top-left origin then scale.
-        """
-        if self.current_matrix_inv is None:
+        if not self.available_frames:
             return None
-        x_center = (bbox[0] + bbox[2]) / 2.0
-        y_bottom = bbox[3]
+
+        # 1. Scale video coordinates UP to the 1280x720 space the matrix expects
+        scale_x = self.calib_w / self.video_w
+        scale_y = self.calib_h / self.video_h
+
+        x_center = ((bbox[0] + bbox[2]) / 2.0) * scale_x
+        y_bottom = (bbox[3]) * scale_y
+
         point = np.array([[[x_center, y_bottom]]], dtype=np.float32)
-        mapped = cv2.perspectiveTransform(point, self.current_matrix_inv)
-        sn_x_meters = float(mapped[0][0][0])
-        sn_y_meters = float(mapped[0][0][1])
-        radar_x_meters = sn_x_meters + (105.0 / 2.0)
-        radar_y_meters = sn_y_meters + (68.0 / 2.0)
-        radar_x = int(radar_x_meters * self.scale)
-        radar_y = int(radar_y_meters * self.scale)
-        if not (0 <= radar_x < self.radar_w and 0 <= radar_y < self.radar_h):
-            return None
+
+        def project(inv_matrix: np.ndarray) -> tuple[float, float]:
+            try:
+                mapped = cv2.perspectiveTransform(point, inv_matrix)
+                return float(mapped[0][0][0]), float(mapped[0][0][1])
+            except cv2.error:
+                return 0.0, 0.0
+
+        # Point-Level Interpolation
+        f_idx = self.current_frame_idx
+        if f_idx in self.inv_homographies:
+            x_m, y_m = project(self.inv_homographies[f_idx])
+        else:
+            before = [f for f in self.available_frames if f < f_idx]
+            after = [f for f in self.available_frames if f > f_idx]
+
+            if not before:
+                x_m, y_m = project(self.inv_homographies[after[0]])
+            elif not after:
+                x_m, y_m = project(self.inv_homographies[before[-1]])
+            else:
+                f0, f1 = before[-1], after[0]
+                x0, y0 = project(self.inv_homographies[f0])
+                x1, y1 = project(self.inv_homographies[f1])
+                weight = 0.0 if f1 == f0 else (f_idx - f0) / float(f1 - f0)
+                x_m = x0 + weight * (x1 - x0)
+                y_m = y0 + weight * (y1 - y0)
+
+        # 2. Convert physical meters (pitch-centered coordinates) to radar pixels.
+        radar_x = int(round((x_m + 52.5) * self.scale))
+        radar_y = int(round((y_m + 34.0) * self.scale))
+
         return (radar_x, radar_y)
 
 
@@ -449,7 +716,7 @@ def main() -> None:
     box_annotator = sv.BoxAnnotator(thickness=2)
     label_annotator = sv.LabelAnnotator(text_scale=0.5)
     classifier = TeamClassifier()
-    radar = TacticalRadar()
+    healer = HybridIDHealer()
 
     cap = cv2.VideoCapture(str(VIDEO_PATH))
     if not cap.isOpened():
@@ -461,10 +728,14 @@ def main() -> None:
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     logger.info("Video: %dx%d @ %d fps, %d frames", width, height, fps, total_frames)
 
+    radar = TacticalRadar(video_res=(width, height))
+
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    # CRITICAL MAC FIX: Force 'avc1' (H.264) codec; QuickTime corrupts mp4v
+    # Side-by-side layout: video left, radar right; no overlap
+    output_height = max(height, radar.radar_h)
+    output_width = width + radar.radar_w
     fourcc = cv2.VideoWriter_fourcc(*"avc1")
-    out = cv2.VideoWriter(str(OUTPUT_PATH), fourcc, fps, (width, height))
+    out = cv2.VideoWriter(str(OUTPUT_PATH), fourcc, fps, (output_width, output_height))
     if not out.isOpened():
         cap.release()
         raise RuntimeError(f"Failed to create output writer: {OUTPUT_PATH}")
@@ -479,32 +750,45 @@ def main() -> None:
             # Standard inference
             results: list[Any] = model(frame, conf=0.3, verbose=False)
             if not results:
-                out.write(frame)
+                radar.update_camera_angle(frame_idx)
+                current_radar = radar.draw_blank_pitch()
+                composed = np.zeros((output_height, output_width, 3), dtype=np.uint8)
+                composed[0:height, 0:width] = frame
+                composed[0 : radar.radar_h, width : width + radar.radar_w] = current_radar
+                out.write(composed)
                 frame_idx += 1
                 continue
             r0 = results[0]
             detections = sv.Detections.from_ultralytics(r0)
             detections = tracker.update_with_detections(detections)
 
-            # --- PASS 1: Collect frame data ---
-            tracker_ids = getattr(detections, "tracker_id", None)
+            radar.update_camera_angle(frame_idx)
+            radar_pts: list[tuple[int, int] | None] = [
+                radar.map_to_2d(detections.xyxy[i]) for i in range(len(detections))
+            ]
+
+            tracker_ids = healer.process_and_heal(detections, frame, radar_pts, frame_idx)
+
+            if tracker_ids is None:
+                tracker_ids = getattr(detections, "tracker_id", None)
             frame_data: list[dict[str, Any]] = []
             for i in range(len(detections)):
                 tid = None
                 if tracker_ids is not None and i < len(tracker_ids):
                     t = tracker_ids[i]
                     tid = int(t) if t is not None else None
-                frame_data.append({
-                    "id": tid,
-                    "bbox": detections.xyxy[i],
-                    "cid": int(detections.class_id[i]),
-                })
+
+                frame_data.append(
+                    {
+                        "id": tid,
+                        "bbox": detections.xyxy[i],
+                        "cid": int(detections.class_id[i]),
+                        "radar_pt": radar_pts[i],
+                    },
+                )
 
             # Global Draft: one prediction per tracker per frame
             role_mapping = classifier.predict_frame(frame, frame_data, frame_idx)
-
-            # Dynamic homography: use nearest frame's matrix for image -> pitch
-            radar.update_camera_angle(frame_idx)
 
             # Build team_ids for annotation (same order as detections)
             team_ids: list[int | tuple[int, bool] | None] = [None] * len(detections)
@@ -521,30 +805,50 @@ def main() -> None:
 
             annotated = annotate_frame(frame, detections, team_ids, tracker_ids)
 
-            # Tactical radar overlay: only team_0 / team_1 (GK/Ref excluded per spec)
-            radar_canvas = np.zeros((radar.radar_h, radar.radar_w, 3), dtype=np.uint8)
-            radar_canvas[:] = (40, 40, 40)
-            cv2.rectangle(radar_canvas, (0, 0), (radar.radar_w - 1, radar.radar_h - 1), (80, 80, 80), 1)
-            for i, data in enumerate(frame_data):
-                prediction = role_mapping.get(data["id"], "unknown")
-                if prediction not in ("team_0", "team_1"):
+            # Tactical radar: blank pitch every frame, then plot every player (all role predictions)
+            current_radar = radar.draw_blank_pitch()
+            for data in frame_data:
+                tid = data["id"]
+                cid = data["cid"]
+                if tid is None or cid != CLASS_PLAYER:
                     continue
-                pt = radar.map_to_2d(data["bbox"])
+                prediction = role_mapping.get(tid, "unknown")
+                pt = data["radar_pt"]
                 if pt is None:
                     continue
-                color = TEAM_COLORS[0] if prediction == "team_0" else TEAM_COLORS[1]
-                cv2.circle(radar_canvas, pt, 4, color, -1)
-            # Overlay radar on top-right of frame
-            overlay_h, overlay_w = min(radar.radar_h, height // 2), min(radar.radar_w, width // 2)
-            radar_small = cv2.resize(radar_canvas, (overlay_w, overlay_h))
-            x0 = width - overlay_w - 10
-            y0 = 10
-            annotated[y0 : y0 + overlay_h, x0 : x0 + overlay_w] = radar_small
+                if prediction == "team_0":
+                    color = TEAM_COLORS[0]
+                elif prediction == "team_1":
+                    color = TEAM_COLORS[1]
+                elif prediction in ("gk_left", "gk_right"):
+                    color = COLOR_GOALKEEPER
+                elif prediction == "referee":
+                    color = COLOR_REF
+                else:
+                    color = COLOR_UNKNOWN
+                cv2.circle(current_radar, pt, 5, color, -1)
+                cv2.circle(current_radar, pt, 5, (0, 0, 0), 1)
+                cv2.putText(
+                    current_radar,
+                    str(tid),
+                    (pt[0] - 10, pt[1] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.4,
+                    (255, 255, 255),
+                    1,
+                )
 
-            out.write(annotated)
+            # Side-by-side: video left, radar right
+            composed = np.zeros((output_height, output_width, 3), dtype=np.uint8)
+            composed[0:height, 0:width] = annotated
+            composed[0 : radar.radar_h, width : width + radar.radar_w] = current_radar
+            out.write(composed)
             frame_idx += 1
             if frame_idx % 100 == 0:
                 logger.info("Processed %d/%d frames", frame_idx, total_frames)
+            if frame_idx > 0 and frame_idx % 300 == 0:
+                healer.cleanup_ghost_ids(frame_idx)
+                logger.info("Executed Healer garbage collection at frame %d", frame_idx)
 
     finally:
         cap.release()
