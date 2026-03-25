@@ -511,8 +511,9 @@ class TeamClassifier:
 class TacticalRadar:
     """
     Panning-aware 2D tactical map using dynamic homographies.
-    Enforces strict 720p resolution normalization and SoccerNet grass border offsets.
+    Unified Architecture: 720p Normalization, Anti-Vortex, and Fail-Safe Clamping.
     """
+
     def __init__(self, json_path: str | Path | None = None, video_res: tuple[int, int] = (640, 360)) -> None:
         if json_path is None:
             json_path = BACKEND_ROOT / "output" / "match_test_homographies.json"
@@ -521,17 +522,18 @@ class TacticalRadar:
         self.radar_w = 105 * self.scale
         self.radar_h = 68 * self.scale
 
-        # --- RESOLUTION NORMALIZER ---
         self.video_w = max(video_res[0], 1)
         self.video_h = max(video_res[1], 1)
-        # The Homography matrices were generated at 1080p.
-        # This prevents the vertical shift that pushes players off the top touchline.
-        self.calib_w, self.calib_h = 1920, 1080
+
+        # 1. THE CRITICAL CALIBRATION LOCK
+        # SoccerNet matrices are native to 1280x720.
+        # (Using 1920x1080 here causes a 3x multiplier that shoots players to X=-15000).
+        self.calib_w = 1280
+        self.calib_h = 720
 
         self.inv_homographies: dict[int, np.ndarray] = {}
         self.current_frame_idx = 0
 
-        # Load and pre-invert all matrices
         with open(self.json_path, "r") as f:
             data = json.load(f)
 
@@ -543,7 +545,7 @@ class TacticalRadar:
                 pass
 
         self.available_frames = sorted(self.inv_homographies.keys())
-        logger.info("Tactical Radar loaded %d dynamic camera matrices", len(self.available_frames))
+        logger.info("Tactical Radar loaded and inverted %d dynamic camera matrices", len(self.available_frames))
 
     def update_camera_angle(self, current_frame_idx: int) -> None:
         self.current_frame_idx = current_frame_idx
@@ -552,7 +554,8 @@ class TacticalRadar:
         pitch = np.ones((self.radar_h, self.radar_w, 3), dtype=np.uint8) * np.array([40, 130, 40], dtype=np.uint8)
         white = (255, 255, 255)
         thickness = 2
-        mid_x, center_y = self.radar_w // 2, self.radar_h // 2
+        mid_x = self.radar_w // 2
+        center_y = self.radar_h // 2
 
         cv2.rectangle(pitch, (0, 0), (self.radar_w, self.radar_h), white, thickness)
         cv2.line(pitch, (mid_x, 0), (mid_x, self.radar_h), white, thickness)
@@ -578,7 +581,7 @@ class TacticalRadar:
         if not self.available_frames:
             return None
 
-        # 1. Scale video coordinates UP to the 1280x720 space the matrix expects
+        # 1. RESOLUTION NORMALIZER
         scale_x = self.calib_w / self.video_w
         scale_y = self.calib_h / self.video_h
 
@@ -592,31 +595,45 @@ class TacticalRadar:
                 mapped = cv2.perspectiveTransform(point, inv_matrix)
                 return float(mapped[0][0][0]), float(mapped[0][0][1])
             except cv2.error:
-                return 0.0, 0.0
+                return -9999.0, -9999.0
 
-        # Point-Level Interpolation
         f_idx = self.current_frame_idx
+
+        # 2. ANTI-VORTEX INTERPOLATION
         if f_idx in self.inv_homographies:
-            x_m, y_m = project(self.inv_homographies[f_idx])
+            x_raw, y_raw = project(self.inv_homographies[f_idx])
         else:
             before = [f for f in self.available_frames if f < f_idx]
             after = [f for f in self.available_frames if f > f_idx]
 
             if not before:
-                x_m, y_m = project(self.inv_homographies[after[0]])
+                x_raw, y_raw = project(self.inv_homographies[after[0]])
             elif not after:
-                x_m, y_m = project(self.inv_homographies[before[-1]])
+                x_raw, y_raw = project(self.inv_homographies[before[-1]])
             else:
                 f0, f1 = before[-1], after[0]
-                x0, y0 = project(self.inv_homographies[f0])
-                x1, y1 = project(self.inv_homographies[f1])
-                weight = 0.0 if f1 == f0 else (f_idx - f0) / float(f1 - f0)
-                x_m = x0 + weight * (x1 - x0)
-                y_m = y0 + weight * (y1 - y0)
+                # VORTEX GUARD: Do not interpolate across camera cuts
+                if f1 - f0 > 10:
+                    x_raw, y_raw = project(self.inv_homographies[f0])
+                else:
+                    x0, y0 = project(self.inv_homographies[f0])
+                    x1, y1 = project(self.inv_homographies[f1])
+                    weight = (f_idx - f0) / float(f1 - f0)
+                    x_raw = x0 + weight * (x1 - x0)
+                    y_raw = y0 + weight * (y1 - y0)
 
-        # 2. Convert physical meters (pitch-centered coordinates) to radar pixels.
-        radar_x = int(round((x_m + 52.5) * self.scale))
-        radar_y = int(round((y_m + 34.0) * self.scale))
+        if x_raw == -9999.0:
+            return None
+
+        # 3. RESTORE METER-TO-PIXEL CONVERSION
+        # CRITICAL FIX: The matrix outputs physical meters, not pixels!
+        # We must add 52.5m (half pitch) and multiply by scale (10 pixels/meter).
+        radar_x = int(round((x_raw + 52.5) * self.scale))
+        radar_y = int(round((y_raw + 34.0) * self.scale))
+
+        # 4. FAIL-SAFE CLAMP
+        radar_x = max(0, min(self.radar_w, radar_x))
+        radar_y = max(0, min(self.radar_h, radar_y))
 
         return (radar_x, radar_y)
 

@@ -75,3 +75,6 @@ _archive/
 backend/output/
 *.mp4
 *.zip
+
+# --- Local artifacts ---
+calibration_data.json
