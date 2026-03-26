@@ -7,20 +7,27 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import cv2
 import numpy as np
 import supervision as sv
+from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from ultralytics import YOLO
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 BACKEND_ROOT_LOCAL = SCRIPT_DIR.parent
+PROJECT_ROOT_LOCAL = BACKEND_ROOT_LOCAL.parent
+
+load_dotenv(PROJECT_ROOT_LOCAL / ".env")
+load_dotenv(BACKEND_ROOT_LOCAL / ".env")
 
 # Ensure backend root is importable so `from models import ...` works.
 if str(BACKEND_ROOT_LOCAL) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT_LOCAL))
+
+from llm_service import generate_coaching_advice, gemini_is_configured  # noqa: E402
 
 from generate_analytics import TacticalAnalyzer
 from rag_coach import (
@@ -57,6 +64,71 @@ class TacticalFrame:
 
 def _print_step(message: str) -> None:
     print(f"[✓] {message}")
+
+
+RELIABILITY_WARN_PCT = 85.0
+RELIABILITY_ABORT_PCT = 70.0
+
+
+def _print_data_guard_reliability(
+    valid_metric_frames: int, total_cv_frames: int
+) -> tuple[float, Literal["ok", "warn", "abort"]]:
+    """
+    Report how many CV frames produced valid dual-team metric rows (Data Guard pass rate).
+
+    Returns:
+        (reliability_pct, status). ``abort`` means the LLM step must be skipped.
+    """
+    if total_cv_frames <= 0:
+        reliability_pct = 0.0
+    else:
+        reliability_pct = (valid_metric_frames / total_cv_frames) * 100.0
+
+    print(
+        f"[🛡️] Data Guard Reliability: {reliability_pct:.1f}% "
+        f"({valid_metric_frames}/{total_cv_frames})"
+    )
+
+    use_color = sys.stdout.isatty()
+    yellow = "\033[33m" if use_color else ""
+    red = "\033[31m" if use_color else ""
+    reset = "\033[0m" if use_color else ""
+
+    if reliability_pct < RELIABILITY_ABORT_PCT:
+        print(
+            f"{red}[❌] ERROR: Data quality too low for tactical analysis.{reset}"
+        )
+        return reliability_pct, "abort"
+    if reliability_pct < RELIABILITY_WARN_PCT:
+        print(
+            f"{yellow}[⚠️] WARNING: Low data quality. AI advice may be hallucinated "
+            f"due to tracking loss.{reset}"
+        )
+        return reliability_pct, "warn"
+    return reliability_pct, "ok"
+
+
+def _final_cards_llm_skipped_low_reliability(
+    prompt_records: list[GeneratedPromptRecord],
+    reliability_pct: float,
+    valid_metric_frames: int,
+    total_cv_frames: int,
+) -> list[dict[str, Any]]:
+    """Build report rows without calling the LLM (Data Guard abort)."""
+
+    msg = (
+        f"Skipped: Data Guard reliability {reliability_pct:.1f}% "
+        f"({valid_metric_frames}/{total_cv_frames}) is below "
+        f"{RELIABILITY_ABORT_PCT:.0f}% threshold."
+    )
+    return [
+        {
+            **r.model_dump(),
+            "tactical_instruction": None,
+            "llm_error": msg,
+        }
+        for r in prompt_records
+    ]
 
 
 def _resolve_video_path(video_name: str) -> Path:
@@ -266,17 +338,44 @@ async def _complete_prompt(
         return (None, str(exc))
 
 
+async def _complete_gemini_prompt(prompt: str) -> tuple[str | None, str | None]:
+    """Run Gemini in a worker thread (SDK is synchronous)."""
+
+    try:
+        text = await asyncio.to_thread(generate_coaching_advice, prompt)
+        return (text if text else None, None)
+    except Exception as exc:  # noqa: BLE001
+        return (None, str(exc))
+
+
 async def run_llm(records: list[GeneratedPromptRecord]) -> list[dict[str, Any]]:
     """
-    Run Cloud LLM completions for each generated prompt record.
+    Run cloud LLM completions for each generated prompt record.
+
+    Prefers ``GEMINI_API_KEY`` (Google Gemini). Falls back to OpenAI-compatible
+    APIs when ``LLM_API_KEY`` / ``OPENAI_API_KEY`` is set and Gemini is not.
     """
+    if gemini_is_configured():
+        tasks = [_complete_gemini_prompt(r.llm_prompt) for r in records]
+        results = await asyncio.gather(*tasks) if tasks else []
+        out: list[dict[str, Any]] = []
+        for record, (instruction, llm_error) in zip(records, results, strict=True):
+            payload = record.model_dump()
+            payload["tactical_instruction"] = instruction
+            payload["llm_error"] = llm_error
+            out.append(payload)
+        return out
+
     api_key, model, base_url = _resolve_llm_credentials()
     if not api_key:
         return [
             {
                 **r.model_dump(),
                 "tactical_instruction": None,
-                "llm_error": "Missing LLM_API_KEY/OPENAI_API_KEY; skipped cloud completion.",
+                "llm_error": (
+                    "Missing GEMINI_API_KEY or LLM_API_KEY/OPENAI_API_KEY; "
+                    "skipped cloud completion."
+                ),
             }
             for r in records
         ]
@@ -289,13 +388,13 @@ async def run_llm(records: list[GeneratedPromptRecord]) -> list[dict[str, Any]]:
     tasks = [_complete_prompt(client, model, r.llm_prompt) for r in records]
     results = await asyncio.gather(*tasks) if tasks else []
 
-    out: list[dict[str, Any]] = []
+    out_openai: list[dict[str, Any]] = []
     for record, (instruction, llm_error) in zip(records, results, strict=True):
         payload = record.model_dump()
         payload["tactical_instruction"] = instruction
         payload["llm_error"] = llm_error
-        out.append(payload)
-    return out
+        out_openai.append(payload)
+    return out_openai
 
 
 def parse_args() -> argparse.Namespace:
@@ -324,18 +423,53 @@ def main() -> None:
         f"Analytics Complete: Built {len(metrics)} metric frames and found {flaw_count} chunk-level tactical flaws."
     )
 
+    total_cv_frames = len(raw_frames)
+    valid_metric_frames = len(metrics)
+    reliability_pct, guard_status = _print_data_guard_reliability(
+        valid_metric_frames, total_cv_frames
+    )
+
     library_path = BACKEND_ROOT / "data" / "tactical_library.json"
     prompt_records = synthesize(triggers, library_path=library_path)
     _print_step(f"RAG Complete: Generated {len(prompt_records)} coaching prompts.")
 
-    final_cards = asyncio.run(run_llm(prompt_records))
+    if guard_status == "abort":
+        final_cards = _final_cards_llm_skipped_low_reliability(
+            prompt_records,
+            reliability_pct=reliability_pct,
+            valid_metric_frames=valid_metric_frames,
+            total_cv_frames=total_cv_frames,
+        )
+        _print_step("LLM Skipped: Data Guard reliability below minimum threshold.")
+    else:
+        final_cards = asyncio.run(run_llm(prompt_records))
 
     output_path = BACKEND_ROOT / "output" / "test_mp4_report.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(final_cards, f, indent=2, ensure_ascii=False)
 
-    _print_step(f"LLM Complete: Report saved to {output_path}.")
+    if guard_status != "abort":
+        _print_step(f"LLM Complete: Report saved to {output_path}.")
+    else:
+        _print_step(f"Report saved to {output_path} (LLM not invoked).")
+
+    print("\n" + "=" * 72)
+    print("TACTICAL COACHING (LLM OUTPUT)")
+    print("=" * 72)
+    for idx, card in enumerate(final_cards, start=1):
+        team = card.get("team", "?")
+        flaw = card.get("flaw", "?")
+        instruction = card.get("tactical_instruction")
+        err = card.get("llm_error")
+        print(f"\n--- Item {idx} | {team} | {flaw} ---\n")
+        if instruction:
+            print(instruction)
+        elif err:
+            print(f"[LLM skipped/error] {err}")
+        else:
+            print("(no instruction text)")
+    print()
 
 
 if __name__ == "__main__":

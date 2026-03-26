@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
+from llm_service import gemini_is_configured, generate_coaching_advice
 from scripts.rag_coach import run as run_rag_synthesizer
 from scripts.tactical_rule_engine import run_engine
 
@@ -115,6 +116,21 @@ async def _complete_coaching_instruction(
             return None, str(exc)
 
 
+async def _complete_coaching_instruction_gemini(
+    user_prompt: str,
+    semaphore: asyncio.Semaphore,
+) -> tuple[str | None, str | None]:
+    """Return (content, error_message) using Google Gemini."""
+
+    async with semaphore:
+        try:
+            text = await asyncio.to_thread(generate_coaching_advice, user_prompt)
+            return (text if text else None, None)
+        except Exception as exc:
+            LOGGER.exception("Gemini completion failed")
+            return None, str(exc)
+
+
 @app.get("/health", tags=["meta"])
 async def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -139,7 +155,8 @@ async def get_coach_advice(
     Run the tactical pipeline: metrics → triggers → RAG prompts → optional LLM completions.
 
     Requires ``backend/output/tactical_metrics.json`` from upstream analytics.
-    Set ``LLM_API_KEY`` (or ``OPENAI_API_KEY``) for generated coaching text.
+    Set ``GEMINI_API_KEY`` for Google Gemini (preferred), or ``LLM_API_KEY`` /
+    ``OPENAI_API_KEY`` for OpenAI-compatible APIs.
     """
 
     generated_at = datetime.now(timezone.utc).isoformat()
@@ -170,25 +187,37 @@ async def get_coach_advice(
     pipeline["rag_synthesizer"] = "success"
 
     api_key, model, base_url = _resolve_llm_credentials()
+    use_gemini = not skip_llm and gemini_is_configured()
     client: AsyncOpenAI | None = None
-    if not skip_llm and api_key:
+    if not skip_llm and not use_gemini and api_key:
         kwargs: dict[str, Any] = {"api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url
         client = AsyncOpenAI(**kwargs)
-    elif not skip_llm and not api_key:
+    elif not skip_llm and not use_gemini and not api_key:
         pipeline["llm"] = "skipped_missing_api_key"
-        LOGGER.warning("LLM_API_KEY not set; returning advice without tactical_instruction text.")
+        LOGGER.warning(
+            "No GEMINI_API_KEY or LLM_API_KEY; returning advice without tactical_instruction text."
+        )
 
     semaphore = asyncio.Semaphore(llm_concurrency)
-    llm_tasks = [
-        _complete_coaching_instruction(client, model, rec.llm_prompt, semaphore)
-        for rec in records
-    ]
+    if use_gemini:
+        llm_tasks = [
+            _complete_coaching_instruction_gemini(rec.llm_prompt, semaphore)
+            for rec in records
+        ]
+    else:
+        llm_tasks = [
+            _complete_coaching_instruction(client, model, rec.llm_prompt, semaphore)
+            for rec in records
+        ]
     llm_results = await asyncio.gather(*llm_tasks) if llm_tasks else []
 
+    gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     if skip_llm:
         pipeline["llm"] = "skipped_by_query"
+    elif use_gemini:
+        pipeline["llm"] = f"ok ({gemini_model})"
     elif client is not None:
         pipeline["llm"] = f"ok ({model})"
     else:

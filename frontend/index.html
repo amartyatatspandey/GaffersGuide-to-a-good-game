@@ -34,18 +34,41 @@
     };
   </script>
 
-  <style type="text/tailwindcss">
-    @layer utilities {
-      .card-enter { animation: fadeIn 0.4s ease-out forwards; }
-
-      .severity-critical  { @apply bg-red-950 border-red-700 text-red-300; }
-      .severity-high      { @apply bg-orange-950 border-orange-700 text-orange-300; }
-      .severity-medium    { @apply bg-yellow-950 border-yellow-700 text-yellow-300; }
-      .severity-low       { @apply bg-blue-950  border-blue-700   text-blue-300;   }
-
-      .skeleton {
-        @apply bg-pitch-700 rounded animate-pulse-slow;
-      }
+  <!-- Plain CSS: Vite PostCSS cannot compile @layer/@apply from CDN-style blocks. -->
+  <style>
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+    .card-enter { animation: fadeIn 0.4s ease-out forwards; }
+    .severity-critical {
+      background-color: rgb(69 10 10 / 0.85);
+      border-color: rgb(185 28 28);
+      color: rgb(252 165 165);
+    }
+    .severity-high {
+      background-color: rgb(67 20 7 / 0.85);
+      border-color: rgb(194 65 12);
+      color: rgb(253 186 116);
+    }
+    .severity-medium {
+      background-color: rgb(66 32 6 / 0.85);
+      border-color: rgb(161 98 7);
+      color: rgb(253 224 71);
+    }
+    .severity-low {
+      background-color: rgb(23 37 84 / 0.85);
+      border-color: rgb(29 78 216);
+      color: rgb(147 197 253);
+    }
+    .skeleton {
+      background-color: #21262d;
+      border-radius: 0.375rem;
+      animation: pulse-slow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
   </style>
 </head>
