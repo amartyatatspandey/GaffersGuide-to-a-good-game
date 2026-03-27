@@ -49,6 +49,7 @@ class GeneratedPromptRecord(BaseModel):
     severity: str
     evidence: str
     frequency_pct: float
+    ball_data_quality: Literal["sufficient", "insufficient"] = "sufficient"
     matched_philosophy_author: str
     matched_quote_excerpt: str
     fc_role_recommendations: list[str] | None = None
@@ -82,6 +83,7 @@ def build_master_llm_prompt(
     flaw: str,
     severity: str,
     frequency_pct: float,
+    ball_data_quality: Literal["sufficient", "insufficient"],
     evidence: str,
     philosophy: PhilosophyEntry,
 ) -> str:
@@ -90,6 +92,17 @@ def build_master_llm_prompt(
     if len(quote) > 400:
         quote = quote[:397] + "..."
 
+    ball_guardrail = ""
+    if ball_data_quality == "insufficient":
+        ball_guardrail = (
+            "\n## Ball-data guardrail (mandatory)\n"
+            "- ball_data_quality is INSUFFICIENT (<50% visibility).\n"
+            "- You MUST avoid discussing possession, passes, turnovers, "
+            "counter-attacks, or ball circulation claims.\n"
+            "- Focus only on possession-agnostic structural organization, "
+            "line compactness, spacing, and pressing shape."
+        )
+
     # Explicitly label the input as a chronic, chunk-wide macro-trend.
     return f"""You are an elite football coach and tactician. Your task is to synthesize mathematical match intelligence with a named coaching philosophy and FC 25 role guidance into clear touchline instructions.
 
@@ -97,7 +110,9 @@ def build_master_llm_prompt(
 - Flaw: {flaw}
 - Severity: {severity}
 - Chronic frequency: {frequency_pct:.1f}% of frames in this video chunk violated the rule
+- Ball data quality: {ball_data_quality}
 - Evidence: {evidence}
+{ball_guardrail}
 
 ## Philosophy anchor
 - Author: {philosophy.author}
@@ -152,6 +167,7 @@ def process_insights(
             flaw=insight.flaw,
             severity=insight.severity,
             frequency_pct=insight.frequency_pct,
+            ball_data_quality=insight.ball_data_quality,
             evidence=insight.evidence,
             philosophy=ph,
         )
@@ -163,6 +179,7 @@ def process_insights(
                 severity=insight.severity,
                 evidence=insight.evidence,
                 frequency_pct=insight.frequency_pct,
+                ball_data_quality=insight.ball_data_quality,
                 matched_philosophy_author=ph.author,
                 matched_quote_excerpt=excerpt,
                 fc_role_recommendations=ph.fc_role_recommendations,

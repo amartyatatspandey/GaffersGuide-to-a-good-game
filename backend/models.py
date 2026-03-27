@@ -17,4 +17,5 @@ class ChunkTacticalInsight(BaseModel):
     severity: str
     frequency_pct: float = Field(..., ge=0.0, le=100.0)
     evidence: str
+    ball_data_quality: Literal["sufficient", "insufficient"] = "sufficient"
 
