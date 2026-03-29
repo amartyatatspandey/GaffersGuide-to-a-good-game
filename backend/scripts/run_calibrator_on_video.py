@@ -2,17 +2,19 @@
 Run DynamicPitchCalibrator on a video file (e.g. match_test.mp4).
 
 Samples frames, computes homography per frame, and prints/writes results.
+CLI defaults match legacy paths; use --video / --output for per-match files
+that align with cloud_batch_processor.py ({stem}_homographies.json).
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import sys
 from pathlib import Path
 
 import cv2
-import numpy as np
 
 # Project layout: run from repo root or backend/
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
@@ -24,12 +26,9 @@ from scripts.dynamic_homography import DynamicPitchCalibrator
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-VIDEO_PATH = BACKEND_ROOT / "data" / "match_test.mp4"
-WEIGHTS_DIR = BACKEND_ROOT / "references" / "sn-calibration" / "resources"
-OUTPUT_JSON = BACKEND_ROOT / "output" / "match_test_homographies.json"
-
-# Sample every N frames (1 = every frame; 30 ≈ 1 per second at 30fps)
-SAMPLE_EVERY = 30
+DEFAULT_VIDEO_PATH = BACKEND_ROOT / "data" / "match_test.mp4"
+DEFAULT_WEIGHTS_DIR = BACKEND_ROOT / "references" / "sn-calibration" / "resources"
+DEFAULT_SAMPLE_EVERY = 30
 
 
 def run(video_path: Path, weights_dir: Path, sample_every: int, output_json: Path | None) -> None:
@@ -79,15 +78,54 @@ def run(video_path: Path, weights_dir: Path, sample_every: int, output_json: Pat
 
     if output_json and results:
         output_json.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_json, "w") as f:
+        with open(output_json, "w", encoding="utf-8") as f:
             json.dump({"video": str(video_path), "sample_every": sample_every, "homographies": results}, f, indent=2)
         logger.info("Wrote %s", output_json)
+    elif output_json and not results:
+        logger.warning("No homography samples; not writing %s (empty file would be skipped by cloud batch)", output_json)
+
+
+def _default_output_for_video(video_path: Path) -> Path:
+    return BACKEND_ROOT / "output" / f"{video_path.stem}_homographies.json"
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate TacticalRadar homography JSON from broadcast video.")
+    parser.add_argument(
+        "--video",
+        type=Path,
+        default=DEFAULT_VIDEO_PATH,
+        help=f"Input video (default: {DEFAULT_VIDEO_PATH})",
+    )
+    parser.add_argument(
+        "--weights-dir",
+        type=Path,
+        default=DEFAULT_WEIGHTS_DIR,
+        help=f"SoccerNet calibration resources dir (default: {DEFAULT_WEIGHTS_DIR})",
+    )
+    parser.add_argument(
+        "--sample-every",
+        type=int,
+        default=DEFAULT_SAMPLE_EVERY,
+        help="Sample every N frames (default: 30)",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Output JSON path. Default: backend/output/{video_stem}_homographies.json",
+    )
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
+    args = _parse_args()
+    video_path = args.video.expanduser().resolve()
+    weights_dir = args.weights_dir.expanduser().resolve()
+    out = args.output.expanduser().resolve() if args.output else _default_output_for_video(video_path)
     run(
-        video_path=VIDEO_PATH,
-        weights_dir=WEIGHTS_DIR,
-        sample_every=SAMPLE_EVERY,
-        output_json=OUTPUT_JSON,
+        video_path=video_path,
+        weights_dir=weights_dir,
+        sample_every=args.sample_every,
+        output_json=out,
     )

@@ -273,6 +273,11 @@ def _resolve_video_path(video_name: str) -> Path:
     candidate = Path(video_name)
     if candidate.is_file():
         return candidate
+    env_dir = os.getenv("GAFFERS_VIDEO_INPUT_DIR", "").strip()
+    if env_dir:
+        env_candidate = Path(env_dir).expanduser() / video_name
+        if env_candidate.is_file():
+            return env_candidate.resolve()
     backend_data_path = BACKEND_ROOT / "data" / video_name
     if backend_data_path.is_file():
         return backend_data_path

@@ -13,6 +13,7 @@ Execution: python backend/scripts/track_teams.py
 import json
 import logging
 import math
+import os
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -516,7 +517,12 @@ class TacticalRadar:
 
     def __init__(self, json_path: str | Path | None = None, video_res: tuple[int, int] = (640, 360)) -> None:
         if json_path is None:
-            json_path = BACKEND_ROOT / "output" / "match_test_homographies.json"
+            env_h = os.getenv("GAFFERS_HOMOGRAPHY_JSON", "").strip()
+            json_path = (
+                Path(env_h).expanduser()
+                if env_h
+                else BACKEND_ROOT / "output" / "match_test_homographies.json"
+            )
         self.json_path = Path(json_path)
         self.scale = 10
         self.radar_w = 105 * self.scale

@@ -1,0 +1,19 @@
+# Global Video Catch-All
+**/*.mp4
+**/*.avi
+**/*.mov
+
+# Local Data & Outputs
+backend/data/
+backend/output/
+
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Python Caches & Git
+__pycache__/
+**/*.pyc
+.git/
+.DS_Store
