@@ -8,7 +8,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 import cv2
 import numpy as np
@@ -93,6 +93,17 @@ class CVTelemetry:
     frames_optical_flow_fallback: int = 0
     total_raw_ball_detections: int = 0
     total_interpolated_ball_frames: int = 0
+
+
+@dataclass(slots=True)
+class TrackingFrameArtifact:
+    frame_idx: int
+    players: list[dict[str, Any]]
+    ball_xy: list[float] | None
+    possession_team_id: int | None
+    homography_confidence: float
+    used_optical_flow_fallback: bool
+    camera_shift_xy: tuple[float, float]
 
 
 class OpticalFlowCameraShiftEstimator:
@@ -791,7 +802,9 @@ def _draw_annotated_frame(
 
 def run_cv_tracking(
     video_path: Path,
-) -> tuple[list[TacticalFrame], CVTelemetry]:
+    *,
+    tracking_overlay_path: Path,
+) -> tuple[list[TacticalFrame], CVTelemetry, list[TrackingFrameArtifact]]:
     """
     Run CV tracking in-memory and return TacticalFrame timeline.
     """
@@ -816,11 +829,12 @@ def run_cv_tracking(
     last_player_radar_by_track: dict[int, tuple[int, int]] = {}
     last_ball_radar: tuple[int, int] | None = None
     telemetry = CVTelemetry()
-    annotated_output_path = BACKEND_ROOT / "output" / "test_mp4_tracking_overlay.mp4"
+    annotated_output_path = tracking_overlay_path
     annotated_output_path.parent.mkdir(parents=True, exist_ok=True)
     annotated_writer: cv2.VideoWriter | None = None
 
     frames_out: list[TacticalFrame] = []
+    frame_artifacts: list[TrackingFrameArtifact] = []
     frame_idx = 0
     try:
         while True:
@@ -870,6 +884,20 @@ def run_cv_tracking(
                 )
                 if annotated_writer is not None:
                     annotated_writer.write(empty_comp)
+                frame_artifacts.append(
+                    TrackingFrameArtifact(
+                        frame_idx=frame_idx,
+                        players=[],
+                        ball_xy=ball_xy,
+                        possession_team_id=None,
+                        homography_confidence=float(homography_conf),
+                        used_optical_flow_fallback=use_fallback,
+                        camera_shift_xy=(
+                            float(camera_shift[0]),
+                            float(camera_shift[1]),
+                        ),
+                    )
+                )
                 frame_idx += 1
                 continue
 
@@ -984,6 +1012,39 @@ def run_cv_tracking(
                     possession_team_id=possession_team_id,
                 )
             )
+            player_rows: list[dict[str, Any]] = []
+            for row in frame_data:
+                if row["cid"] != CLASS_PLAYER:
+                    continue
+                rp = row["radar_pt"]
+                bbox = np.asarray(row["bbox"], dtype=np.float64).ravel()
+                x_canvas = float((bbox[0] + bbox[2]) / 2.0)
+                y_canvas = float((bbox[1] + bbox[3]) / 2.0)
+                team_label = _prediction_to_team(role_mapping.get(row["id"], "unknown"))
+                player_rows.append(
+                    {
+                        "id": row["id"],
+                        "team_id": team_label,
+                        "x_pitch": float(rp[0]) if rp is not None else None,
+                        "y_pitch": float(rp[1]) if rp is not None else None,
+                        "x_canvas": x_canvas,
+                        "y_canvas": y_canvas,
+                    }
+                )
+            frame_artifacts.append(
+                TrackingFrameArtifact(
+                    frame_idx=frame_idx,
+                    players=player_rows,
+                    ball_xy=ball_xy,
+                    possession_team_id=possession_team_id,
+                    homography_confidence=float(homography_conf),
+                    used_optical_flow_fallback=use_fallback,
+                    camera_shift_xy=(
+                        float(camera_shift[0]),
+                        float(camera_shift[1]),
+                    ),
+                )
+            )
             if annotated_writer is None:
                 out_h = max(height, radar.radar_h)
                 out_w = width + radar.radar_w
@@ -1013,7 +1074,43 @@ def run_cv_tracking(
     telemetry.total_interpolated_ball_frames = interpolate_ball_positions(
         frames_out, max_gap_frames=BALL_INTERPOLATION_MAX_GAP
     )
-    return frames_out, telemetry
+    return frames_out, telemetry, frame_artifacts
+
+
+def _write_tracking_artifact(
+    output_path: Path,
+    *,
+    video_path: Path,
+    overlay_path: Path,
+    telemetry: CVTelemetry,
+    frames: list[TrackingFrameArtifact],
+) -> None:
+    payload = {
+        "video_path": str(video_path.resolve()),
+        "overlay_video_path": str(overlay_path.resolve()),
+        "telemetry": {
+            "total_frames_processed": telemetry.total_frames_processed,
+            "frames_standard_homography": telemetry.frames_standard_homography,
+            "frames_optical_flow_fallback": telemetry.frames_optical_flow_fallback,
+            "total_raw_ball_detections": telemetry.total_raw_ball_detections,
+            "total_interpolated_ball_frames": telemetry.total_interpolated_ball_frames,
+        },
+        "frames": [
+            {
+                "frame_idx": fr.frame_idx,
+                "players": fr.players,
+                "ball_xy": fr.ball_xy,
+                "possession_team_id": fr.possession_team_id,
+                "homography_confidence": fr.homography_confidence,
+                "used_optical_flow_fallback": fr.used_optical_flow_fallback,
+                "camera_shift_xy": [fr.camera_shift_xy[0], fr.camera_shift_xy[1]],
+            }
+            for fr in frames
+        ],
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as f_out:
+        json.dump(payload, f_out, ensure_ascii=False)
 
 
 def build_metrics_timeline(raw_frames: list[TacticalFrame]) -> list[dict[str, Any]]:
@@ -1197,13 +1294,57 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
-    video_path = _resolve_video_path(args.video)
+def run_e2e(
+    video: str | Path,
+    *,
+    output_prefix: str = "test_mp4",
+    progress_callback: Callable[[str], None] | None = None,
+) -> Path:
+    """
+    Execute the full CV→Math→Rules→RAG→LLM pipeline and write job outputs.
 
-    raw_frames, telemetry = run_cv_tracking(video_path)
+    Returns:
+        Path to the final report JSON file (`*_report.json`).
+    """
+
+    if progress_callback is not None:
+        progress_callback("Pending")
+
+    if isinstance(video, Path):
+        video_path = video
+    else:
+        video_path = _resolve_video_path(video)
+
+    if output_prefix == "test_mp4":
+        tracking_overlay_path = BACKEND_ROOT / "output" / "test_mp4_tracking_overlay.mp4"
+        tracking_data_path = BACKEND_ROOT / "output" / "test_mp4_tracking_data.json"
+        metrics_output_path = BACKEND_ROOT / "output" / "tactical_metrics_e2e.json"
+        report_output_path = BACKEND_ROOT / "output" / "test_mp4_report.json"
+    else:
+        tracking_overlay_path = (
+            BACKEND_ROOT / "output" / f"{output_prefix}_tracking_overlay.mp4"
+        )
+        tracking_data_path = BACKEND_ROOT / "output" / f"{output_prefix}_tracking_data.json"
+        metrics_output_path = (
+            BACKEND_ROOT / "output" / f"{output_prefix}_tactical_metrics.json"
+        )
+        report_output_path = BACKEND_ROOT / "output" / f"{output_prefix}_report.json"
+
+    if progress_callback is not None:
+        progress_callback("Tracking Players")
+    raw_frames, telemetry, tracking_frames = run_cv_tracking(
+        video_path, tracking_overlay_path=tracking_overlay_path
+    )
     _print_step(f"CV Tracking Complete: Processed {len(raw_frames)} frames.")
     telemetry.total_frames_processed = len(raw_frames)
+    _write_tracking_artifact(
+        tracking_data_path,
+        video_path=video_path,
+        overlay_path=tracking_overlay_path,
+        telemetry=telemetry,
+        frames=tracking_frames,
+    )
+    _print_step(f"Tracking timeline saved to {tracking_data_path}.")
 
     total_cv_frames = len(raw_frames)
     metrics_before = build_metrics_timeline(raw_frames)
@@ -1214,6 +1355,8 @@ def main() -> None:
     )
 
     refiner = GlobalRefiner()
+    if progress_callback is not None:
+        progress_callback("Spatial Math")
     refined_frames = refiner.refine(
         raw_frames,
         frame_factory=lambda frame_idx, players: TacticalFrame(
@@ -1227,12 +1370,11 @@ def main() -> None:
         ),
     )
     raw_ball_by_frame: dict[int, tuple[list[float] | None, int | None]] = {
-        frame.frame_idx: (frame.ball_xy, frame.possession_team_id) for frame in raw_frames
+        frame.frame_idx: (frame.ball_xy, frame.possession_team_id)
+        for frame in raw_frames
     }
     for frame in refined_frames:
-        ball_xy, possession_team_id = raw_ball_by_frame.get(
-            frame.frame_idx, (None, None)
-        )
+        ball_xy, possession_team_id = raw_ball_by_frame.get(frame.frame_idx, (None, None))
         frame.ball_xy = ball_xy
         frame.possession_team_id = possession_team_id
     _print_step(
@@ -1260,11 +1402,12 @@ def main() -> None:
         f"[🛡️] After Refinement Reliability: {reliability_after:.1f}% "
         f"({len(metrics)}/{total_cv_frames})"
     )
-    metrics_output_path = BACKEND_ROOT / "output" / "tactical_metrics_e2e.json"
     with metrics_output_path.open("w", encoding="utf-8") as f_metrics:
         json.dump(metrics, f_metrics, indent=2, ensure_ascii=False)
     _print_step(f"Metrics timeline saved to {metrics_output_path}.")
 
+    if progress_callback is not None:
+        progress_callback("Rule Engine")
     triggers = evaluate_chunk_insights(metrics)
     flaw_count = len(triggers)
     _print_step(
@@ -1277,6 +1420,8 @@ def main() -> None:
     )
 
     library_path = BACKEND_ROOT / "data" / "tactical_library.json"
+    if progress_callback is not None:
+        progress_callback("Synthesizing Advice")
     prompt_records = synthesize(
         triggers,
         library_path=library_path,
@@ -1295,7 +1440,7 @@ def main() -> None:
     else:
         final_cards = asyncio.run(run_llm(prompt_records))
 
-    output_path = BACKEND_ROOT / "output" / "test_mp4_report.json"
+    output_path = report_output_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(final_cards, f, indent=2, ensure_ascii=False)
@@ -1305,14 +1450,15 @@ def main() -> None:
     else:
         _print_step(f"Report saved to {output_path} (LLM not invoked).")
 
+    if progress_callback is not None:
+        progress_callback("Completed")
+
     print("\n" + "=" * 72)
     print("CV TELEMETRY SUMMARY")
     print("=" * 72)
     print(f"Total Frames Processed: {telemetry.total_frames_processed}")
     print(f"Frames using standard Homography: {telemetry.frames_standard_homography}")
-    print(
-        f"Frames using Optical Flow Fallback: {telemetry.frames_optical_flow_fallback}"
-    )
+    print(f"Frames using Optical Flow Fallback: {telemetry.frames_optical_flow_fallback}")
     print(f"Total raw ball detections: {telemetry.total_raw_ball_detections}")
     print(
         f"Total frames where the ball was interpolated: {telemetry.total_interpolated_ball_frames}"
@@ -1334,6 +1480,14 @@ def main() -> None:
         else:
             print("(no instruction text)")
     print()
+
+    return output_path
+
+
+def main() -> None:
+    args = parse_args()
+    # Preserve legacy output filenames for CLI usage.
+    run_e2e(args.video, output_prefix="test_mp4", progress_callback=None)
 
 
 if __name__ == "__main__":

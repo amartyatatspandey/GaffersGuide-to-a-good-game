@@ -643,6 +643,80 @@ class TacticalRadar:
 
         return (radar_x, radar_y)
 
+    def map_many_to_2d(
+        self,
+        bboxes_xyxy: np.ndarray | list[np.ndarray],
+        *,
+        frame_idx: int | None = None,
+    ) -> list[tuple[int, int] | None]:
+        """
+        Vectorized projection for many bboxes in one frame.
+
+        Safety guarantees:
+        - Empty input returns [].
+        - OpenCV input shape is (N, 1, 2), dtype float32.
+        - Output index order matches input order exactly.
+        """
+        if len(bboxes_xyxy) == 0:
+            return []
+        if not self.available_frames:
+            return [None] * len(bboxes_xyxy)
+
+        f_idx = self.current_frame_idx if frame_idx is None else int(frame_idx)
+        scale_x = self.calib_w / self.video_w
+        scale_y = self.calib_h / self.video_h
+
+        b = np.asarray(bboxes_xyxy, dtype=np.float32)
+        if b.ndim != 2 or b.shape[1] != 4:
+            return [None] * len(bboxes_xyxy)
+
+        x_center = ((b[:, 0] + b[:, 2]) / 2.0) * scale_x
+        y_bottom = b[:, 3] * scale_y
+        # OpenCV shape rule: (N, 1, 2) float32
+        points = np.stack([x_center, y_bottom], axis=1).astype(np.float32).reshape(-1, 1, 2)
+        if len(points) == 0:
+            return []
+
+        def project_many(inv_matrix: np.ndarray) -> np.ndarray:
+            try:
+                mapped = cv2.perspectiveTransform(points, inv_matrix)
+                # Flatten back to (N, 2)
+                return mapped.reshape(-1, 2).astype(np.float64)
+            except cv2.error:
+                return np.full((len(points), 2), -9999.0, dtype=np.float64)
+
+        if f_idx in self.inv_homographies:
+            mapped_xy = project_many(self.inv_homographies[f_idx])
+        else:
+            before = [f for f in self.available_frames if f < f_idx]
+            after = [f for f in self.available_frames if f > f_idx]
+            if not before:
+                mapped_xy = project_many(self.inv_homographies[after[0]])
+            elif not after:
+                mapped_xy = project_many(self.inv_homographies[before[-1]])
+            else:
+                f0, f1 = before[-1], after[0]
+                if f1 - f0 > 10:
+                    mapped_xy = project_many(self.inv_homographies[f0])
+                else:
+                    xy0 = project_many(self.inv_homographies[f0])
+                    xy1 = project_many(self.inv_homographies[f1])
+                    weight = (f_idx - f0) / float(f1 - f0)
+                    mapped_xy = xy0 + (xy1 - xy0) * weight
+
+        out: list[tuple[int, int] | None] = []
+        for i in range(len(mapped_xy)):
+            x_raw, y_raw = float(mapped_xy[i][0]), float(mapped_xy[i][1])
+            if x_raw == -9999.0:
+                out.append(None)
+                continue
+            radar_x = int(round((x_raw + 52.5) * self.scale))
+            radar_y = int(round((y_raw + 34.0) * self.scale))
+            radar_x = max(0, min(self.radar_w, radar_x))
+            radar_y = max(0, min(self.radar_h, radar_y))
+            out.append((radar_x, radar_y))
+        return out
+
 
 def role_to_payload(prediction: str) -> int | tuple[int, bool] | None:
     """Map Global Draft role string to annotation payload: -1, (team_id, is_gk), or None (ball)."""

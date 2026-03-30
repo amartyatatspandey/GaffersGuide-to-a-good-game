@@ -24,6 +24,8 @@ build/
 venv/
 env/
 .env
+.env.local
+*.local
 !.env.example
 
 # --- IDE / OS ---
