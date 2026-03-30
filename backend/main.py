@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import shutil
 import threading
 from datetime import datetime, timezone
@@ -153,6 +154,10 @@ class CoachingAdviceItem(BaseModel):
     tactical_instruction: str | None = Field(
         default=None,
         description="Final coaching text (LLM output when enabled).",
+    )
+    tactical_instruction_steps: list[str] = Field(
+        default_factory=list,
+        description="Normalized tactical instruction split into concise points.",
     )
     llm_error: str | None = Field(
         default=None,
@@ -511,6 +516,88 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def _card_needs_local_llm_refresh(card: dict[str, Any]) -> bool:
+    """True when the card has a prompt but no successful coaching text yet."""
+    prompt = card.get("llm_prompt")
+    if not isinstance(prompt, str) or not prompt.strip():
+        return False
+    tip = card.get("tactical_instruction")
+    if isinstance(tip, str) and tip.strip():
+        return False
+    return True
+
+
+def _normalize_instruction_steps(text: str | None) -> list[str]:
+    """Convert model output into a clean list of at most 3 tactical points."""
+    if not isinstance(text, str):
+        return []
+    cleaned = text.strip()
+    if not cleaned:
+        return []
+
+    lines = [ln.strip() for ln in cleaned.splitlines() if ln.strip()]
+    steps: list[str] = []
+    bullet_prefix = re.compile(r"^\s*(?:\d+[.)]\s*|[-*]\s+)")
+    for line in lines:
+        line_step = bullet_prefix.sub("", line).strip()
+        if line_step:
+            steps.append(line_step)
+
+    if len(steps) <= 1:
+        chunks = re.split(r"(?<=[.!?])\s+", cleaned)
+        steps = [c.strip() for c in chunks if c.strip()]
+
+    deduped: list[str] = []
+    for step in steps:
+        normalized = " ".join(step.split())
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+        if len(deduped) == 3:
+            break
+    return deduped
+
+
+def _format_numbered_steps(steps: list[str], fallback_text: str | None) -> str | None:
+    """Return user-facing numbered text so older clients still render readable points."""
+    if steps:
+        return "\n".join([f"{idx + 1}. {step}" for idx, step in enumerate(steps)])
+    if isinstance(fallback_text, str):
+        value = fallback_text.strip()
+        return value or None
+    return None
+
+
+async def _refresh_job_report_cards_with_local_llm(
+    report_cards: list[dict[str, Any]],
+    *,
+    llm_concurrency: int,
+) -> list[dict[str, Any]]:
+    """Re-run LLM for job report rows using Ollama when the pipeline skipped cloud keys."""
+    await ensure_ollama_available()
+    semaphore = asyncio.Semaphore(llm_concurrency)
+
+    async def _one(card: dict[str, Any]) -> dict[str, Any]:
+        if not _card_needs_local_llm_refresh(card):
+            return card
+        prompt = card["llm_prompt"]
+        if not isinstance(prompt, str):
+            return card
+        async with semaphore:
+            try:
+                text = await get_tactical_advice(prompt, "local")
+                return {**card, "tactical_instruction": text, "llm_error": None}
+            except EngineRoutingError as exc:
+                return {
+                    **card,
+                    "llm_error": f"{exc.code}: {exc.message}",
+                }
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.exception("Local Ollama completion failed for job report card")
+                return {**card, "llm_error": str(exc)}
+
+    return list(await asyncio.gather(*[_one(c) for c in report_cards]))
+
+
 @app.get(
     "/api/v1/coach/advice",
     response_model=CoachAdviceResponse,
@@ -540,6 +627,10 @@ async def get_coach_advice(
     Requires ``backend/output/tactical_metrics.json`` from upstream analytics.
     Set ``GEMINI_API_KEY`` for Google Gemini (preferred), or ``LLM_API_KEY`` /
     ``OPENAI_API_KEY`` for OpenAI-compatible APIs.
+
+    When ``job_id`` is set and ``llm_engine=local``, cards that have ``llm_prompt``
+    but no ``tactical_instruction`` (e.g. cloud keys were missing at job time) are
+    completed with local Ollama on read.
     """
 
     generated_at = datetime.now(timezone.utc).isoformat()
@@ -565,17 +656,24 @@ async def get_coach_advice(
                 raise HTTPException(status_code=404, detail="Job report not found yet.")
             raise HTTPException(status_code=425, detail="Job report not ready yet.")
 
-        import json
-
         with report_file.open("r", encoding="utf-8") as f:
             report_cards: list[dict[str, Any]] = json.load(f)
 
+        if not skip_llm and llm_engine == "local":
+            report_cards = await _refresh_job_report_cards_with_local_llm(
+                report_cards,
+                llm_concurrency=llm_concurrency,
+            )
+
         # Determine whether LLM produced text.
         llm_ok = any(bool(c.get("tactical_instruction")) for c in report_cards)
+        pipeline_llm = (
+            f"ok ({llm_engine})" if llm_ok else "skipped"
+        )
         pipeline = {
             "rule_engine": "ok",
             "rag_synthesizer": "ok",
-            "llm": "ok" if llm_ok else "skipped",
+            "llm": pipeline_llm,
         }
 
         advice_items: list[CoachingAdviceItem] = []
@@ -591,7 +689,13 @@ async def get_coach_advice(
                         card.get("matched_philosophy_author", "")
                     ),
                     fc25_player_roles=card.get("fc_role_recommendations"),
-                    tactical_instruction=card.get("tactical_instruction"),
+                    tactical_instruction=_format_numbered_steps(
+                        _normalize_instruction_steps(card.get("tactical_instruction")),
+                        card.get("tactical_instruction"),
+                    ),
+                    tactical_instruction_steps=_normalize_instruction_steps(
+                        card.get("tactical_instruction")
+                    ),
                     llm_error=card.get("llm_error"),
                 )
             )
@@ -644,10 +748,12 @@ async def get_coach_advice(
                 return None, str(exc)
 
     if skip_llm:
-        llm_tasks: list[asyncio.Future[tuple[str | None, str | None]] | asyncio.Task[tuple[str | None, str | None]]] = []
+        llm_results: list[tuple[str | None, str | None]] = [
+            (None, None) for _ in records
+        ]
     else:
         llm_tasks = [_complete_routed(rec.llm_prompt, semaphore) for rec in records]
-    llm_results = await asyncio.gather(*llm_tasks) if llm_tasks else []
+        llm_results = await asyncio.gather(*llm_tasks)
 
     if skip_llm:
         pipeline["llm"] = "skipped_by_query"
@@ -656,6 +762,7 @@ async def get_coach_advice(
 
     advice_items: list[CoachingAdviceItem] = []
     for rec, (instruction, err) in zip(records, llm_results, strict=True):
+        instruction_steps = _normalize_instruction_steps(instruction)
         advice_items.append(
             CoachingAdviceItem(
                 frame_idx=rec.frame_idx,
@@ -665,7 +772,11 @@ async def get_coach_advice(
                 evidence=rec.evidence,
                 matched_philosophy_author=rec.matched_philosophy_author,
                 fc25_player_roles=rec.fc_role_recommendations,
-                tactical_instruction=instruction,
+                tactical_instruction=_format_numbered_steps(
+                    instruction_steps,
+                    instruction,
+                ),
+                tactical_instruction_steps=instruction_steps,
                 llm_error=err,
             )
         )

@@ -48,6 +48,7 @@ def test_job_artifact_endpoints() -> None:
                     "players": [],
                     "ball_xy": None,
                     "used_optical_flow_fallback": False,
+                    "camera_shift_xy": [0.0, 0.0],
                 }
             ],
         },
@@ -81,6 +82,8 @@ def test_job_artifact_endpoints() -> None:
         tr_body = tr.json()
         assert isinstance(tr_body.get("frames"), list)
         assert tr_body["frames"][0]["frame_idx"] == 1
+        assert "used_optical_flow_fallback" in tr_body["frames"][0]
+        assert "camera_shift_xy" in tr_body["frames"][0]
 
         ov = client.get(f"/api/v1/jobs/{job_id}/overlay")
         assert ov.status_code == 200

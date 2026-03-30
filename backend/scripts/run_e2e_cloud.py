@@ -26,7 +26,7 @@ PROJECT_ROOT_LOCAL = BACKEND_ROOT_LOCAL.parent
 if str(BACKEND_ROOT_LOCAL) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT_LOCAL))
 
-from scripts.run_e2e import (  # noqa: E402
+from scripts.e2e_shared import (  # noqa: E402
     BALL_INTERPOLATION_MAX_GAP,
     COUNTER_ATTACK_WINDOW_FRAMES,
     FPS,

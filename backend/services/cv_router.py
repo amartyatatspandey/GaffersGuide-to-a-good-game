@@ -32,10 +32,10 @@ class LocalCVRunner:
         progress_callback: Callable[[str], None] | None = None,
     ) -> Path:
         # Lazy import keeps cold-start light for API-only flows.
-        from scripts.run_e2e import run_e2e
+        from scripts.run_e2e_cloud import run_e2e_cloud
 
         return await asyncio.to_thread(
-            run_e2e,
+            run_e2e_cloud,
             video_path,
             output_prefix=job_id,
             progress_callback=progress_callback,

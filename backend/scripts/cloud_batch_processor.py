@@ -24,7 +24,7 @@ VIDEO_INPUT_DIR = (
 )
 OUTPUT_DIR = BACKEND_ROOT / "output"
 CLOUD_RESULTS_DIR = OUTPUT_DIR / "cloud_results"
-RUN_E2E_SCRIPT = SCRIPT_DIR / "run_e2e.py"
+RUN_E2E_SCRIPT = SCRIPT_DIR / "run_e2e_cloud.py"
 
 _HOMOGRAPHY_DIR_ENV = os.getenv("GAFFERS_HOMOGRAPHY_DIR", "").strip()
 HOMOGRAPHY_DIR = (
@@ -144,9 +144,9 @@ def main() -> None:
     CLOUD_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     HOMOGRAPHY_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Tactical threshold alignment marker with run_e2e production threshold.
+    # Tactical threshold alignment marker with production threshold.
     try:
-        from run_e2e import MIN_BALL_CONFIDENCE  # local script import
+        from scripts.e2e_shared import MIN_BALL_CONFIDENCE
 
         LOGGER.info(
             "Threshold alignment verified: MIN_BALL_CONFIDENCE=%.2f",
