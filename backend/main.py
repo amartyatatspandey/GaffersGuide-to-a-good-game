@@ -12,7 +12,6 @@ import asyncio
 import json
 import logging
 import os
-import re
 import shutil
 import threading
 from datetime import datetime, timezone
@@ -22,7 +21,7 @@ from dataclasses import dataclass
 from typing import Annotated, Any, Literal
 
 from dotenv import load_dotenv
-from fastapi import File, FastAPI, Form, HTTPException, Query, UploadFile, WebSocket
+from fastapi import File, FastAPI, Form, HTTPException, Query, Request, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from openai import AsyncOpenAI
@@ -32,7 +31,15 @@ from llm_service import gemini_is_configured, generate_coaching_advice
 from models import ChatRequest, ChatResponse, CreateJobResponse, ReportEntry, ReportsResponse
 from services.cv_router import CVEngine, CVRouterFactory
 from services.errors import EngineRoutingError
+from services.beta_job_store import BetaJobRecord, BetaJobStore
+from services.beta_queue import BetaPipelineQueue, BetaQueueItem
+from services.llm_policy import (
+    build_structured_coaching_prompt,
+    format_numbered_steps,
+    normalize_instruction_steps,
+)
 from services.llm_router import LLMEngine, ensure_ollama_available, get_tactical_advice
+from services.observability import PipelineMetricsRegistry
 from scripts.rag_coach import run as run_rag_synthesizer
 from scripts.tactical_rule_engine import run_engine
 
@@ -58,6 +65,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.on_event("startup")
+async def _startup_beta_queue() -> None:
+    await _beta_queue.start()
+
+
+@app.middleware("http")
+async def _metrics_middleware(request: Request, call_next):
+    key = f"http.{request.method}.{request.url.path}"
+    with _metrics.timed(f"{key}.latency_ms"):
+        response = await call_next(request)
+    _metrics.incr(f"{key}.status.{response.status_code}")
+    return response
+
 @dataclass(slots=True)
 class JobRecord:
     job_id: str
@@ -73,6 +94,9 @@ class JobRecord:
 
 _job_store: dict[str, JobRecord] = {}
 _job_store_lock = threading.Lock()
+_metrics = PipelineMetricsRegistry()
+_beta_store = BetaJobStore(BACKEND_ROOT / "output" / "beta_jobs_store.json")
+_beta_queue = BetaPipelineQueue(_beta_store, _metrics)
 
 
 def _job_artifact_paths(job_id: str) -> tuple[Path, Path, Path]:
@@ -81,6 +105,15 @@ def _job_artifact_paths(job_id: str) -> tuple[Path, Path, Path]:
     overlay_path = output_dir / f"{job_id}_tracking_overlay.mp4"
     tracking_path = output_dir / f"{job_id}_tracking_data.json"
     return report_path, overlay_path, tracking_path
+
+
+def _beta_job_artifact_paths(job_id: str) -> tuple[Path, Path, Path]:
+    output_dir = BACKEND_ROOT / "output"
+    return (
+        output_dir / f"{job_id}_report.json",
+        output_dir / f"{job_id}_tracking_overlay.mp4",
+        output_dir / f"{job_id}_tracking_data.json",
+    )
 
 
 async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
@@ -265,6 +298,149 @@ async def create_job(
     )
 
 
+@app.post(
+    "/api/v1beta/jobs",
+    response_model=CreateJobResponse,
+    tags=["jobs-beta"],
+)
+async def create_beta_job(
+    file: UploadFile = File(...),
+    cv_engine: CVEngine = Form("cloud"),
+    llm_engine: LLMEngine = Form("cloud"),
+    idempotency_key: str | None = Form(default=None),
+) -> CreateJobResponse:
+    """Queue-backed beta job creation endpoint with optional idempotency key."""
+    filename = file.filename or ""
+    if not filename.lower().endswith(".mp4"):
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Only .mp4 uploads are supported for now."},
+        )
+
+    if idempotency_key:
+        existing = _beta_store.find_by_idempotency(idempotency_key)
+        if existing is not None:
+            return CreateJobResponse(
+                job_id=existing.job_id,
+                status=existing.status,  # type: ignore[arg-type]
+                cv_engine=existing.cv_engine,  # type: ignore[arg-type]
+                llm_engine=existing.llm_engine,  # type: ignore[arg-type]
+            )
+
+    job_id = uuid.uuid4().hex
+    upload_dir = BACKEND_ROOT / "data" / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    video_path = upload_dir / f"{job_id}.mp4"
+
+    try:
+        with _metrics.timed("beta.upload.write_ms"):
+            with video_path.open("wb") as f_out:
+                shutil.copyfileobj(file.file, f_out)
+    finally:
+        await file.close()
+
+    now = datetime.now(timezone.utc).isoformat()
+    _beta_store.create(
+        BetaJobRecord(
+            job_id=job_id,
+            status="pending",
+            current_step="Pending",
+            cv_engine=cv_engine,
+            llm_engine=llm_engine,
+            source_video_path=str(video_path),
+            idempotency_key=idempotency_key,
+            created_at=now,
+            updated_at=now,
+        )
+    )
+    await _beta_queue.enqueue(
+        BetaQueueItem(job_id=job_id, video_path=video_path, cv_engine=cv_engine)
+    )
+    _metrics.incr("beta.jobs.created")
+
+    return CreateJobResponse(
+        job_id=job_id,
+        status="pending",
+        cv_engine=cv_engine,
+        llm_engine=llm_engine,
+    )
+
+
+@app.get("/api/v1beta/jobs/{job_id}", tags=["jobs-beta"])
+async def get_beta_job(job_id: str) -> dict[str, Any]:
+    rec = _beta_store.get(job_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    return {
+        "job_id": rec.job_id,
+        "status": rec.status,
+        "current_step": rec.current_step,
+        "result_path": rec.result_path,
+        "tracking_overlay_path": rec.tracking_overlay_path,
+        "tracking_data_path": rec.tracking_data_path,
+        "error": rec.error,
+        "created_at": rec.created_at,
+        "updated_at": rec.updated_at,
+    }
+
+
+@app.get("/api/v1beta/jobs/{job_id}/artifacts", tags=["jobs-beta"])
+async def get_beta_job_artifacts(job_id: str) -> dict[str, Any]:
+    rec = _beta_store.get(job_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    report_path, overlay_path, tracking_path = _beta_job_artifact_paths(job_id)
+    return {
+        "job_id": job_id,
+        "status": rec.status,
+        "report_path": str(report_path) if report_path.is_file() else rec.result_path,
+        "tracking_overlay_path": (
+            str(overlay_path) if overlay_path.is_file() else rec.tracking_overlay_path
+        ),
+        "tracking_data_path": (
+            str(tracking_path) if tracking_path.is_file() else rec.tracking_data_path
+        ),
+    }
+
+
+@app.websocket("/ws/v1beta/jobs/{job_id}")
+async def beta_job_progress_ws(websocket: WebSocket, job_id: str) -> None:
+    await websocket.accept()
+    try:
+        while True:
+            rec = _beta_store.get(job_id)
+            if rec is None:
+                await websocket.send_json(
+                    {
+                        "job_id": job_id,
+                        "status": "error",
+                        "current_step": "Unknown job",
+                        "result_path": None,
+                        "error": "job_not_found",
+                    }
+                )
+                return
+            await websocket.send_json(
+                {
+                    "job_id": rec.job_id,
+                    "status": rec.status,
+                    "current_step": rec.current_step,
+                    "result_path": rec.result_path,
+                    "tracking_overlay_path": rec.tracking_overlay_path,
+                    "tracking_data_path": rec.tracking_data_path,
+                    "error": rec.error,
+                }
+            )
+            if rec.status in ("done", "error"):
+                return
+            await asyncio.sleep(0.5)
+    finally:
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
+
 @app.get("/api/v1/jobs/{job_id}/artifacts", tags=["jobs"])
 async def get_job_artifacts(job_id: str) -> dict[str, Any]:
     with _job_store_lock:
@@ -374,18 +550,10 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
         prompt_context = "Job insights:\n" + "\n".join(lines)
 
-    full_prompt = f"""You are an elite football coach and tactician.
-
-{prompt_context}
-
-User question:
-{req.message}
-
-Output requirements:
-1. Provide exactly 3 numbered tactical steps.
-2. Keep it under 150 words.
-3. Focus on the user question and stay consistent with the job insights when provided.
-"""
+    full_prompt = build_structured_coaching_prompt(
+        user_prompt=req.message,
+        context=prompt_context,
+    )
 
     try:
         reply = await get_tactical_advice(full_prompt, selected_llm_engine)
@@ -516,6 +684,23 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/api/v1beta/metrics", tags=["meta-beta"])
+async def beta_metrics() -> dict[str, Any]:
+    """Return beta pipeline metrics snapshot for baseline and promotion gates."""
+    snapshot = _metrics.snapshot()
+    counters = snapshot.get("counters", {})
+    succeeded = int(counters.get("beta.jobs.succeeded", 0)) if isinstance(counters, dict) else 0
+    failed = int(counters.get("beta.jobs.failed", 0)) if isinstance(counters, dict) else 0
+    total = succeeded + failed
+    success_rate = (succeeded / total * 100.0) if total else 0.0
+    gates = {
+        "job_success_rate_pct": round(success_rate, 2),
+        "minimum_required_success_rate_pct": 95.0,
+        "pass": success_rate >= 95.0 if total else False,
+    }
+    return {"snapshot": snapshot, "promotion_gate": gates}
+
+
 def _card_needs_local_llm_refresh(card: dict[str, Any]) -> bool:
     """True when the card has a prompt but no successful coaching text yet."""
     prompt = card.get("llm_prompt")
@@ -525,46 +710,6 @@ def _card_needs_local_llm_refresh(card: dict[str, Any]) -> bool:
     if isinstance(tip, str) and tip.strip():
         return False
     return True
-
-
-def _normalize_instruction_steps(text: str | None) -> list[str]:
-    """Convert model output into a clean list of at most 3 tactical points."""
-    if not isinstance(text, str):
-        return []
-    cleaned = text.strip()
-    if not cleaned:
-        return []
-
-    lines = [ln.strip() for ln in cleaned.splitlines() if ln.strip()]
-    steps: list[str] = []
-    bullet_prefix = re.compile(r"^\s*(?:\d+[.)]\s*|[-*]\s+)")
-    for line in lines:
-        line_step = bullet_prefix.sub("", line).strip()
-        if line_step:
-            steps.append(line_step)
-
-    if len(steps) <= 1:
-        chunks = re.split(r"(?<=[.!?])\s+", cleaned)
-        steps = [c.strip() for c in chunks if c.strip()]
-
-    deduped: list[str] = []
-    for step in steps:
-        normalized = " ".join(step.split())
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-        if len(deduped) == 3:
-            break
-    return deduped
-
-
-def _format_numbered_steps(steps: list[str], fallback_text: str | None) -> str | None:
-    """Return user-facing numbered text so older clients still render readable points."""
-    if steps:
-        return "\n".join([f"{idx + 1}. {step}" for idx, step in enumerate(steps)])
-    if isinstance(fallback_text, str):
-        value = fallback_text.strip()
-        return value or None
-    return None
 
 
 async def _refresh_job_report_cards_with_local_llm(
@@ -689,11 +834,11 @@ async def get_coach_advice(
                         card.get("matched_philosophy_author", "")
                     ),
                     fc25_player_roles=card.get("fc_role_recommendations"),
-                    tactical_instruction=_format_numbered_steps(
-                        _normalize_instruction_steps(card.get("tactical_instruction")),
+                    tactical_instruction=format_numbered_steps(
+                        normalize_instruction_steps(card.get("tactical_instruction")),
                         card.get("tactical_instruction"),
                     ),
-                    tactical_instruction_steps=_normalize_instruction_steps(
+                    tactical_instruction_steps=normalize_instruction_steps(
                         card.get("tactical_instruction")
                     ),
                     llm_error=card.get("llm_error"),
@@ -762,7 +907,7 @@ async def get_coach_advice(
 
     advice_items: list[CoachingAdviceItem] = []
     for rec, (instruction, err) in zip(records, llm_results, strict=True):
-        instruction_steps = _normalize_instruction_steps(instruction)
+        instruction_steps = normalize_instruction_steps(instruction)
         advice_items.append(
             CoachingAdviceItem(
                 frame_idx=rec.frame_idx,
@@ -772,7 +917,7 @@ async def get_coach_advice(
                 evidence=rec.evidence,
                 matched_philosophy_author=rec.matched_philosophy_author,
                 fc25_player_roles=rec.fc_role_recommendations,
-                tactical_instruction=_format_numbered_steps(
+                tactical_instruction=format_numbered_steps(
                     instruction_steps,
                     instruction,
                 ),
