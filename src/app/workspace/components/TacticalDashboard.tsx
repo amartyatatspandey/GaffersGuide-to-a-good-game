@@ -5,13 +5,18 @@ import { VideoHUD } from './VideoHUD';
 import { Clock, Send, Bot, User, Menu, ChevronLeft } from 'lucide-react';
 import { useStreamingText } from '@/hooks/useStreamingText';
 
+interface TeamInsight {
+  payload: string;
+  keywords: KeywordConfig[];
+}
+
 interface TimelineData {
   time: string;
   title: string;
   minute: string;
   summary: string;
-  payload: string;
-  keywords: KeywordConfig[];
+  blueTeam: TeamInsight;
+  redTeam: TeamInsight;
 }
 
 const TIMELINE_DATA: TimelineData[] = [
@@ -20,47 +25,85 @@ const TIMELINE_DATA: TimelineData[] = [
     title: 'Midfield Disconnect',
     minute: '12:45',
     summary: '1 Critical insights flagged',
-    payload: "The opponent has a massive gap between their defense and midfield. Deploy your striker as a False 9 to drop into this Zone 14 pocket. Simultaneously, instruct your left back to act as an Inverted Fullback, tucking into the central midfield to create a numerical overload and dominate the center of the pitch.",
-    keywords: [
-      { text: "False 9", color: "emerald", role: "False 9" },
-      { text: "Zone 14 pocket", color: "amber", role: "Zone 14" },
-      { text: "Inverted Fullback", color: "emerald", role: "Inverted Fullback" },
-      { text: "tucking into the central midfield", color: "cyan", role: "Inverted Fullback" }
-    ]
+    blueTeam: {
+      payload: "The opponent (Red Team) has a massive gap between their defense and midfield. Deploy your striker as a False 9 to drop into this Zone 14 pocket. Instruct your left back to act as an Inverted Fullback, tucking into the central midfield to create a numerical overload.",
+      keywords: [
+        { text: "False 9", color: "emerald", role: "False 9" },
+        { text: "Zone 14 pocket", color: "amber", role: "Zone 14" },
+        { text: "Inverted Fullback", color: "emerald", role: "Inverted Fullback" },
+        { text: "tucking into the central midfield", color: "cyan", role: "Inverted Fullback" }
+      ]
+    },
+    redTeam: {
+      payload: "Blue Team's defensive line is retreating too early, creating a huge gap. Exploit this by pushing our Attacking Midfielder higher to operate between the lines in Zone 14. Have our wingers stay wide to stretch their Inverted Fullbacks.",
+      keywords: [
+        { text: "Attacking Midfielder", color: "amber", role: "Attacking Mid" },
+        { text: "Zone 14", color: "cyan", role: "Zone 14" },
+        { text: "Inverted Fullbacks", color: "emerald", role: "Inverted Fullback" }
+      ]
+    }
   },
   {
     time: '15:00 - 30:00',
     title: 'High Press Exploited',
     minute: '22:15',
     summary: 'High risk transition vulnerability',
-    payload: "Our high defensive line is being bypassed by long diagonals. The right winger is staying high, pinning back our Left Back. Shift the defensive block to a mid-block temporarily and instruct the holding midfielder to provide cover in the channels.",
-    keywords: [
-      { text: "mid-block", color: "amber", role: "Defensive Block" },
-      { text: "holding midfielder", color: "emerald", role: "Holding Mid" },
-      { text: "cover in the channels", color: "cyan", role: "Holding Mid" }
-    ]
+    blueTeam: {
+      payload: "Our high defensive line is being bypassed by long diagonals. Shift the defensive block to a mid-block temporarily and instruct the holding midfielder to provide cover in the channels.",
+      keywords: [
+        { text: "mid-block", color: "amber", role: "Defensive Block" },
+        { text: "holding midfielder", color: "emerald", role: "Holding Mid" },
+        { text: "cover in the channels", color: "cyan", role: "Holding Mid" }
+      ]
+    },
+    redTeam: {
+      payload: "Blue team's high press is aggressive. Utilize long diagonals from our Center Backs directly to the wide areas. Keep our wingers high to pin back their fullbacks and exploit the space behind.",
+      keywords: [
+        { text: "long diagonals", color: "cyan", role: "Playmaker" },
+        { text: "pin back their fullbacks", color: "amber", role: "Winger" }
+      ]
+    }
   },
   {
     time: '30:00 - 45+',
     title: 'Structural Stability',
     minute: '41:00',
     summary: 'No major anomalies structurally',
-    payload: "The structural adjustments have successfully neutralized the opponent's transition game. Maintain current shape. Wingers should continue tracking back to ensure wide overloads do not develop near the box before halftime.",
-    keywords: []
+    blueTeam: {
+      payload: "Structural adjustments have neutralized their transition game. Maintain current shape. Wingers should prioritize tracking back to prevent wide overloads before halftime.",
+      keywords: []
+    },
+    redTeam: {
+      payload: "Blue team has stabilized their defensive block. Introduce greater rotational movement in the final third to disrupt marking. Consider swapping wingers to change the angle of attack.",
+      keywords: []
+    }
   }
 ];
 
 // Sub-component for a streaming AI chat bubble
 function StreamingBubble({ text }: { text: string }) {
   const { displayedText } = useStreamingText(text, 25);
+
+  const renderFormattedText = (raw: string) => {
+    const parts = raw.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} className="font-bold text-gray-100">{part.slice(2, -2)}</strong>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
   return (
     <div className="flex gap-4">
       <div className="w-8 h-8 rounded-full bg-emerald-900/50 flex items-center justify-center flex-shrink-0 border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
         <Bot size={16} className="text-emerald-400" />
       </div>
-      <div className="flex-1 bg-gray-800/80 border border-gray-700/50 rounded-2xl rounded-tl-none p-4 text-sm text-gray-300">
-        {displayedText}
-        <span className="inline-block w-2 bg-emerald-500 animate-pulse h-4 align-middle ml-1 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span>
+      <div className="flex-1 bg-gray-800/80 border border-gray-700/50 rounded-2xl rounded-tl-none p-4 text-sm text-gray-300 overflow-x-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-700">
+        <div className="min-w-fit pr-2">
+          {renderFormattedText(displayedText)}
+          <span className="inline-block w-2 bg-emerald-500 animate-pulse h-4 align-middle ml-1 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span>
+        </div>
       </div>
     </div>
   );
@@ -104,7 +147,7 @@ export function TacticalDashboard() {
       setChatHistory(prev => [...prev, { 
         id: (Date.now() + 1).toString(), 
         role: 'ai', 
-        text: "Based on the kinematic tracking data, dropping a midfielder into the half-space will draw their center back out of position. This enables the winger to exploit the blindside run natively. I recommend activating a 3-2-5 attacking structure." 
+        text: "Based on the **kinematic tracking data**, dropping a midfielder into the half-space will draw their center-back out of position. This enables the winger to exploit the **blindside run** natively. I recommend activating a **3-2-5 attacking structure**." 
       }]);
     }, 1200);
   };
@@ -180,8 +223,8 @@ export function TacticalDashboard() {
                    key={activeIndex} 
                    title={TIMELINE_DATA[activeIndex].title}
                    minute={TIMELINE_DATA[activeIndex].minute}
-                   payload={TIMELINE_DATA[activeIndex].payload}
-                   keywords={TIMELINE_DATA[activeIndex].keywords}
+                   blueTeam={TIMELINE_DATA[activeIndex].blueTeam}
+                   redTeam={TIMELINE_DATA[activeIndex].redTeam}
                  />
                </div>
              </div>

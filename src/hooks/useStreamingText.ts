@@ -15,13 +15,9 @@ export function useStreamingText(fullText: string, speedMs: number = 20) {
     let currentIndex = 0;
 
     const intervalId = setInterval(() => {
-      if (currentIndex < fullText.length - 1) {
-        // Use functional state update to guarantee latest state length
-        setDisplayedText(prev => prev + fullText[currentIndex]);
-        currentIndex++;
-      } else {
-        // Last character
-        setDisplayedText(prev => prev + fullText[currentIndex]);
+      currentIndex++;
+      setDisplayedText(fullText.substring(0, currentIndex));
+      if (currentIndex >= fullText.length) {
         setIsStreaming(false);
         clearInterval(intervalId);
       }

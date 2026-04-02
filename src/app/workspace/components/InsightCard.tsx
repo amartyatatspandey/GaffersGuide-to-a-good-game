@@ -10,15 +10,22 @@ export interface KeywordConfig {
   role: string;
 }
 
-interface InsightCardProps {
-  title: string;
-  minute: string;
+interface TeamInsight {
   payload: string;
   keywords: KeywordConfig[];
 }
 
-export function InsightCard({ title, minute, payload, keywords }: InsightCardProps) {
-  const { displayedText } = useStreamingText(payload, 20);
+interface InsightCardProps {
+  title: string;
+  minute: string;
+  blueTeam: TeamInsight;
+  redTeam: TeamInsight;
+}
+
+export function InsightCard({ title, minute, blueTeam, redTeam }: InsightCardProps) {
+  const [activeTeam, setActiveTeam] = useState<'blue' | 'red'>('blue');
+  const currentData = activeTeam === 'blue' ? blueTeam : redTeam;
+  const { displayedText } = useStreamingText(currentData.payload, 20);
   const [activeRole, setActiveRole] = useState<string | null>(null);
   const [isGridOpen, setIsGridOpen] = useState(false);
 
@@ -28,13 +35,13 @@ export function InsightCard({ title, minute, payload, keywords }: InsightCardPro
   };
 
   const renderInterpolatedText = (text: string) => {
-    if (keywords.length === 0) return <span>{text}</span>;
-    const regexText = keywords.map(k => k.text).join('|');
+    if (currentData.keywords.length === 0) return <span>{text}</span>;
+    const regexText = currentData.keywords.map(k => k.text).join('|');
     const regex = new RegExp(`(${regexText})`, 'gi');
     const parts = text.split(regex);
 
     return parts.map((part, i) => {
-      const kw = keywords.find(k => k.text.toLowerCase() === part.toLowerCase());
+      const kw = currentData.keywords.find(k => k.text.toLowerCase() === part.toLowerCase());
       if (kw) {
         // Build color scheme
         const colorClasses = 
@@ -60,15 +67,34 @@ export function InsightCard({ title, minute, payload, keywords }: InsightCardPro
     <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 shadow-lg mb-4 max-w-2xl relative overflow-hidden font-sans transition-all duration-500">
       {/* Header */}
       <div className="flex justify-between items-start mb-3">
-        <h3 className="text-xl font-bold text-red-400 flex items-center gap-2">
+        <h3 className="text-xl font-bold text-gray-200 flex items-center gap-2">
           <span>🚨</span> {title}
         </h3>
-        <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 font-mono">Minute {minute}</span>
+      </div>
+
+      {/* Team Toggle */}
+      <div className="flex mb-5 bg-[#0a0f0a] border border-gray-700/50 p-1 rounded-lg w-full max-w-[280px]">
+        <button 
+          onClick={() => setActiveTeam('blue')}
+          className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all ${
+            activeTeam === 'blue' ? 'bg-blue-600/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          Team Blue
+        </button>
+        <button 
+          onClick={() => setActiveTeam('red')}
+          className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all ${
+            activeTeam === 'red' ? 'bg-red-600/20 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          Team Red
+        </button>
       </div>
       
       {/* Interactive Tactical Role Badges */}
       <div className="flex flex-wrap gap-2 mb-4">
-        {Array.from(new Set(keywords.map(k => k.role))).map((uniqueRole, idx) => (
+        {Array.from(new Set(currentData.keywords.map(k => k.role))).map((uniqueRole, idx) => (
            <button 
              key={idx}
              onClick={() => handleRoleClick(uniqueRole)}

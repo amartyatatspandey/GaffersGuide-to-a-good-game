@@ -56,26 +56,6 @@ export function Sidebar({
               {!isCollapsed && <span className="text-sm">Engine Settings</span>}
             </button>
           </nav>
-
-          {/* Recent Files */}
-          {!isCollapsed && (
-            <>
-              <div className="px-5 mt-10 mb-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest flex items-center justify-between">
-                <span>Recent Analysis</span>
-                <RefreshCw size={12} className="cursor-pointer hover:text-gray-300 transition-colors" />
-              </div>
-              <div className="space-y-1">
-                <button className="w-full flex items-center gap-3 px-6 py-2 text-gray-400 hover:text-gray-200 transition-colors truncate">
-                  <Database size={14} className="flex-shrink-0" />
-                  <span className="text-xs truncate">MCI_vs_ARS_WK5.mp4</span>
-                </button>
-                <button className="w-full flex items-center gap-3 px-6 py-2 text-gray-400 hover:text-gray-200 transition-colors truncate">
-                  <Database size={14} className="flex-shrink-0" />
-                  <span className="text-xs truncate">LIV_vs_CHE_FINAL.mp4</span>
-                </button>
-              </div>
-            </>
-          )}
         </div>
 
         {/* Status Indicators */}
