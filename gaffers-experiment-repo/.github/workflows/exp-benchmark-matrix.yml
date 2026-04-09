@@ -1,0 +1,56 @@
+name: Exp Benchmark Matrix
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "experiment-backend/**"
+      - "docs/experiment_runbook.md"
+
+jobs:
+  nvidia_release_gate:
+    # Requires self-hosted GPU runner with label nvidia.
+    runs-on: [self-hosted, linux, nvidia]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          cd experiment-backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run NVIDIA benchmark matrix (blocking)
+        run: |
+          cd experiment-backend
+          python -m scripts.benchmark_decoders ../../backend/data/match_test.mp4 --matrix --runtime-target nvidia --hardware-profile l4 --output-json output/exp/decoder_benchmark_matrix_nvidia.json
+      - name: Upload NVIDIA benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: decoder-benchmark-nvidia
+          path: experiment-backend/output/exp/decoder_benchmark_matrix_nvidia.json
+
+  apple_mps_tracked:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          cd experiment-backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run Apple MPS benchmark matrix (non-blocking)
+        run: |
+          cd experiment-backend
+          python -m scripts.benchmark_decoders ../../backend/data/match_test.mp4 --matrix --runtime-target apple_mps --hardware-profile mps --output-json output/exp/decoder_benchmark_matrix_mps.json
+      - name: Upload MPS benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: decoder-benchmark-mps
+          path: experiment-backend/output/exp/decoder_benchmark_matrix_mps.json
