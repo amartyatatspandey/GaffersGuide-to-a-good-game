@@ -1,7 +1,0 @@
--r requirements-cpu.txt
-# Cloud GPU runtime stack (install in worker-gpu image/profile)
-onnxruntime-gpu>=1.18.0
-# TensorRT packages are environment-specific and often installed from NVIDIA channels.
-# Keep placeholder dependency metadata in docs/build tooling.
-# Apple MPS track dependency (optional on macOS; CPU fallback is automatic when absent).
-torch>=2.3.0; platform_system == "Darwin"

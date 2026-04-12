@@ -1,2 +1,0 @@
-# Place YOLO .pt weights here (e.g. best.pt from setup_references.py or Colab training).
-# *.pt is gitignored; use Git LFS if you need to track a model.
