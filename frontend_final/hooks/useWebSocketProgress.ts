@@ -1,13 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { getWsBaseUrl } from '../lib/apiBase';
 
-export type ProgressStep = 
-  | 'Pending'
-  | 'Tracking Players'
-  | 'Spatial Math'
-  | 'Rule Engine'
-  | 'Synthesizing Advice'
-  | 'Completed';
+export type ProgressStep = string;
 
+// Common steps matching backend's potential output
 export const STEPS: ProgressStep[] = [
   'Tracking Players',
   'Spatial Math',
@@ -18,30 +14,56 @@ export const STEPS: ProgressStep[] = [
 export function useWebSocketProgress() {
   const [currentStep, setCurrentStep] = useState<ProgressStep>('Pending');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  const startProcessing = () => {
+  const startTracking = useCallback((jobId: string) => {
     setIsProcessing(true);
-    setCurrentStep('Tracking Players');
-  };
+    setError(null);
+    setCurrentStep('Pending');
 
-  useEffect(() => {
-    if (!isProcessing) return;
+    const wsUrl = `${getWsBaseUrl()}/ws/jobs/${jobId}`;
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
 
-    const timer1 = setTimeout(() => setCurrentStep('Spatial Math'), 2000);
-    const timer2 = setTimeout(() => setCurrentStep('Rule Engine'), 4000);
-    const timer3 = setTimeout(() => setCurrentStep('Synthesizing Advice'), 6000);
-    const timer4 = setTimeout(() => {
-      setCurrentStep('Completed');
-      setIsProcessing(false);
-    }, 8000);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timer4);
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.current_step) {
+          setCurrentStep(data.current_step);
+        }
+        if (data.status === 'Completed' || data.status === 'Failed' || data.type === 'error') {
+          if (data.status === 'Failed' || data.type === 'error') {
+             setError(data.message || 'Job Failed');
+          } else {
+             setCurrentStep('Completed');
+          }
+          setIsProcessing(false);
+          ws.close();
+        }
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
+      }
     };
-  }, [isProcessing]);
 
-  return { currentStep, isProcessing, startProcessing };
+    ws.onerror = (e) => {
+      console.error('WebSocket Error', e);
+      setError('Connection Error');
+      setIsProcessing(false);
+    };
+
+    ws.onclose = () => {
+      setIsProcessing(false);
+    };
+
+  }, []);
+
+  const disconnect = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+    setIsProcessing(false);
+  }, []);
+
+  return { currentStep, isProcessing, error, startTracking, disconnect };
 }

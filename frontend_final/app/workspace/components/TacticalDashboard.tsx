@@ -109,7 +109,11 @@ function StreamingBubble({ text }: { text: string }) {
   );
 }
 
-export function TacticalDashboard() {
+interface DashboardProps {
+  job: { jobId: string; file: File; tracking: any } | null;
+}
+
+export function TacticalDashboard({ job }: DashboardProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
   
@@ -204,7 +208,7 @@ export function TacticalDashboard() {
              Live IPC Feed
            </div>
            
-           <VideoHUD />
+           <VideoHUD file={job?.file} trackingData={job?.tracking} />
         </div>
 
         {/* Bottom Half: Telemetry Insight Viewer + Chat */}
