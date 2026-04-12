@@ -16,6 +16,11 @@ huggingface_hub>=0.24.0
 torch>=2.2.0,<2.6.0
 opencv-python-headless>=4.10.0,<4.12.0
 
+# Local CV pipeline (run_e2e_cloud.py, track_teams / YOLO)
+supervision>=0.22.0
+ultralytics>=8.0.0
+scikit-learn>=1.4.0
+
 # EDA / viz prep (prepare_viz_data.py)
 pandas>=2.0.0
 tqdm>=4.66.0

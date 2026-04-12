@@ -2772,6 +2772,25 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$ap
 const _sleep = (ms)=>new Promise((r)=>{
         setTimeout(r, ms);
     });
+// #region agent log
+function _coachDebug(hypothesisId, location, message, data) {
+    fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "bb63ae"
+        },
+        body: JSON.stringify({
+            sessionId: "bb63ae",
+            hypothesisId,
+            location,
+            message,
+            data,
+            timestamp: Date.now()
+        })
+    }).catch(()=>{});
+}
+// #endregion
 function coachAdviceUrl(jobId, llmEngine, skipLlm) {
     const base = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getApiBaseUrl"])();
     return `${base}/api/v1/coach/advice?${new URLSearchParams({
@@ -2780,12 +2799,111 @@ function coachAdviceUrl(jobId, llmEngine, skipLlm) {
         skip_llm: skipLlm ? "true" : "false"
     }).toString()}`;
 }
+async function _coachFetch(url) {
+    try {
+        return await fetch(url);
+    } catch (e) {
+        const inner = e instanceof Error ? e.message : String(e);
+        // #region agent log
+        _coachDebug("A", "coach.ts:_coachFetch", "fetch_rejected", {
+            inner,
+            urlHost: (()=>{
+                try {
+                    return new URL(url).host;
+                } catch  {
+                    return "bad-url";
+                }
+            })()
+        });
+        // #endregion
+        const base = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getApiBaseUrl"])();
+        throw new Error(`Coach request could not reach the API (${inner}). ` + `Confirm FastAPI is running at ${base}. ` + `Safari/WebKit often reports this as "Load failed" when the connection drops or times out ` + `(a long local-Ollama refresh on /coach/advice can cause that).`);
+    }
+}
 async function getCoachAdvice(jobId, llmEngine = "local") {
     const maxAttempts = 36;
+    // #region agent log
+    _coachDebug("E", "coach.ts:getCoachAdvice", "enter", {
+        jobIdPrefix: jobId.slice(0, 8),
+        llmEngine
+    });
+    // #endregion
     for(let attempt = 0; attempt < maxAttempts; attempt++){
-        const res = await fetch(coachAdviceUrl(jobId, llmEngine, false));
+        const res = await _coachFetch(coachAdviceUrl(jobId, llmEngine, true));
+        // #region agent log
+        _coachDebug("D", "coach.ts:getCoachAdvice", "poll_skip_llm_response", {
+            attempt,
+            status: res.status,
+            ok: res.ok
+        });
+        // #endregion
         if (res.ok) {
-            return await res.json();
+            let fast;
+            try {
+                fast = await res.json();
+            } catch (parseErr) {
+                // #region agent log
+                _coachDebug("E", "coach.ts:getCoachAdvice", "poll_json_parse_failed", {
+                    err: parseErr instanceof Error ? parseErr.message : String(parseErr)
+                });
+                // #endregion
+                throw new Error("Coach advice response was not valid JSON (check API base URL and that FastAPI served this request).");
+            }
+            if (llmEngine !== "local") {
+                return fast;
+            }
+            const items = fast.advice_items ?? [];
+            const fullyHydrated = items.length > 0 && items.every((it)=>typeof it.tactical_instruction === "string" && it.tactical_instruction.trim().length > 0);
+            // #region agent log
+            _coachDebug("C", "coach.ts:getCoachAdvice", "enrich_gate", {
+                itemCount: items.length,
+                fullyHydrated,
+                skipEnrichReason: items.length === 0 ? "empty_report" : fullyHydrated ? "already_hydrated" : "needs_enrich"
+            });
+            // #endregion
+            if (items.length === 0 || fullyHydrated) {
+                return fast;
+            }
+            try {
+                // #region agent log
+                _coachDebug("A", "coach.ts:getCoachAdvice", "enrich_fetch_start", {
+                    adviceLen: items.length
+                });
+                // #endregion
+                const richRes = await _coachFetch(coachAdviceUrl(jobId, "local", false));
+                // #region agent log
+                _coachDebug("B", "coach.ts:getCoachAdvice", "enrich_fetch_response", {
+                    status: richRes.status,
+                    ok: richRes.ok
+                });
+                // #endregion
+                if (richRes.ok) {
+                    try {
+                        return await richRes.json();
+                    } catch (parseRich) {
+                        // #region agent log
+                        _coachDebug("E", "coach.ts:getCoachAdvice", "enrich_json_parse_failed", {
+                            err: parseRich instanceof Error ? parseRich.message : String(parseRich)
+                        });
+                        // #endregion
+                        return fast;
+                    }
+                }
+                if (richRes.status === 424 || richRes.status === 500) {
+                    const resSkip = await _coachFetch(coachAdviceUrl(jobId, "local", true));
+                    if (resSkip.ok) {
+                        return await resSkip.json();
+                    }
+                }
+                return fast;
+            } catch (enrichErr) {
+                // #region agent log
+                _coachDebug("E", "coach.ts:getCoachAdvice", "enrich_catch_fallback_fast", {
+                    err: enrichErr instanceof Error ? enrichErr.message : String(enrichErr)
+                });
+                // #endregion
+                return fast;
+            }
         }
         const text = await res.text().catch(()=>"");
         if (res.status === 425 && attempt < maxAttempts - 1) {
@@ -2793,7 +2911,7 @@ async function getCoachAdvice(jobId, llmEngine = "local") {
             continue;
         }
         if (llmEngine === "local" && (res.status === 424 || res.status === 500)) {
-            const resSkip = await fetch(coachAdviceUrl(jobId, llmEngine, true));
+            const resSkip = await _coachFetch(coachAdviceUrl(jobId, llmEngine, true));
             if (resSkip.ok) {
                 return await resSkip.json();
             }

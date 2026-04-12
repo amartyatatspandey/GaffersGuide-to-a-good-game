@@ -7,6 +7,7 @@ Uses logging; prints detection counts for the first frame as required.
 """
 
 import logging
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -19,7 +20,12 @@ logger = logging.getLogger(__name__)
 # Resolve backend root: script lives in backend/scripts/
 SCRIPT_DIR = Path(__file__).resolve().parent
 BACKEND_ROOT = SCRIPT_DIR.parent
-MODEL_PATH = BACKEND_ROOT / "models" / "pretrained" / "best.pt"
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from services.pipeline_paths import tracking_model_weights_path  # noqa: E402
+
+MODEL_PATH = tracking_model_weights_path()
 VIDEO_PATH = BACKEND_ROOT / "data" / "match_test.mp4"
 OUTPUT_DIR = BACKEND_ROOT / "output"
 OUTPUT_VIDEO = OUTPUT_DIR / "validation_adit.mp4"

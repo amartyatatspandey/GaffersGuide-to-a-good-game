@@ -21,8 +21,6 @@ BACKEND_ROOT = Path(__file__).resolve().parent.parent
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from scripts.dynamic_homography import DynamicPitchCalibrator
-
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -36,6 +34,8 @@ def run(video_path: Path, weights_dir: Path, sample_every: int, output_json: Pat
         raise FileNotFoundError(f"Video not found: {video_path}")
     if not weights_dir.is_dir():
         raise FileNotFoundError(f"Weights dir not found: {weights_dir}")
+
+    from scripts.dynamic_homography import DynamicPitchCalibrator
 
     calibrator = DynamicPitchCalibrator(weights_dir)
     cap = cv2.VideoCapture(str(video_path))
@@ -83,6 +83,54 @@ def run(video_path: Path, weights_dir: Path, sample_every: int, output_json: Pat
         logger.info("Wrote %s", output_json)
     elif output_json and not results:
         logger.warning("No homography samples; not writing %s (empty file would be skipped by cloud batch)", output_json)
+
+
+def ensure_homography_json_for_video(
+    video_path: Path,
+    *,
+    sample_every: int = DEFAULT_SAMPLE_EVERY,
+) -> Path:
+    """
+    Resolve homography JSON for ``video_path`` (env override or per-stem under ``output/``).
+
+    If the file is missing and ``references/sn-calibration/resources`` exists, runs the
+    calibrator synchronously. Otherwise raises ``FileNotFoundError`` with a CLI hint.
+    """
+    from services.pipeline_paths import (
+        format_homography_missing_error,
+        resolve_tracking_homography_json_path,
+        sn_calibration_resources_dir,
+        validate_homography_json_file,
+    )
+
+    vp = video_path.expanduser().resolve()
+    expected = resolve_tracking_homography_json_path(vp)
+    if expected.is_file():
+        bad = validate_homography_json_file(expected)
+        if bad:
+            raise ValueError(bad)
+        return expected
+
+    weights_dir = sn_calibration_resources_dir()
+    if weights_dir.is_dir():
+        logger.info(
+            "Homography JSON not found at %s; running calibrator (resources at %s).",
+            expected,
+            weights_dir,
+        )
+        run(
+            video_path=vp,
+            weights_dir=weights_dir,
+            sample_every=sample_every,
+            output_json=expected,
+        )
+
+    if not expected.is_file():
+        raise FileNotFoundError(format_homography_missing_error(vp, expected))
+    bad = validate_homography_json_file(expected)
+    if bad:
+        raise ValueError(bad)
+    return expected
 
 
 def _default_output_for_video(video_path: Path) -> Path:

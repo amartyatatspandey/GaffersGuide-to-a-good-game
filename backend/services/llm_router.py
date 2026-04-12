@@ -8,7 +8,12 @@ from openai import AsyncOpenAI
 
 from llm_service import generate_coaching_advice, gemini_is_configured
 from services.errors import EngineRoutingError
-from services.ollama_client import ensure_ollama_available, generate_local_advice
+from services.ollama_client import (
+    ensure_ollama_available,
+    generate_local_advice,
+    start_ollama_for_app_lifecycle,
+    stop_ollama_for_app_lifecycle,
+)
 
 LLMEngine = Literal["local", "cloud"]
 
@@ -86,5 +91,7 @@ __all__ = [
     "get_tactical_advice",
     "generate_coaching_text",
     "ensure_ollama_available",
+    "start_ollama_for_app_lifecycle",
+    "stop_ollama_for_app_lifecycle",
 ]
 

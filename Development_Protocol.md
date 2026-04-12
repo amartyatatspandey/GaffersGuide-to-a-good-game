@@ -59,3 +59,24 @@ Ensure the AI places files in this structure:
 └── Development_Protocol.md  # THIS FILE
 
 
+7. Local LLM (Ollama)
+
+- Backend uses `OLLAMA_BASE_URL` and `OLLAMA_MODEL` (see `backend/.env.example`).
+- Request-time auto-start: if the `ollama` binary is on PATH and `/api/tags` fails, the API spawns `ollama serve` and retries when **not** on Cloud Run and `OLLAMA_AUTO_START` is unset (default on laptops). Set `OLLAMA_AUTO_START=0` to disable. On Cloud Run (`K_SERVICE`), default is off unless `OLLAMA_AUTO_START_IN_CLOUD=1`.
+- Optional `OLLAMA_MANAGED_LIFECYCLE=1` or `GAFFERS_DEFAULT_LLM_ENGINE=local`: on FastAPI startup the backend starts `ollama serve` if nothing is listening yet, and on shutdown it stops **only** that child process (not an Ollama you started yourself). Optional `OLLAMA_PULL_ON_START=1` runs `ollama pull` for `OLLAMA_MODEL` after the daemon is up (can be slow).
+
+8. CV pipeline homography (SoccerNet sn-calibration)
+
+Local CV (`run_e2e_cloud`, API jobs) expects per-upload homography at
+`backend/output/{video_stem}_homographies.json`, or `GAFFERS_HOMOGRAPHY_JSON` pointing at a JSON file.
+
+Auto-generation during a job requires:
+
+- Clone https://github.com/SoccerNet/sn-calibration into `backend/references/sn-calibration`.
+- Populate `backend/references/sn-calibration/resources/` per the upstream README (calibration weights).
+- Leave `GAFFERS_HOMOGRAPHY_JSON` unset for normal per-upload files; set it only to override with an existing file.
+
+Verify layout from `backend/`: `python scripts/verify_sn_calibration.py` (add `--try-import` to test `DynamicPitchCalibrator`).
+
+Docker / Cloud Run: the default image copies the repo root; if `references/sn-calibration` is not in the build context, mount it or bake it into the image, otherwise homography auto-generation will fail the same way as on a bare laptop.
+

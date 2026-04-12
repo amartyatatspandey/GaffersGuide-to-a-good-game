@@ -46,7 +46,13 @@ from services.llm_policy import (
     format_numbered_steps,
     normalize_instruction_steps,
 )
-from services.llm_router import LLMEngine, ensure_ollama_available, get_tactical_advice
+from services.llm_router import (
+    LLMEngine,
+    ensure_ollama_available,
+    get_tactical_advice,
+    start_ollama_for_app_lifecycle,
+    stop_ollama_for_app_lifecycle,
+)
 from services.observability import PipelineMetricsRegistry
 from scripts.rag_coach import run as run_rag_synthesizer
 from scripts.tactical_rule_engine import run_engine
@@ -105,6 +111,12 @@ app.add_middleware(
 @app.on_event("startup")
 async def _startup_beta_queue() -> None:
     await _beta_queue.start()
+    await start_ollama_for_app_lifecycle()
+
+
+@app.on_event("shutdown")
+async def _shutdown_managed_ollama() -> None:
+    stop_ollama_for_app_lifecycle()
 
 
 @app.middleware("http")
@@ -332,6 +344,31 @@ async def list_datasets() -> DatasetsListResponse:
             )
         )
     return DatasetsListResponse(datasets=rows)
+
+
+@app.get(
+    "/api/v1/meta/pipeline-prerequisites",
+    tags=["meta"],
+)
+async def pipeline_prerequisites() -> dict[str, Any]:
+    """
+    Report whether local CV prerequisites are satisfied (weights + RAG library).
+
+    Does not validate cloud keys or Ollama; use for operator checks before long jobs.
+    """
+    from services.pipeline_paths import (
+        collect_local_cv_pipeline_gaps,
+        tactical_library_path,
+        tracking_model_weights_path,
+    )
+
+    gaps = collect_local_cv_pipeline_gaps(video_path=None)
+    return {
+        "ok": len(gaps) == 0,
+        "gaps": gaps,
+        "resolved_weights_path": str(tracking_model_weights_path()),
+        "tactical_library_path": str(tactical_library_path()),
+    }
 
 
 @app.post(
@@ -831,6 +868,15 @@ async def _refresh_job_report_cards_with_local_llm(
     llm_concurrency: int,
 ) -> list[dict[str, Any]]:
     """Re-run LLM for job report rows using Ollama when the pipeline skipped cloud keys."""
+    # #region agent log
+    _t0 = datetime.now(timezone.utc)
+    _agent_debug_ndjson(
+        "C",
+        "main.py:_refresh_job_report_cards_with_local_llm",
+        "refresh_enter",
+        {"card_count": len(report_cards), "llm_concurrency": llm_concurrency},
+    )
+    # #endregion
     await ensure_ollama_available()
     semaphore = asyncio.Semaphore(llm_concurrency)
 
@@ -853,7 +899,17 @@ async def _refresh_job_report_cards_with_local_llm(
                 LOGGER.exception("Local Ollama completion failed for job report card")
                 return {**card, "llm_error": str(exc)}
 
-    return list(await asyncio.gather(*[_one(c) for c in report_cards]))
+    out = list(await asyncio.gather(*[_one(c) for c in report_cards]))
+    # #region agent log
+    _ms = int((datetime.now(timezone.utc) - _t0).total_seconds() * 1000)
+    _agent_debug_ndjson(
+        "C",
+        "main.py:_refresh_job_report_cards_with_local_llm",
+        "refresh_exit",
+        {"elapsed_ms": _ms, "card_count": len(out)},
+    )
+    # #endregion
+    return out
 
 
 @app.get(
@@ -918,7 +974,25 @@ async def get_coach_advice(
             report_cards: list[dict[str, Any]] = json.load(f)
 
         llm_skip_reason: str | None = None
-        if not skip_llm and llm_engine == "local":
+        needs_local_refresh = any(_card_needs_local_llm_refresh(c) for c in report_cards)
+        # #region agent log
+        _agent_debug_ndjson(
+            "D",
+            "main.py:get_coach_advice",
+            "job_report_loaded",
+            {
+                "job_id_prefix": job_id[:8],
+                "skip_llm": skip_llm,
+                "llm_engine": llm_engine,
+                "cards_len": len(report_cards),
+                "needs_local_refresh": needs_local_refresh,
+                "will_run_refresh": (
+                    not skip_llm and llm_engine == "local" and needs_local_refresh
+                ),
+            },
+        )
+        # #endregion
+        if not skip_llm and llm_engine == "local" and needs_local_refresh:
             try:
                 report_cards = await _refresh_job_report_cards_with_local_llm(
                     report_cards,

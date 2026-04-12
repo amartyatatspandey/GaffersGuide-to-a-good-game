@@ -30,11 +30,19 @@ logger = logging.getLogger(__name__)
 
 # Paths: script lives in backend/scripts/
 SCRIPT_DIR = Path(__file__).resolve().parent
-BACKEND_ROOT = SCRIPT_DIR.parent
-
+_backend_root = SCRIPT_DIR.parent
+if str(_backend_root) not in sys.path:
+    sys.path.insert(0, str(_backend_root))
 # Ensure sibling modules (e.g. reid_healer) resolve when run as a script or from another cwd.
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+
+from services.pipeline_paths import (  # noqa: E402
+    BACKEND_ROOT,
+    format_tracking_model_missing_reason,
+    tracking_model_weights_path,
+)
+from scripts.run_calibrator_on_video import ensure_homography_json_for_video  # noqa: E402
 
 # --- DECOUPLED REID IMPORT ---
 # Explicit fallback: pipeline keeps running if ReID deps or reid_healer.py are missing or broken.
@@ -61,7 +69,9 @@ def cosine_similarity(v1: np.ndarray | Sequence[float], v2: np.ndarray | Sequenc
     if norm1 == 0.0 or norm2 == 0.0:
         return 0.0
     return float(np.dot(a, b) / (norm1 * norm2))
-MODEL_PATH = BACKEND_ROOT / "models" / "pretrained" / "best.pt"
+
+
+MODEL_PATH = tracking_model_weights_path()
 VIDEO_PATH = BACKEND_ROOT / "data" / "match_test.mp4"
 OUTPUT_PATH = BACKEND_ROOT / "output" / "tracking_teams.mp4"
 
@@ -518,11 +528,14 @@ class TacticalRadar:
     def __init__(self, json_path: str | Path | None = None, video_res: tuple[int, int] = (640, 360)) -> None:
         if json_path is None:
             env_h = os.getenv("GAFFERS_HOMOGRAPHY_JSON", "").strip()
-            json_path = (
-                Path(env_h).expanduser()
-                if env_h
-                else BACKEND_ROOT / "output" / "match_test_homographies.json"
-            )
+            if env_h:
+                json_path = Path(env_h).expanduser()
+            else:
+                raise ValueError(
+                    "TacticalRadar requires json_path=... or set GAFFERS_HOMOGRAPHY_JSON. "
+                    "Default per-video file: backend/output/{video_stem}_homographies.json "
+                    "(generate with scripts/run_calibrator_on_video.py)."
+                )
         self.json_path = Path(json_path)
         self.scale = 10
         self.radar_w = 105 * self.scale
@@ -802,8 +815,10 @@ def annotate_frame(
 
 def main() -> None:
     """Load model, run YOLO + ByteTrack + team classification, write output video."""
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
+    if not MODEL_PATH.is_file():
+        raise FileNotFoundError(
+            f"Model not found at {MODEL_PATH}. {format_tracking_model_missing_reason(MODEL_PATH)}"
+        )
     if not VIDEO_PATH.exists():
         raise FileNotFoundError(f"Video not found at {VIDEO_PATH}")
 
@@ -825,7 +840,8 @@ def main() -> None:
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     logger.info("Video: %dx%d @ %d fps, %d frames", width, height, fps, total_frames)
 
-    radar = TacticalRadar(video_res=(width, height))
+    homography_json = ensure_homography_json_for_video(VIDEO_PATH)
+    radar = TacticalRadar(json_path=homography_json, video_res=(width, height))
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     # Side-by-side layout: video left, radar right; no overlap

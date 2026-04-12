@@ -27,6 +27,12 @@ if str(BACKEND_ROOT_LOCAL) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT_LOCAL))
 
 from services.llm_router import ensure_ollama_available  # noqa: E402
+from services.pipeline_paths import (  # noqa: E402
+    collect_local_cv_pipeline_gaps,
+    ensure_core_pipeline_directories,
+    format_pipeline_prerequisite_errors,
+)
+from scripts.run_calibrator_on_video import ensure_homography_json_for_video  # noqa: E402
 
 from scripts.e2e_shared import (  # noqa: E402
     BALL_INTERPOLATION_MAX_GAP,
@@ -64,6 +70,7 @@ from scripts.track_teams import (  # noqa: E402
     MODEL_PATH,
     TacticalRadar,
     TeamClassifier,
+    format_tracking_model_missing_reason,
 )
 from calculators.possession import (  # noqa: E402
     compute_possession_team_id,
@@ -234,7 +241,9 @@ def run_cv_tracking_batched(
     device: str | None = None,
 ) -> tuple[list[TacticalFrame], CVTelemetry, list[TrackingFrameArtifact]]:
     if not MODEL_PATH.is_file():
-        raise FileNotFoundError(f"Tracking model not found: {MODEL_PATH}")
+        raise FileNotFoundError(
+            f"Tracking model not found: {MODEL_PATH}. {format_tracking_model_missing_reason(MODEL_PATH)}"
+        )
 
     selected_device = _infer_device(device)
     LOGGER.info("Cloud beta tracking device: %s", selected_device or "default")
@@ -260,7 +269,8 @@ def run_cv_tracking_batched(
 
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    radar = TacticalRadar(video_res=(width, height))
+    homography_json = ensure_homography_json_for_video(video_path)
+    radar = TacticalRadar(json_path=homography_json, video_res=(width, height))
 
     telemetry = CVTelemetry()
     frames_out: list[TacticalFrame] = []
@@ -498,6 +508,11 @@ def run_e2e_cloud(
         progress_callback("Pending")
 
     video_path = video if isinstance(video, Path) else _resolve_video_path(video)
+
+    ensure_core_pipeline_directories()
+    prereq_gaps = collect_local_cv_pipeline_gaps(video_path=video_path)
+    if prereq_gaps:
+        raise FileNotFoundError(format_pipeline_prerequisite_errors(prereq_gaps))
 
     if output_prefix == "test_mp4":
         tracking_overlay_path = BACKEND_ROOT / "output" / "test_mp4_tracking_overlay.mp4"

@@ -40,6 +40,7 @@ from scripts.rag_coach import (
 )
 from models import ChunkTacticalInsight
 from scripts.tactical_rule_engine import evaluate_timeline as evaluate_chunk_insights
+from scripts.run_calibrator_on_video import ensure_homography_json_for_video  # noqa: E402
 from scripts.track_teams import (
     BACKEND_ROOT,
     CLASS_BALL,
@@ -48,6 +49,7 @@ from scripts.track_teams import (
     MODEL_PATH,
     TacticalRadar,
     TeamClassifier,
+    format_tracking_model_missing_reason,
 )
 
 from calculators.advanced_ball_metrics import (
@@ -809,7 +811,9 @@ def run_cv_tracking(
     Run CV tracking in-memory and return TacticalFrame timeline.
     """
     if not MODEL_PATH.is_file():
-        raise FileNotFoundError(f"Tracking model not found: {MODEL_PATH}")
+        raise FileNotFoundError(
+            f"Tracking model not found: {MODEL_PATH}. {format_tracking_model_missing_reason(MODEL_PATH)}"
+        )
 
     model: YOLO = YOLO(str(MODEL_PATH))
     primary_ball_class_ids = _resolve_primary_ball_class_ids(model)
@@ -825,7 +829,8 @@ def run_cv_tracking(
 
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    radar = TacticalRadar(video_res=(width, height))
+    homography_json = ensure_homography_json_for_video(video_path)
+    radar = TacticalRadar(json_path=homography_json, video_res=(width, height))
     last_player_radar_by_track: dict[int, tuple[int, int]] = {}
     last_ball_radar: tuple[int, int] | None = None
     telemetry = CVTelemetry()

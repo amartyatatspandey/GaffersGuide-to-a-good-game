@@ -1,4 +1,8 @@
-"""Generate TacticalRadar homographies from video using Spiideo soccersegcal."""
+"""Generate TacticalRadar homographies from video using Spiideo soccersegcal.
+
+CLI defaults point at the repo dev clip and matching output filename; pass --video
+and --output for real matches (same convention as ``output/{{stem}}_homographies.json``).
+"""
 
 from __future__ import annotations
 
@@ -39,13 +43,13 @@ def parse_args() -> Namespace:
         "--video",
         type=Path,
         default=Path("backend/data/match_test.mp4"),
-        help="Input video path.",
+        help="Input video path (default is dev sample; override per match).",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=Path("backend/output/match_test_homographies.json"),
-        help="Output homography JSON path.",
+        help="Output JSON (default matches dev sample stem; use output/{stem}_homographies.json for other videos).",
     )
     parser.add_argument(
         "--checkpoint",

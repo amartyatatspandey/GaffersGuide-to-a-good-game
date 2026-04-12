@@ -5,11 +5,10 @@ High-throughput tracking export: YOLO + ByteTrack + homography radar projection.
 Skips VideoWriter, composed overlays, and OpticalFlowCameraShiftEstimator (CPU-heavy).
 For EDA, writes a pickle with per-frame tracks (bboxes, optional radar, team labels).
 
-Usage (single video, PYTHONPATH=/workspace pointing at repo root with backend layout):
-  PYTHONPATH=/workspace GAFFERS_HOMOGRAPHY_JSON=/workspace/output/MATCH_homographies.json \\
-    python backend/scripts/run_coords_only.py --video /path/to/MATCH.mp4
+Usage (single video; homography defaults to backend/output/{stem}_homographies.json or set GAFFERS_HOMOGRAPHY_JSON):
+  PYTHONPATH=/workspace python backend/scripts/run_coords_only.py --video /path/to/MATCH.mp4
 
-Batch (default homography: GAFFERS_HOMOGRAPHY_DIR/{stem}_homographies.json):
+Batch:
   PYTHONPATH=/workspace python backend/scripts/run_coords_only.py \\
     --input-dir /workspace/data/training_samples --output-dir /workspace/output
 """
@@ -40,6 +39,7 @@ from calculators.possession import (  # noqa: E402
     compute_possession_team_id,
     interpolate_ball_positions,
 )
+from scripts.run_calibrator_on_video import ensure_homography_json_for_video  # noqa: E402
 from track_teams import (  # noqa: E402
     CLASS_BALL,
     CLASS_PLAYER,
@@ -47,6 +47,7 @@ from track_teams import (  # noqa: E402
     MODEL_PATH,
     TacticalRadar,
     TeamClassifier,
+    format_tracking_model_missing_reason,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -186,15 +187,11 @@ def run_coords_only(
     may be less stable across gaps; use stride=1 for best continuity.
     """
     if not MODEL_PATH.is_file():
-        raise FileNotFoundError(f"Tracking model not found: {MODEL_PATH}")
-
-    homography_env = os.getenv("GAFFERS_HOMOGRAPHY_JSON", "").strip()
-    if not homography_env:
-        raise RuntimeError(
-            "GAFFERS_HOMOGRAPHY_JSON is not set. Point it at this match's "
-            "{stem}_homographies.json (see run_calibrator_on_video.py)."
+        raise FileNotFoundError(
+            f"Tracking model not found: {MODEL_PATH}. {format_tracking_model_missing_reason(MODEL_PATH)}"
         )
-    homography_path = Path(homography_env).expanduser().resolve()
+
+    homography_path = ensure_homography_json_for_video(video_path)
     ok, reason = _validate_homography_json(homography_path)
     if not ok:
         raise ValueError(f"Invalid homography file {homography_path}: {reason}")
@@ -213,7 +210,7 @@ def run_coords_only(
 
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    radar = TacticalRadar(video_res=(width, height))
+    radar = TacticalRadar(json_path=homography_path, video_res=(width, height))
 
     telemetry = CoordsTelemetry()
     frames_out: list[TacticalFrame] = []
@@ -452,7 +449,7 @@ def main() -> int:
     parser.add_argument(
         "--video",
         type=Path,
-        help="Single video file (requires GAFFERS_HOMOGRAPHY_JSON unless --homography is set).",
+        help="Single video file (homography: --homography, GAFFERS_HOMOGRAPHY_JSON, or default output/{stem}_homographies.json).",
     )
     parser.add_argument(
         "--homography",
@@ -534,12 +531,10 @@ def main() -> int:
         homography_path = args.homography.expanduser().resolve()
     else:
         he = os.getenv("GAFFERS_HOMOGRAPHY_JSON", "").strip()
-        if not he:
-            LOGGER.error(
-                "Set GAFFERS_HOMOGRAPHY_JSON or pass --homography for single-video mode"
-            )
-            return 2
-        homography_path = Path(he).expanduser().resolve()
+        if he:
+            homography_path = Path(he).expanduser().resolve()
+        else:
+            homography_path = ensure_homography_json_for_video(video_path)
 
     ok, reason = _validate_homography_json(homography_path)
     if not ok:
