@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-barlow);
+  --font-heading: var(--font-barlow);
+  --font-mono: var(--font-jetbrains-mono);
+  
+  --color-pitch: #0a0f0a;
+  --color-surface: #111a12;
+  --color-neon: #00e676;
+  --color-amber: #ffb300;
+  --color-chalk: #e8f0e9;
+  --color-slate-dark: #1a2420;
+  --color-slate-light: #2a4030;
+}
+
+@layer utilities {
+  .bg-grid {
+    background-image: 
+      linear-gradient(var(--color-slate-dark) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-slate-dark) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
+
+body {
+  overflow-x: hidden;
+  background-color: var(--color-pitch);
+  color: var(--color-chalk);
+}
