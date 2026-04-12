@@ -95,3 +95,72 @@ async def generate_local_advice(tracking_data_csv: str) -> str:
         )
     return text
 
+
+async def run_ollama_preflight_check() -> dict[str, str | bool | None]:
+    """
+    Validate local Ollama readiness for desktop local-LLM mode.
+
+    Checks:
+    1) daemon reachable
+    2) configured model present in tags
+    3) one minimal generation succeeds
+    """
+    base_url = _base_url()
+    model = _model_name()
+    timeout_s = _timeout_seconds()
+    result: dict[str, str | bool | None] = {
+        "configured_base_url": base_url,
+        "configured_model": model,
+        "daemon_reachable": False,
+        "model_present": False,
+        "generation_ok": False,
+        "error": None,
+        "hint": None,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=timeout_s) as client:
+            tags_res = await client.get(f"{base_url}/api/tags")
+            if tags_res.status_code >= 400:
+                result["error"] = f"Ollama tags endpoint returned {tags_res.status_code}."
+                result["hint"] = "Run `ollama serve` and verify OLLAMA_BASE_URL."
+                return result
+            result["daemon_reachable"] = True
+            payload = tags_res.json()
+            models = payload.get("models", []) if isinstance(payload, dict) else []
+            names = {
+                str(m.get("name", "")).strip()
+                for m in models
+                if isinstance(m, dict)
+            }
+            result["model_present"] = any(
+                name == model or name.startswith(f"{model}:") for name in names
+            )
+            if not result["model_present"]:
+                result["error"] = f"Configured model `{model}` is not present locally."
+                result["hint"] = f"Run `ollama pull {model}`."
+                return result
+            gen_res = await client.post(
+                f"{base_url}/api/generate",
+                json={"model": model, "prompt": "ping", "stream": False},
+            )
+            if gen_res.status_code >= 400:
+                result["error"] = f"Ollama generate returned {gen_res.status_code}."
+                result["hint"] = "Model exists but generation failed; check Ollama logs."
+                return result
+            data = gen_res.json()
+            response_text = str(data.get("response", "")).strip()
+            if not response_text:
+                result["error"] = "Ollama returned an empty generation output."
+                result["hint"] = "Try restarting Ollama and pulling the model again."
+                return result
+            result["generation_ok"] = True
+            return result
+    except httpx.ConnectError:
+        result["error"] = "Ollama daemon is unreachable."
+        result["hint"] = "Run `ollama serve` and ensure it listens on OLLAMA_BASE_URL."
+        return result
+    except Exception as exc:  # noqa: BLE001
+        result["error"] = str(exc)
+        result["hint"] = "Check local Ollama health and model configuration."
+        return result
+

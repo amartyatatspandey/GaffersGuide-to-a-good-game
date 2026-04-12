@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { UploadCloud, CheckCircle2, Loader2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, UploadCloud, WifiOff } from "lucide-react";
 
+import { useEngineConfig } from "@/context/EngineContext";
+import { useBackendHealth } from "@/hooks/useBackendHealth";
 import { type CoachAdviceResponse, type JobArtifactsResponse } from "@/lib/api";
 import { STEPS, useWebSocketProgress } from "@/hooks/useWebSocketProgress";
 
@@ -15,6 +17,8 @@ interface HopperProps {
 export function Hopper({ onComplete }: HopperProps) {
   const { currentStep, isProcessing, startProcessing, errorMessage, jobId, artifacts, advice } =
     useWebSocketProgress();
+  const { cvEngine, llmEngine } = useEngineConfig();
+  const { status: backendStatus, recheck: recheckBackend } = useBackendHealth();
   const [selectedFileName, setSelectedFileName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -39,7 +43,7 @@ export function Hopper({ onComplete }: HopperProps) {
       return;
     }
     setSelectedFileName(file.name);
-    await startProcessing(file);
+    await startProcessing(file, { cvEngine, llmEngine });
   };
 
   return (
@@ -94,6 +98,25 @@ export function Hopper({ onComplete }: HopperProps) {
           void handleFileChange(event);
         }}
       />
+
+      {/* Backend connectivity badge */}
+      {backendStatus === "unreachable" && (
+        <div className="rounded-lg border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-300 flex items-center gap-3">
+          <WifiOff size={16} className="flex-shrink-0" />
+          <span>
+            Backend unreachable at{" "}
+            <span className="font-mono">{typeof window !== "undefined" && (window as typeof window & { desktopConfig?: { backendUrl?: string } }).desktopConfig?.backendUrl || "http://127.0.0.1:8000"}</span>
+            .{" "}
+            <button
+              type="button"
+              onClick={recheckBackend}
+              className="underline hover:text-amber-200 transition-colors"
+            >
+              Retry
+            </button>
+          </span>
+        </div>
+      )}
 
       {errorMessage && (
         <div className="rounded-lg border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">

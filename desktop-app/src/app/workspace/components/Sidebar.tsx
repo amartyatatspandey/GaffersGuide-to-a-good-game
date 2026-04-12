@@ -1,17 +1,22 @@
 "use client";
-import React, { useState } from 'react';
-import { LayoutDashboard, FileText, Settings, Database, Server, RefreshCw, Menu } from 'lucide-react';
-import { EngineSettingsModal } from './EngineSettingsModal';
+import React, { useState } from "react";
+import { Database, FileText, LayoutDashboard, Menu, RefreshCw, Server, Settings } from "lucide-react";
 
-export function Sidebar({ 
-  currentView = 'dashboard', 
-  setCurrentView = () => {} 
-}: { 
-  currentView?: 'dashboard' | 'reports', 
-  setCurrentView?: (v: 'dashboard' | 'reports') => void 
+import { useEngineConfig } from "@/context/EngineContext";
+
+import { EngineSettingsModal } from "./EngineSettingsModal";
+
+export function Sidebar({
+  currentView = "dashboard",
+  setCurrentView = () => {},
+}: {
+  currentView?: "dashboard" | "reports";
+  setCurrentView?: (v: "dashboard" | "reports") => void;
 }) {
   const [isEngineSettingsOpen, setIsEngineSettingsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { cvEngine, connectivity } = useEngineConfig();
+  const statusLabel = `${cvEngine.toUpperCase()} ${connectivity === "offline" ? "AIRGAP" : "IDLE"}`;
 
   return (
     <>
@@ -84,8 +89,8 @@ export function Sidebar({
             <>
               <div className="flex items-center justify-between text-xs mb-3">
                 <span className="text-gray-500">Telemetry Engine</span>
-                <span className="text-emerald-500 font-bold flex items-center gap-1.5 bg-emerald-500/10 px-2 py-0.5 rounded">
-                  <Server size={10} /> LOCAL IDLE
+                <span className={`font-bold flex items-center gap-1.5 px-2 py-0.5 rounded ${cvEngine === "local" ? "text-emerald-500 bg-emerald-500/10" : "text-blue-400 bg-blue-500/10"}`}>
+                  <Server size={10} /> {statusLabel}
                 </span>
               </div>
               <div className="h-0.5 w-full bg-gray-800 overflow-hidden">
@@ -93,8 +98,8 @@ export function Sidebar({
               </div>
             </>
           ) : (
-            <div title="Engine Status: LOCAL IDLE" className="my-2">
-               <Server size={18} className="text-emerald-500" />
+            <div title={`Engine: ${statusLabel}`} className="my-2">
+              <Server size={18} className={cvEngine === "local" ? "text-emerald-500" : "text-blue-400"} />
             </div>
           )}
         </div>

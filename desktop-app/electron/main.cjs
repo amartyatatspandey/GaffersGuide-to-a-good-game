@@ -7,6 +7,7 @@ const net = require("net");
 const isDev = !app.isPackaged;
 const NEXT_PORT = process.env.NEXT_PORT || "3000";
 const NEXT_HOST = process.env.NEXT_HOST || "127.0.0.1";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
 const nextUrl = `http://${NEXT_HOST}:${NEXT_PORT}/workspace`;
 
 let nextServerProcess = null;
@@ -71,6 +72,7 @@ function startNextServer() {
           ...process.env,
           NEXT_PORT,
           NEXT_HOST,
+          NEXT_PUBLIC_BACKEND_URL: BACKEND_URL,
         },
       },
     );

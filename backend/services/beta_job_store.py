@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import threading
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -24,6 +27,20 @@ class BetaJobRecord:
     updated_at: str | None = None
 
 
+def _record_from_payload(job_id: str, payload: dict[str, Any]) -> BetaJobRecord:
+    """Build a record from JSON, dropping keys not on BetaJobRecord (schema drift)."""
+    allowed = {f.name for f in fields(BetaJobRecord)}
+    unknown = sorted(set(payload) - allowed)
+    if unknown:
+        LOGGER.warning(
+            "Beta job store %s: dropping unknown keys %s",
+            job_id,
+            unknown,
+        )
+    filtered = {k: payload[k] for k in payload if k in allowed}
+    return BetaJobRecord(**filtered)
+
+
 class BetaJobStore:
     """Thread-safe JSON-backed persistent store for beta jobs."""
 
@@ -37,13 +54,52 @@ class BetaJobStore:
     def _load(self) -> None:
         if not self._store_path.is_file():
             return
-        with self._store_path.open("r", encoding="utf-8") as f:
-            raw = json.load(f)
-        jobs_raw = raw.get("jobs", {})
-        idx_raw = raw.get("idempotency_index", {})
+        try:
+            with self._store_path.open("r", encoding="utf-8") as f:
+                raw = json.load(f)
+        except (OSError, json.JSONDecodeError) as exc:
+            LOGGER.error(
+                "Beta job store: failed to read %s (%s). Starting with empty store.",
+                self._store_path,
+                exc,
+            )
+            return
+        jobs_raw = raw.get("jobs", {}) if isinstance(raw, dict) else {}
+        idx_raw = raw.get("idempotency_index", {}) if isinstance(raw, dict) else {}
+        loaded = 0
+        skipped = 0
         for job_id, payload in jobs_raw.items():
-            self._jobs[job_id] = BetaJobRecord(**payload)
+            if not isinstance(payload, dict):
+                LOGGER.warning(
+                    "Beta job store: skipping job %r (not an object)",
+                    job_id,
+                )
+                skipped += 1
+                continue
+            try:
+                self._jobs[job_id] = _record_from_payload(job_id, payload)
+                loaded += 1
+            except TypeError as exc:
+                LOGGER.warning(
+                    "Beta job store: skipping job %r (record build failed: %s)",
+                    job_id,
+                    exc,
+                )
+                skipped += 1
         self._idempotency_index = {str(k): str(v) for k, v in idx_raw.items()}
+        if skipped:
+            LOGGER.warning(
+                "Beta job store: loaded %d jobs, skipped %d malformed records from %s",
+                loaded,
+                skipped,
+                self._store_path,
+            )
+        else:
+            LOGGER.info(
+                "Beta job store: loaded %d jobs from %s",
+                loaded,
+                self._store_path,
+            )
 
     def _persist(self) -> None:
         self._store_path.parent.mkdir(parents=True, exist_ok=True)

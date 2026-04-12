@@ -2,7 +2,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, Clock, Send, User } from "lucide-react";
 
-import { type CoachAdviceResponse, type JobArtifactsResponse, sendChat } from "@/lib/api";
+import { useEngineConfig } from "@/context/EngineContext";
+import {
+  type CoachAdviceResponse,
+  type JobArtifactsResponse,
+  getCoachAdvice,
+  sendChat,
+} from "@/lib/api";
 import { useStreamingText } from "@/hooks/useStreamingText";
 
 import { type KeywordConfig, InsightCard } from "./InsightCard";
@@ -42,11 +48,11 @@ function toTimeline(advice: CoachAdviceResponse | null): TacticalTimelineItem[] 
     return [
       {
         time: "00:00 - 90:00",
-        title: "Awaiting Tactical Cards",
+        title: "No Triggered Tactical Insights",
         minute: "00:00",
-        summary: "No advice rows available for this job yet.",
+        summary: "No tactical triggers exceeded confidence/frequency thresholds.",
         payload:
-          "The backend has not emitted tactical advice rows yet. Once the report is generated this panel will populate automatically.",
+          "Analysis completed but no strong tactical violations were detected. Try a longer segment, higher-quality footage, or rerun with local LLM enabled for narrative coaching.",
         keywords: [],
       },
     ];
@@ -91,7 +97,10 @@ export function TacticalDashboard({
   initialAdvice,
   artifacts,
 }: TacticalDashboardProps): React.JSX.Element {
-  const timeline = useMemo(() => toTimeline(initialAdvice), [initialAdvice]);
+  const { llmEngine } = useEngineConfig();
+  const [advice, setAdvice] = useState<CoachAdviceResponse | null>(initialAdvice);
+  const [adviceError, setAdviceError] = useState<string | null>(null);
+  const timeline = useMemo(() => toTimeline(advice), [advice]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [promptInput, setPromptInput] = useState("");
   const [chatHistory, setChatHistory] = useState<{ id: string; role: "user" | "ai"; text: string }[]>(
@@ -105,6 +114,33 @@ export function TacticalDashboard({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatHistory, isTyping]);
+
+  useEffect(() => {
+    if (!jobId) {
+      return;
+    }
+    let cancelled = false;
+    const attemptRefetch = async (): Promise<void> => {
+      try {
+        const payload = await getCoachAdvice(jobId, { llmEngine });
+        if (cancelled) {
+          return;
+        }
+        setAdvice(payload);
+        setAdviceError(null);
+      } catch (error) {
+        if (!cancelled) {
+          setAdviceError(error instanceof Error ? error.message : "Advice refresh failed.");
+        }
+      }
+    };
+    void attemptRefetch();
+    const id = setInterval(() => void attemptRefetch(), 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [jobId, llmEngine]);
 
   const handleSendPrompt = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
@@ -186,6 +222,11 @@ export function TacticalDashboard({
                   <span>Proactive Insight Generation</span>
                   <span className="text-emerald-500">Telemetry Synced</span>
                 </div>
+                {adviceError && (
+                  <div className="rounded border border-amber-800 bg-amber-950/50 px-3 py-2 text-xs text-amber-300">
+                    {adviceError}
+                  </div>
+                )}
                 <InsightCard
                   key={`${active.title}-${active.minute}`}
                   title={active.title}

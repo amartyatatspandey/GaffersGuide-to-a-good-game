@@ -20,9 +20,25 @@ export interface JobProgressMessage {
 export interface JobArtifactsResponse {
   job_id: string;
   status: JobStatus;
-  report_path?: string | null;
-  tracking_overlay_path?: string | null;
-  tracking_data_path?: string | null;
+  report_path: string | null;
+  tracking_overlay_path: string | null;
+  tracking_data_path: string | null;
+  report_state: "ready" | "not_ready";
+  tracking_state: "ready" | "not_ready";
+  overlay_state: "ready" | "not_ready" | "unavailable";
+  overlay_reason?: string | null;
+}
+
+export interface BetaJobResponse {
+  job_id: string;
+  status: JobStatus;
+  current_step: string;
+  result_path: string | null;
+  tracking_overlay_path: string | null;
+  tracking_data_path: string | null;
+  error: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface ReportEntry {
@@ -61,6 +77,16 @@ export interface ChatResponse {
 const DEFAULT_API_BASE = "http://127.0.0.1:8000";
 
 export function getApiBaseUrl(): string {
+  // Prefer runtime config injected by Electron preload (works in packaged builds
+  // where NEXT_PUBLIC_* is fixed at Next build time).
+  if (
+    typeof window !== "undefined" &&
+    (window as typeof window & { desktopConfig?: { backendUrl?: string } }).desktopConfig
+      ?.backendUrl
+  ) {
+    return (window as typeof window & { desktopConfig: { backendUrl: string } }).desktopConfig
+      .backendUrl;
+  }
   return process.env.NEXT_PUBLIC_BACKEND_URL ?? DEFAULT_API_BASE;
 }
 
@@ -82,11 +108,20 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function createBetaJob(file: File): Promise<CreateJobResponse> {
+export interface CreateBetaJobOptions {
+  cvEngine?: "local" | "cloud";
+  llmEngine?: "local" | "cloud";
+}
+
+export async function createBetaJob(
+  file: File,
+  options: CreateBetaJobOptions = {},
+): Promise<CreateJobResponse> {
+  const { cvEngine = "local", llmEngine = "local" } = options;
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("cv_engine", "cloud");
-  formData.append("llm_engine", "cloud");
+  formData.append("cv_engine", cvEngine);
+  formData.append("llm_engine", llmEngine);
   formData.append("idempotency_key", `desktop-${Date.now()}-${file.name}`);
 
   const response = await fetch(`${getApiBaseUrl()}/api/v1beta/jobs`, {
@@ -120,6 +155,11 @@ export function subscribeJobProgress(
   };
 }
 
+export async function getBetaJob(jobId: string): Promise<BetaJobResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/api/v1beta/jobs/${jobId}`);
+  return parseResponse<BetaJobResponse>(response);
+}
+
 export async function getBetaArtifacts(jobId: string): Promise<JobArtifactsResponse> {
   const response = await fetch(`${getApiBaseUrl()}/api/v1beta/jobs/${jobId}/artifacts`);
   return parseResponse<JobArtifactsResponse>(response);
@@ -130,14 +170,24 @@ export async function getReports(): Promise<ReportsResponse> {
   return parseResponse<ReportsResponse>(response);
 }
 
-export async function getCoachAdvice(jobId: string): Promise<CoachAdviceResponse> {
+export async function getCoachAdvice(
+  jobId: string,
+  options: { llmEngine?: "local" | "cloud" } = {},
+): Promise<CoachAdviceResponse> {
   const url = new URL(`${getApiBaseUrl()}/api/v1/coach/advice`);
   url.searchParams.set("job_id", jobId);
+  if (options.llmEngine) {
+    url.searchParams.set("llm_engine", options.llmEngine);
+  }
   const response = await fetch(url.toString());
   return parseResponse<CoachAdviceResponse>(response);
 }
 
-export async function sendChat(jobId: string, message: string): Promise<ChatResponse> {
+export async function sendChat(
+  jobId: string,
+  message: string,
+  llmEngine?: "local" | "cloud",
+): Promise<ChatResponse> {
   const response = await fetch(`${getApiBaseUrl()}/api/v1/chat`, {
     method: "POST",
     headers: {
@@ -146,7 +196,74 @@ export async function sendChat(jobId: string, message: string): Promise<ChatResp
     body: JSON.stringify({
       job_id: jobId,
       message,
+      llm_engine: llmEngine ?? null,
     }),
   });
   return parseResponse<ChatResponse>(response);
+}
+
+export interface BackendHealthResult {
+  reachable: boolean;
+  status?: string;
+}
+
+export interface LocalLlmPreflightResponse {
+  configured_base_url: string;
+  configured_model: string;
+  daemon_reachable: boolean;
+  model_present: boolean;
+  generation_ok: boolean;
+  error?: string | null;
+  hint?: string | null;
+}
+
+export interface TrackingPlayerPoint {
+  x_pitch?: number | null;
+  y_pitch?: number | null;
+  team_id?: number | null;
+}
+
+export interface TrackingFrame {
+  frame_idx: number;
+  players: TrackingPlayerPoint[];
+}
+
+export interface TrackingDataResponse {
+  telemetry?: Record<string, unknown>;
+  frames: TrackingFrame[];
+}
+
+export async function checkBackendHealth(): Promise<BackendHealthResult> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/health`, { signal: AbortSignal.timeout(4000) });
+    if (!response.ok) {
+      return { reachable: false };
+    }
+    const body = (await response.json()) as { status?: string };
+    return { reachable: true, status: body.status };
+  } catch {
+    return { reachable: false };
+  }
+}
+
+export async function getBetaJobOverlay(jobId: string): Promise<string> {
+  return `${getApiBaseUrl()}/api/v1beta/jobs/${jobId}/overlay`;
+}
+
+export function getBetaSourceVideoUrl(jobId: string): string {
+  return `${getApiBaseUrl()}/api/v1beta/jobs/${jobId}/source-video`;
+}
+
+export async function getRecentAnalysis(): Promise<ReportsResponse> {
+  return getReports();
+}
+
+export async function getBetaTracking(jobId: string): Promise<TrackingDataResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/api/v1beta/jobs/${jobId}/tracking`);
+  return parseResponse<TrackingDataResponse>(response);
+}
+
+export async function getLocalLlmPreflight(): Promise<LocalLlmPreflightResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/api/v1/llm/local/preflight`);
+  return parseResponse<LocalLlmPreflightResponse>(response);
 }

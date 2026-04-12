@@ -73,3 +73,53 @@ class ErrorResponse(BaseModel):
     message: str
     hint: str | None = None
 
+
+class JobArtifactsResponse(BaseModel):
+    """Artifact paths returned after a job completes."""
+
+    job_id: str
+    status: Literal["pending", "processing", "done", "error"]
+    report_path: str | None = None
+    tracking_overlay_path: str | None = None
+    tracking_data_path: str | None = None
+    report_state: Literal["ready", "not_ready"] = "not_ready"
+    tracking_state: Literal["ready", "not_ready"] = "not_ready"
+    overlay_state: Literal["ready", "not_ready", "unavailable"] = "not_ready"
+    overlay_reason: str | None = None
+
+
+class BetaJobResponse(BaseModel):
+    """Full record returned by GET /api/v1beta/jobs/{job_id}."""
+
+    job_id: str
+    status: Literal["pending", "processing", "done", "error"]
+    current_step: str
+    result_path: str | None = None
+    tracking_overlay_path: str | None = None
+    tracking_data_path: str | None = None
+    error: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class JobProgressMessage(BaseModel):
+    """WebSocket progress frame for both v1 and v1beta."""
+
+    job_id: str
+    status: Literal["pending", "processing", "done", "error"]
+    current_step: str
+    result_path: str | None = None
+    tracking_overlay_path: str | None = None
+    tracking_data_path: str | None = None
+    error: str | None = None
+
+
+class LocalLlmPreflightResponse(BaseModel):
+    configured_base_url: str
+    configured_model: str
+    daemon_reachable: bool
+    model_present: bool
+    generation_ok: bool
+    error: str | None = None
+    hint: str | None = None
+

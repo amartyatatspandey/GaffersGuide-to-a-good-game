@@ -11,35 +11,55 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import mimetypes
 import os
 import shutil
 import threading
-from datetime import datetime, timezone
-from pathlib import Path
 import uuid
 from dataclasses import dataclass
-from typing import Annotated, Any, Literal
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Annotated, Any
 
 from dotenv import load_dotenv
-from fastapi import File, FastAPI, Form, HTTPException, Query, Request, UploadFile, WebSocket
+from fastapi import (
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    WebSocket,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from llm_service import generate_coaching_advice
+from models import (
+    BetaJobResponse,
+    ChatRequest,
+    ChatResponse,
+    CreateJobResponse,
+    JobArtifactsResponse,
+    LocalLlmPreflightResponse,
+    ReportEntry,
+    ReportsResponse,
+)
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
-
-from llm_service import gemini_is_configured, generate_coaching_advice
-from models import ChatRequest, ChatResponse, CreateJobResponse, ReportEntry, ReportsResponse
-from services.cv_router import CVEngine, CVRouterFactory
-from services.errors import EngineRoutingError
 from services.beta_job_store import BetaJobRecord, BetaJobStore
 from services.beta_queue import BetaPipelineQueue, BetaQueueItem
+from services.cv_router import CVEngine, CVRouterFactory
+from services.errors import EngineRoutingError
 from services.llm_policy import (
     build_structured_coaching_prompt,
     format_numbered_steps,
     normalize_instruction_steps,
 )
 from services.llm_router import LLMEngine, ensure_ollama_available, get_tactical_advice
+from services.ollama_client import run_ollama_preflight_check
 from services.observability import PipelineMetricsRegistry
+
 from scripts.rag_coach import run as run_rag_synthesizer
 from scripts.tactical_rule_engine import run_engine
 
@@ -113,6 +133,39 @@ def _beta_job_artifact_paths(job_id: str) -> tuple[Path, Path, Path]:
         output_dir / f"{job_id}_report.json",
         output_dir / f"{job_id}_tracking_overlay.mp4",
         output_dir / f"{job_id}_tracking_data.json",
+    )
+
+
+def _artifact_contract(
+    *,
+    job_id: str,
+    status: str,
+    report_path: str | None,
+    tracking_overlay_path: str | None,
+    tracking_data_path: str | None,
+) -> JobArtifactsResponse:
+    report_ready = bool(report_path and Path(report_path).is_file())
+    tracking_ready = bool(tracking_data_path and Path(tracking_data_path).is_file())
+    overlay_ready = bool(
+        tracking_overlay_path and Path(tracking_overlay_path).is_file()
+    )
+    overlay_state = "ready" if overlay_ready else "not_ready"
+    overlay_reason: str | None = None
+    if not overlay_ready and status == "done":
+        overlay_state = "unavailable"
+        overlay_reason = (
+            "Overlay MP4 was not produced by the current CV pipeline output for this job."
+        )
+    return JobArtifactsResponse(
+        job_id=job_id,
+        status=status,  # type: ignore[arg-type]
+        report_path=report_path,
+        tracking_overlay_path=tracking_overlay_path,
+        tracking_data_path=tracking_data_path,
+        report_state="ready" if report_ready else "not_ready",
+        tracking_state="ready" if tracking_ready else "not_ready",
+        overlay_state=overlay_state,  # type: ignore[arg-type]
+        overlay_reason=overlay_reason,
     )
 
 
@@ -366,41 +419,100 @@ async def create_beta_job(
     )
 
 
-@app.get("/api/v1beta/jobs/{job_id}", tags=["jobs-beta"])
-async def get_beta_job(job_id: str) -> dict[str, Any]:
+@app.get(
+    "/api/v1beta/jobs/{job_id}", tags=["jobs-beta"], response_model=BetaJobResponse
+)
+async def get_beta_job(job_id: str) -> BetaJobResponse:
     rec = _beta_store.get(job_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="Job not found.")
-    return {
-        "job_id": rec.job_id,
-        "status": rec.status,
-        "current_step": rec.current_step,
-        "result_path": rec.result_path,
-        "tracking_overlay_path": rec.tracking_overlay_path,
-        "tracking_data_path": rec.tracking_data_path,
-        "error": rec.error,
-        "created_at": rec.created_at,
-        "updated_at": rec.updated_at,
-    }
+    return BetaJobResponse(
+        job_id=rec.job_id,
+        status=rec.status,  # type: ignore[arg-type]
+        current_step=rec.current_step,
+        result_path=rec.result_path,
+        tracking_overlay_path=rec.tracking_overlay_path,
+        tracking_data_path=rec.tracking_data_path,
+        error=rec.error,
+        created_at=rec.created_at,
+        updated_at=rec.updated_at,
+    )
 
 
-@app.get("/api/v1beta/jobs/{job_id}/artifacts", tags=["jobs-beta"])
-async def get_beta_job_artifacts(job_id: str) -> dict[str, Any]:
+@app.get(
+    "/api/v1beta/jobs/{job_id}/artifacts",
+    tags=["jobs-beta"],
+    response_model=JobArtifactsResponse,
+)
+async def get_beta_job_artifacts(job_id: str) -> JobArtifactsResponse:
     rec = _beta_store.get(job_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="Job not found.")
     report_path, overlay_path, tracking_path = _beta_job_artifact_paths(job_id)
-    return {
-        "job_id": job_id,
-        "status": rec.status,
-        "report_path": str(report_path) if report_path.is_file() else rec.result_path,
-        "tracking_overlay_path": (
-            str(overlay_path) if overlay_path.is_file() else rec.tracking_overlay_path
-        ),
-        "tracking_data_path": (
-            str(tracking_path) if tracking_path.is_file() else rec.tracking_data_path
-        ),
-    }
+    final_report_path = str(report_path) if report_path.is_file() else rec.result_path
+    final_overlay_path = (
+        str(overlay_path) if overlay_path.is_file() else rec.tracking_overlay_path
+    )
+    final_tracking_path = (
+        str(tracking_path) if tracking_path.is_file() else rec.tracking_data_path
+    )
+    return _artifact_contract(
+        job_id=job_id,
+        status=rec.status,
+        report_path=final_report_path,
+        tracking_overlay_path=final_overlay_path,
+        tracking_data_path=final_tracking_path,
+    )
+
+
+@app.get("/api/v1beta/jobs/{job_id}/source-video", tags=["jobs-beta"])
+async def get_beta_job_source_video(job_id: str) -> FileResponse:
+    """Stream the original uploaded match video for a beta job."""
+    rec = _beta_store.get(job_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    source_path = Path(rec.source_video_path)
+    if not source_path.is_file():
+        raise HTTPException(status_code=404, detail="Source video file not found.")
+    guessed, _ = mimetypes.guess_type(str(source_path))
+    media_type = guessed if guessed and guessed.startswith("video/") else "video/mp4"
+    return FileResponse(
+        str(source_path),
+        media_type=media_type,
+        filename=source_path.name,
+    )
+
+
+@app.get("/api/v1beta/jobs/{job_id}/overlay", tags=["jobs-beta"])
+async def get_beta_job_overlay_video(job_id: str) -> FileResponse:
+    """Serve the tracking overlay video for a beta job."""
+    rec = _beta_store.get(job_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    overlay_path = BACKEND_ROOT / "output" / f"{job_id}_tracking_overlay.mp4"
+    if not overlay_path.is_file():
+        raise HTTPException(
+            status_code=425,
+            detail="Tracking overlay video not ready yet. Wait for job completion.",
+        )
+    return FileResponse(str(overlay_path), media_type="video/mp4", filename=overlay_path.name)
+
+
+@app.get("/api/v1beta/jobs/{job_id}/tracking", tags=["jobs-beta"])
+async def get_beta_job_tracking(job_id: str) -> dict[str, Any]:
+    """Serve the tracking data JSON for a beta job."""
+    rec = _beta_store.get(job_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    tracking_path = BACKEND_ROOT / "output" / f"{job_id}_tracking_data.json"
+    if not tracking_path.is_file():
+        raise HTTPException(
+            status_code=425,
+            detail="Tracking timeline not ready yet. Wait for job completion.",
+        )
+    with tracking_path.open("r", encoding="utf-8") as f_in:
+        payload: dict[str, Any] = json.load(f_in)
+    return payload
 
 
 @app.websocket("/ws/v1beta/jobs/{job_id}")
@@ -434,6 +546,20 @@ async def beta_job_progress_ws(websocket: WebSocket, job_id: str) -> None:
             if rec.status in ("done", "error"):
                 return
             await asyncio.sleep(0.5)
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.exception("Beta WebSocket error for job %s: %s", job_id, exc)
+        try:
+            await websocket.send_json(
+                {
+                    "job_id": job_id,
+                    "status": "error",
+                    "current_step": "WebSocket error",
+                    "result_path": None,
+                    "error": str(exc),
+                }
+            )
+        except Exception:
+            pass
     finally:
         try:
             await websocket.close()
@@ -449,21 +575,24 @@ async def get_job_artifacts(job_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Job not found.")
 
     report_path_p, overlay_path_p, tracking_path_p = _job_artifact_paths(job_id)
-    return {
-        "job_id": job_id,
-        "status": rec.status,
-        "report_path": str(report_path_p) if report_path_p.is_file() else rec.result_path,
-        "tracking_overlay_path": (
-            str(overlay_path_p)
-            if overlay_path_p.is_file()
-            else rec.tracking_overlay_path
-        ),
-        "tracking_data_path": (
-            str(tracking_path_p)
-            if tracking_path_p.is_file()
-            else rec.tracking_data_path
-        ),
-    }
+    final_report_path = (
+        str(report_path_p) if report_path_p.is_file() else rec.result_path
+    )
+    final_overlay_path = (
+        str(overlay_path_p)
+        if overlay_path_p.is_file()
+        else rec.tracking_overlay_path
+    )
+    final_tracking_path = (
+        str(tracking_path_p) if tracking_path_p.is_file() else rec.tracking_data_path
+    )
+    return _artifact_contract(
+        job_id=job_id,
+        status=rec.status,
+        report_path=final_report_path,
+        tracking_overlay_path=final_overlay_path,
+        tracking_data_path=final_tracking_path,
+    ).model_dump()
 
 
 @app.get("/api/v1/jobs/{job_id}/tracking", tags=["jobs"])
@@ -513,14 +642,26 @@ async def chat(req: ChatRequest) -> ChatResponse:
     selected_llm_engine: LLMEngine = (req.llm_engine or "cloud")
     if req.job_id:
         with _job_store_lock:
-            rec = _job_store.get(req.job_id)
-            job_status = rec.status if rec else None
-            report_path = rec.result_path if rec else None
+            v1_rec = _job_store.get(req.job_id)
 
-        if not rec or job_status not in ("done", "processing", "error"):
+        beta_rec = _beta_store.get(req.job_id)
+
+        if v1_rec is not None:
+            job_status = v1_rec.status
+            report_path = v1_rec.result_path
+            if req.llm_engine is None:
+                selected_llm_engine = v1_rec.llm_engine
+        elif beta_rec is not None:
+            job_status = beta_rec.status
+            report_path = beta_rec.result_path
+            if req.llm_engine is None:
+                selected_llm_engine = beta_rec.llm_engine  # type: ignore[assignment]
+        else:
+            job_status = None
+            report_path = None
+
+        if job_status not in ("done", "processing", "error"):
             raise HTTPException(status_code=404, detail="Job not found.")
-        if req.llm_engine is None:
-            selected_llm_engine = rec.llm_engine
 
         if not report_path:
             report_path = str(BACKEND_ROOT / "output" / f"{req.job_id}_report.json")
@@ -684,6 +825,24 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get(
+    "/api/v1/llm/local/preflight",
+    tags=["meta"],
+    response_model=LocalLlmPreflightResponse,
+)
+async def local_llm_preflight() -> LocalLlmPreflightResponse:
+    payload = await run_ollama_preflight_check()
+    return LocalLlmPreflightResponse(
+        configured_base_url=str(payload.get("configured_base_url", "")),
+        configured_model=str(payload.get("configured_model", "")),
+        daemon_reachable=bool(payload.get("daemon_reachable", False)),
+        model_present=bool(payload.get("model_present", False)),
+        generation_ok=bool(payload.get("generation_ok", False)),
+        error=str(payload.get("error")) if payload.get("error") else None,
+        hint=str(payload.get("hint")) if payload.get("hint") else None,
+    )
+
+
 @app.get("/api/v1beta/metrics", tags=["meta-beta"])
 async def beta_metrics() -> dict[str, Any]:
     """Return beta pipeline metrics snapshot for baseline and promotion gates."""
@@ -788,9 +947,18 @@ async def get_coach_advice(
     # Job mode: load already computed report cards for this job id.
     if job_id:
         with _job_store_lock:
-            rec = _job_store.get(job_id)
-            status = rec.status if rec else None
-            report_path = rec.result_path if rec else None
+            v1_rec = _job_store.get(job_id)
+        beta_rec = _beta_store.get(job_id)
+
+        if v1_rec is not None:
+            status = v1_rec.status
+            report_path = v1_rec.result_path
+        elif beta_rec is not None:
+            status = beta_rec.status
+            report_path = beta_rec.result_path
+        else:
+            status = None
+            report_path = None
 
         if not report_path:
             report_path = str(BACKEND_ROOT / "output" / f"{job_id}_report.json")

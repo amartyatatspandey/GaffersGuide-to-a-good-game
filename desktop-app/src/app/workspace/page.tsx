@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 
+import { EngineProvider } from "@/context/EngineContext";
 import { type CoachAdviceResponse, type JobArtifactsResponse } from "@/lib/api";
 
 import { Hopper } from "./components/Hopper";
@@ -21,6 +22,7 @@ export default function WorkspacePage(): React.JSX.Element {
   const [session, setSession] = useState<WorkspaceSession | null>(null);
 
   return (
+    <EngineProvider>
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#0a0f0a] text-gray-300 antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
       <Titlebar />
       <div className="flex flex-1 overflow-hidden relative">
@@ -45,5 +47,6 @@ export default function WorkspacePage(): React.JSX.Element {
         </div>
       </div>
     </div>
+    </EngineProvider>
   );
 }
