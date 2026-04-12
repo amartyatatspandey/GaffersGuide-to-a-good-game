@@ -7,9 +7,24 @@ import { TacticalDashboard } from './components/TacticalDashboard';
 
 import { ReportsArchive } from './components/ReportsArchive';
 
+import { getTracking } from '@/lib/api/jobs';
+
 export default function WorkspacePage() {
   const [ingestionComplete, setIngestionComplete] = useState(false);
   const [currentView, setCurrentView] = useState<'dashboard' | 'reports'>('dashboard');
+  const [activeJob, setActiveJob] = useState<{jobId: string, file: File, tracking: any} | null>(null);
+
+  const handleIngestionComplete = async (jobId: string, file: File) => {
+    try {
+      const tracking = await getTracking(jobId);
+      setActiveJob({ jobId, file, tracking });
+      setIngestionComplete(true);
+    } catch (e) {
+      console.error(e);
+      setActiveJob({ jobId, file, tracking: null });
+      setIngestionComplete(true);
+    }
+  };
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#0a0f0a] text-gray-300 antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
@@ -20,9 +35,9 @@ export default function WorkspacePage() {
           {currentView === 'reports' ? (
             <ReportsArchive />
           ) : !ingestionComplete ? (
-            <Hopper onComplete={() => setIngestionComplete(true)} />
+            <Hopper onComplete={handleIngestionComplete} />
           ) : (
-            <TacticalDashboard />
+            <TacticalDashboard job={activeJob} />
           )}
         </div>
       </div>

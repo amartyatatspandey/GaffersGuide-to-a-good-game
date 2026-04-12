@@ -1,25 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useWebSocketProgress, STEPS } from '@/hooks/useWebSocketProgress';
-import { UploadCloud, CheckCircle2, Loader2, Circle } from 'lucide-react';
+import { UploadCloud, CheckCircle2, Loader2, Circle, AlertCircle } from 'lucide-react';
+import { createJob } from '@/lib/api/jobs';
 
-export function Hopper({ onComplete }: { onComplete: () => void }) {
-  const { currentStep, isProcessing, startProcessing } = useWebSocketProgress();
-  const [hasFile, setHasFile] = useState(false);
+export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File) => void }) {
+  const { currentStep, isProcessing, error, startTracking } = useWebSocketProgress();
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (currentStep === 'Completed') {
-      onComplete();
+    if (currentStep === 'Completed' && activeJobId && file) {
+      onComplete(activeJobId, file);
     }
-  }, [currentStep, onComplete]);
+  }, [currentStep, activeJobId, file, onComplete]);
 
   // Derive current step index to know past/future states
-  const currentIndex = isProcessing || (currentStep as string) === 'Completed' 
-    ? STEPS.indexOf(currentStep as any) 
+  const currentIndex = (isProcessing || currentStep === 'Completed') 
+    ? STEPS.indexOf(currentStep) 
     : -1;
 
   if (currentStep === 'Completed') {
     return null;
   }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    
+    setFile(selectedFile);
+    setIsUploading(true);
+    
+    try {
+      const job = await createJob(selectedFile);
+      setActiveJobId(job.job_id);
+      startTracking(job.job_id);
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to upload video: ' + err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6 w-full max-w-4xl mx-auto h-full justify-center">
@@ -32,31 +55,47 @@ export function Hopper({ onComplete }: { onComplete: () => void }) {
 
       {/* Drag & Drop Zone */}
       <div 
-        onClick={() => { if(!isProcessing) { setHasFile(true); startProcessing(); } }}
+        onClick={() => { if(!isProcessing && !isUploading) fileInputRef.current?.click(); }}
         className={`w-full h-48 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${
-          isProcessing 
+          (isProcessing || isUploading)
             ? 'border-emerald-500/50 bg-[#111a12] shadow-[0_0_30px_rgba(16,185,129,0.05)]' 
             : 'border-gray-700 bg-[#0a0f0a] hover:border-emerald-500/70 hover:bg-[#111a12]/50 cursor-pointer'
         }`}
       >
-        {!isProcessing ? (
+        <input 
+          type="file" 
+          accept="video/mp4,video/quicktime,video/x-msvideo" 
+          className="hidden" 
+          ref={fileInputRef} 
+          onChange={handleFileChange} 
+        />
+        
+        {(!isProcessing && !isUploading) ? (
           <>
             <UploadCloud size={40} className="text-gray-600 mb-3" />
             <h2 className="text-lg font-bold text-gray-300 tracking-tight font-sans">System Ready</h2>
-            <p className="text-xs text-gray-500 mt-1 font-mono">Click here to begin mock injection</p>
+            <p className="text-xs text-gray-500 mt-1 font-mono">Click here to upload match footage</p>
           </>
         ) : (
           <>
             <div className="text-emerald-500 mb-3">
               <Loader2 size={40} className="animate-spin" />
             </div>
-            <h2 className="text-lg font-bold text-emerald-400 tracking-tight font-mono uppercase">Processing Video Chunk</h2>
+            <h2 className="text-lg font-bold text-emerald-400 tracking-tight font-mono uppercase">
+              {isUploading ? 'Uploading Video...' : 'Processing Pipeline...'}
+            </h2>
           </>
         )}
       </div>
 
+      {error && (
+        <div className="text-red-400 flex items-center justify-center gap-2 mt-4 font-mono text-sm">
+           <AlertCircle size={16} /> {error}
+        </div>
+      )}
+
       {/* Interval Selector */}
-      {!isProcessing && (
+      {(!isProcessing && !isUploading) && (
         <div className="w-full flex items-center justify-center gap-4 animate-fade-in-up mt-2">
           <label className="text-xs font-bold text-gray-500 uppercase tracking-widest font-mono">Chunking Interval</label>
           <select className="bg-[#111a12] border border-gray-800 rounded-lg px-4 py-2 text-gray-300 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-xs appearance-none cursor-pointer">
@@ -74,7 +113,7 @@ export function Hopper({ onComplete }: { onComplete: () => void }) {
           <div className="flex flex-col gap-5">
             {STEPS.map((step, idx) => {
               const matchesCurrent = step === currentStep;
-              const isPast = idx < currentIndex || (currentStep as string) === 'Completed';
+              const isPast = idx < currentIndex || currentStep === 'Completed';
               
               return (
                 <div key={step} className="flex items-center gap-4">
