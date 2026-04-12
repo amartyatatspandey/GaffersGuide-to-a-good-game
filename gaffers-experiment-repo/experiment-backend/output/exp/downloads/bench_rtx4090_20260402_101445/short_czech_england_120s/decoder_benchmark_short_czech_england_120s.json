@@ -1,0 +1,77 @@
+{
+  "video": "/workspace/gaffers-experiment-repo/experiment-backend/data/fixtures/short/short_czech_england_120s.mp4",
+  "duration_minutes": 2.0,
+  "results": {
+    "opencv": {
+      "elapsed_ms": 62461.63,
+      "frames_processed": 3000
+    },
+    "pyav": {
+      "elapsed_ms": 18453.15,
+      "frames_processed": 3000
+    }
+  },
+  "normalized": {
+    "opencv_seconds_per_video_minute": 31.2308,
+    "pyav_seconds_per_video_minute": 9.2266
+  },
+  "promotion_gate": {
+    "latency_improvement_pct": 70.46,
+    "min_latency_improvement_pct": 15.0,
+    "pass": true
+  },
+  "matrix": [
+    {
+      "profile": "baseline",
+      "target_sla_tier": "tier_10m",
+      "runtime_target": "nvidia",
+      "hardware_profile": "a10",
+      "elapsed_minutes": 0.833,
+      "seconds_per_video_minute": 25.002,
+      "effective_fps": 60.0,
+      "frames_processed": 3000,
+      "decode_ms": 49916.72,
+      "infer_ms": 2.62,
+      "post_ms": 0.41
+    },
+    {
+      "profile": "tier_10m",
+      "target_sla_tier": "tier_10m",
+      "runtime_target": "nvidia",
+      "hardware_profile": "a10",
+      "elapsed_minutes": 0.873,
+      "seconds_per_video_minute": 26.1795,
+      "effective_fps": 57.3,
+      "frames_processed": 3000,
+      "decode_ms": 52279.2,
+      "infer_ms": 1.88,
+      "post_ms": 0.47
+    },
+    {
+      "profile": "tier_5m",
+      "target_sla_tier": "tier_5m",
+      "runtime_target": "nvidia",
+      "hardware_profile": "a10",
+      "elapsed_minutes": 0.606,
+      "seconds_per_video_minute": 18.1675,
+      "effective_fps": 82.56,
+      "frames_processed": 3000,
+      "decode_ms": 36265.82,
+      "infer_ms": 3.36,
+      "post_ms": 0.39
+    }
+  ],
+  "sla_gates": {
+    "gate_profile": "nvidia_release",
+    "tier_a_30min_p50_le_10": true,
+    "tier_b_30min_p50_le_5": true,
+    "tier_b_30min_p95_le_7": true,
+    "mps_relaxed_p50_le_12": true,
+    "reliability_success_rate_gte_99": true,
+    "quality_no_major_regressions": true
+  },
+  "promotion_policy": {
+    "nvidia_release_blocking": true,
+    "apple_mps_non_blocking": false
+  }
+}

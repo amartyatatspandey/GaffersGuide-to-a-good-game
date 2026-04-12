@@ -24,10 +24,9 @@ Audit target: `gaffers-experiment-repo/` only.
 ## Coupling Findings
 
 - No runtime imports from the main product backend/frontend code paths were found.
-- One test/benchmark fixture currently reads source video from:
-  - `../../backend/data/match_test.mp4`
-
-This fixture dependency is only for validation input media and does not route requests through the main product runtime.
+- Experiment tests/benchmarks read from experiment-local fixture dataset:
+  - `experiment-backend/data/fixtures/*`
+  - `experiment-backend/data/fixtures/manifest.json`
 
 ## Smoke Validation Result
 
@@ -41,5 +40,5 @@ This fixture dependency is only for validation input media and does not route re
 
 ## Benchmark Result
 
-- File: `experiment-backend/output/exp/decoder_benchmark_match_test.json`
-- `match_test.mp4` processed by both decoders in isolated experiment backend.
+- File: `experiment-backend/output/exp/decoder_benchmark_short.json`
+- Fixture clips from `experiment-backend/data/fixtures/` processed by decoders in isolated experiment backend.

@@ -11,13 +11,14 @@ from services.cv_pipeline import process_video  # noqa: E402
 
 def test_process_video_writes_experiment_artifacts(tmp_path: Path) -> None:
     source_video = (
-        Path(__file__).resolve().parents[3]
-        / "backend"
+        Path(__file__).resolve().parents[1]
         / "data"
-        / "match_test.mp4"
+        / "fixtures"
+        / "short"
+        / "short_czech_england_120s.mp4"
     )
     if not source_video.is_file():
-        raise AssertionError("Expected shared match_test.mp4 fixture to exist.")
+        raise AssertionError("Expected experiment fixture clip to exist.")
 
     artifacts = process_video(
         source_video,

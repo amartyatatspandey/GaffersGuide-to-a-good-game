@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-json",
         type=str,
-        default="output/exp/decoder_benchmark_match_test.json",
+        default="output/exp/decoder_benchmark_fixture.json",
         help="Output json path.",
     )
     parser.add_argument(

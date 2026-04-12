@@ -1,0 +1,52 @@
+{
+  "clips": [
+    {
+      "clip_id": "short_czech_england_120s",
+      "category": "short",
+      "source_relpath": "backend/data/training_samples/08_czech_england.mp4",
+      "fixture_relpath": "short/short_czech_england_120s.mp4",
+      "requested_duration_sec": 120,
+      "start_sec": 0,
+      "duration_sec": 120.0,
+      "fps": 25.0,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "clip_id": "medium_liverpool_mancity_900s",
+      "category": "medium",
+      "source_relpath": "backend/data/training_samples/02_liverpool_mancity.mp4",
+      "fixture_relpath": "medium/medium_liverpool_mancity_900s.mp4",
+      "requested_duration_sec": 900,
+      "start_sec": 0,
+      "duration_sec": 900.0,
+      "fps": 30.0,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "clip_id": "long_barca_madrid_1200s",
+      "category": "long",
+      "source_relpath": "backend/data/training_samples/01_barca_madrid.mp4",
+      "fixture_relpath": "long/long_barca_madrid_1200s.mp4",
+      "requested_duration_sec": 1200,
+      "start_sec": 0,
+      "duration_sec": 1200.0,
+      "fps": 25.0,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "clip_id": "stress_psg_intermilan_1200s",
+      "category": "stress",
+      "source_relpath": "backend/data/training_samples/03_psg_intermilan.mp4",
+      "fixture_relpath": "stress/stress_psg_intermilan_1200s.mp4",
+      "requested_duration_sec": 1200,
+      "start_sec": 0,
+      "duration_sec": 1200.0,
+      "fps": 25.0,
+      "width": 1920,
+      "height": 1080
+    }
+  ]
+}

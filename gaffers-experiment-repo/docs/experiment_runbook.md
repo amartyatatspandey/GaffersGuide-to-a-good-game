@@ -18,23 +18,34 @@
 
 ## Smoke Validation
 
-1. Upload `match_test.mp4`.
+1. Upload a fixture clip from `experiment-backend/data/fixtures/` (for example, `short/short_czech_england_120s.mp4`).
 2. Wait for websocket status `done`.
 3. Load advice + tracking + reports from experiment endpoints.
+
+## Fixture Dataset Preparation
+
+Build experiment-local fixtures from `backend/data/training_samples`:
+
+`python -m scripts.prepare_fixtures --training-samples-dir "../../../backend/data/training_samples" --fixtures-dir "../data/fixtures"`
+
+This writes:
+
+- categorized fixture clips under `experiment-backend/data/fixtures/{short,medium,long,stress}/`
+- dataset metadata manifest at `experiment-backend/data/fixtures/manifest.json`
 
 ## Benchmark
 
 Run:
 
-`python -m scripts.benchmark_decoders "/absolute/path/to/match_test.mp4" --output-json output/exp/decoder_benchmark_match_test.json`
+`python -m scripts.benchmark_decoders "data/fixtures/short/short_czech_england_120s.mp4" --output-json output/exp/decoder_benchmark_short.json`
 
 Run NVIDIA matrix + release SLA gates:
 
-`python -m scripts.benchmark_decoders "/absolute/path/to/match_test.mp4" --matrix --runtime-target nvidia --hardware-profile l4 --output-json output/exp/decoder_benchmark_matrix_nvidia.json`
+`python -m scripts.benchmark_decoders "data/fixtures/long/long_barca_madrid_1200s.mp4" --matrix --runtime-target nvidia --hardware-profile l4 --output-json output/exp/decoder_benchmark_matrix_nvidia.json`
 
 Run Apple MPS matrix + tracked SLA:
 
-`python -m scripts.benchmark_decoders "/absolute/path/to/match_test.mp4" --matrix --runtime-target apple_mps --hardware-profile mps --output-json output/exp/decoder_benchmark_matrix_mps.json`
+`python -m scripts.benchmark_decoders "data/fixtures/long/long_barca_madrid_1200s.mp4" --matrix --runtime-target apple_mps --hardware-profile mps --output-json output/exp/decoder_benchmark_matrix_mps.json`
 
 ## Promotion Policy
 
