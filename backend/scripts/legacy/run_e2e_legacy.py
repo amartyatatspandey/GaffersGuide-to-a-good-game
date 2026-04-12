@@ -1094,6 +1094,10 @@ def _write_tracking_artifact(
             "frames_optical_flow_fallback": telemetry.frames_optical_flow_fallback,
             "total_raw_ball_detections": telemetry.total_raw_ball_detections,
             "total_interpolated_ball_frames": telemetry.total_interpolated_ball_frames,
+            # ``x_pitch`` / ``y_pitch`` / ``ball_xy`` in frames are TacticalRadar canvas
+            # pixels (scale=10 → 10 px ≈ 1 m on a 105×68 m pitch).
+            "player_position_space": "radar_pixels",
+            "radar_pixels_per_meter": 10,
         },
         "frames": [
             {

@@ -7,6 +7,9 @@ interface UseVideoFrameSyncOptions {
   onFrameChange: (frameIndex: number) => void;
 }
 
+const DEFAULT_FPS = 30;
+const MAX_REF_RETRY_FRAMES = 360;
+
 export function useVideoFrameSync({
   videoRef,
   fps,
@@ -24,8 +27,10 @@ export function useVideoFrameSync({
   onFrameRef.current = onFrameChange;
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    let cancelled = false;
+    let retryRafId: number | null = null;
+    let retryCount = 0;
+    let detachVideo: (() => void) | null = null;
 
     const stop = (): void => {
       if (rafIdRef.current != null) {
@@ -34,11 +39,20 @@ export function useVideoFrameSync({
       }
     };
 
-    const emitCurrent = (): void => {
-      const curFps = Math.max(1, fpsRef.current);
+    const safeFps = (): number => {
+      const f = fpsRef.current;
+      if (Number.isFinite(f) && f > 0) return f;
+      return DEFAULT_FPS;
+    };
+
+    const emitCurrent = (video: HTMLVideoElement): void => {
+      const curFps = safeFps();
+      const t = video.currentTime;
+      const timeOk = Number.isFinite(t) && t >= 0 ? t : 0;
+      const rawIdx = Math.round(timeOk * curFps);
       const idx = Math.max(
         0,
-        Math.min(maxFrameRef.current, Math.round(video.currentTime * curFps)),
+        Math.min(maxFrameRef.current, Number.isFinite(rawIdx) ? rawIdx : 0),
       );
       if (idx !== lastFrameRef.current) {
         lastFrameRef.current = idx;
@@ -46,40 +60,73 @@ export function useVideoFrameSync({
       }
     };
 
-    const tick = (): void => {
-      emitCurrent();
-      if (!video.paused && !video.ended) {
-        rafIdRef.current = requestAnimationFrame(tick);
+    const tick = (video: HTMLVideoElement): void => {
+      emitCurrent(video);
+      if (!cancelled && !video.paused && !video.ended) {
+        rafIdRef.current = requestAnimationFrame(() => tick(video));
       } else {
         rafIdRef.current = null;
       }
     };
 
-    const onPlay = (): void => {
-      stop();
-      rafIdRef.current = requestAnimationFrame(tick);
+    const attach = (video: HTMLVideoElement): (() => void) => {
+      const onPlay = (): void => {
+        stop();
+        rafIdRef.current = requestAnimationFrame(() => tick(video));
+      };
+      const onPauseOrEnd = (): void => stop();
+      const onSeeked = (): void => emitCurrent(video);
+      const onSeeking = (): void => emitCurrent(video);
+      const onTimeUpdate = (): void => emitCurrent(video);
+
+      video.addEventListener("play", onPlay);
+      video.addEventListener("pause", onPauseOrEnd);
+      video.addEventListener("ended", onPauseOrEnd);
+      video.addEventListener("seeked", onSeeked);
+      video.addEventListener("seeking", onSeeking);
+      video.addEventListener("timeupdate", onTimeUpdate);
+
+      emitCurrent(video);
+      if (!video.paused && !video.ended) {
+        rafIdRef.current = requestAnimationFrame(() => tick(video));
+      }
+
+      return () => {
+        stop();
+        video.removeEventListener("play", onPlay);
+        video.removeEventListener("pause", onPauseOrEnd);
+        video.removeEventListener("ended", onPauseOrEnd);
+        video.removeEventListener("seeked", onSeeked);
+        video.removeEventListener("seeking", onSeeking);
+        video.removeEventListener("timeupdate", onTimeUpdate);
+      };
     };
-    const onPauseOrEnd = (): void => stop();
-    const onSeeked = (): void => emitCurrent();
 
-    video.addEventListener("play", onPlay);
-    video.addEventListener("pause", onPauseOrEnd);
-    video.addEventListener("ended", onPauseOrEnd);
-    video.addEventListener("seeked", onSeeked);
+    const tryAttach = (): void => {
+      if (cancelled) return;
+      const video = videoRef.current;
+      if (!video) {
+        if (retryCount < MAX_REF_RETRY_FRAMES) {
+          retryCount += 1;
+          retryRafId = requestAnimationFrame(tryAttach);
+        }
+        return;
+      }
+      retryRafId = null;
+      detachVideo = attach(video);
+    };
 
-    // Render one frame immediately when hook attaches.
-    emitCurrent();
-    if (!video.paused && !video.ended) {
-      rafIdRef.current = requestAnimationFrame(tick);
-    }
+    tryAttach();
 
     return () => {
+      cancelled = true;
+      if (retryRafId != null) {
+        cancelAnimationFrame(retryRafId);
+        retryRafId = null;
+      }
       stop();
-      video.removeEventListener("play", onPlay);
-      video.removeEventListener("pause", onPauseOrEnd);
-      video.removeEventListener("ended", onPauseOrEnd);
-      video.removeEventListener("seeked", onSeeked);
+      detachVideo?.();
+      detachVideo = null;
     };
-  }, [videoRef]);
+  }, [videoRef, fps, maxFrameIndex]);
 }
-

@@ -2,7 +2,7 @@ import {
   PITCH_LENGTH_M,
   PITCH_WIDTH_M,
   projectMetersToCanvas,
-} from "../../lib/trackingAdapter";
+} from "@/lib/trackingAdapter";
 
 const PITCH_GREEN = "#1f7a33";
 const PITCH_LINE = "#ffffff";

@@ -1,7 +1,7 @@
 import { RefObject, useEffect, useMemo, useState } from "react";
-import { useVideoFrameSync } from "../../hooks/useVideoFrameSync";
-import { buildFrameLookup } from "../../lib/trackingAdapter";
-import type { TrackingFrame, TrackingPayload } from "../../lib/trackingTypes";
+import { useVideoFrameSync } from "@/hooks/useVideoFrameSync";
+import { adaptTrackingPayload, buildFrameLookup } from "@/lib/trackingAdapter";
+import type { TrackingFrame, TrackingPayload } from "@/lib/types/trackingTypes";
 import RadarCanvas from "./RadarCanvas";
 
 interface RadarWidgetProps {
@@ -15,22 +15,36 @@ export default function RadarWidget({
   trackingData,
   onFrameChange,
 }: RadarWidgetProps) {
-  const lookup = useMemo(
-    () => (trackingData ? buildFrameLookup(trackingData) : null),
+  const adaptedTracking = useMemo(
+    () => (trackingData ? adaptTrackingPayload(trackingData) : null),
     [trackingData],
   );
+  const lookup = useMemo(
+    () => (adaptedTracking ? buildFrameLookup(adaptedTracking) : null),
+    [adaptedTracking],
+  );
+  const maxFrameIndex = useMemo(() => {
+    if (!lookup) return 0;
+    const n = lookup.totalFrames;
+    const tel = adaptedTracking?.telemetry?.total_frames_processed;
+    if (typeof tel === "number" && Number.isFinite(tel) && tel > 0) {
+      return Math.max(0, Math.min(Math.floor(tel), n) - 1);
+    }
+    return Math.max(0, n - 1);
+  }, [adaptedTracking, lookup]);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [syncFps, setSyncFps] = useState(30);
 
   useEffect(() => {
     setCurrentFrame(0);
-  }, [trackingData]);
+  }, [adaptedTracking]);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !trackingData) return;
+    if (!video || !adaptedTracking) return;
     const totalFrames =
-      trackingData.telemetry?.total_frames_processed ?? trackingData.frames.length;
+      adaptedTracking.telemetry?.total_frames_processed ??
+      adaptedTracking.frames.length;
     const onLoadedMetadata = (): void => {
       if (video.duration > 0 && totalFrames > 0) {
         const derived = totalFrames / video.duration;
@@ -40,14 +54,17 @@ export default function RadarWidget({
       }
     };
     video.addEventListener("loadedmetadata", onLoadedMetadata);
-    onLoadedMetadata();
+    // Metadata may already be available (blob URL warmed before Radar mounts).
+    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      onLoadedMetadata();
+    }
     return () => video.removeEventListener("loadedmetadata", onLoadedMetadata);
-  }, [videoRef, trackingData]);
+  }, [videoRef, adaptedTracking]);
 
   useVideoFrameSync({
     videoRef,
     fps: syncFps,
-    maxFrameIndex: Math.max(0, (lookup?.totalFrames ?? 1) - 1),
+    maxFrameIndex,
     onFrameChange: setCurrentFrame,
   });
 
@@ -57,9 +74,33 @@ export default function RadarWidget({
     onFrameChange?.(currentFrame, frame);
   }, [currentFrame, frame, onFrameChange]);
 
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "bb63ae",
+      },
+      body: JSON.stringify({
+        sessionId: "bb63ae",
+        hypothesisId: "H1",
+        location: "RadarWidget.tsx:mount",
+        message: "RadarWidget mounted",
+        data: {
+          hasTrackingPayload: Boolean(trackingData),
+          adaptedOk: Boolean(adaptedTracking),
+          totalFrames: lookup?.totalFrames ?? 0,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [trackingData, adaptedTracking, lookup?.totalFrames]);
+
   return (
-    <div className="rounded-lg border bg-white p-3 shadow-sm">
-      <h2 className="mb-2 text-sm font-semibold text-gray-800">Tactical Radar</h2>
+    <div data-testid="tactical-radar" className="rounded-lg border border-gray-800 bg-[#0a0f0a] p-3 shadow-sm">
+      <h2 className="mb-2 text-sm font-semibold text-gray-200">Tactical Radar</h2>
       <RadarCanvas frame={frame} />
       <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
         <span>Frame {currentFrame}</span>

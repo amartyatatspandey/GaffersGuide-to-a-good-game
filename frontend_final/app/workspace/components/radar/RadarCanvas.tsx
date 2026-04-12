@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { normalizePitchMeters, projectMetersToCanvas } from "../../lib/trackingAdapter";
-import type { TrackingFrame } from "../../lib/trackingTypes";
+import { normalizePitchMeters, projectMetersToCanvas } from "@/lib/trackingAdapter";
+import type { TrackingFrame } from "@/lib/types/trackingTypes";
 import { drawPitchBackground } from "./pitch";
 
 interface RadarCanvasProps {
@@ -83,7 +83,7 @@ export default function RadarCanvas({
       ref={canvasRef}
       width={width}
       height={height}
-      className="w-full rounded border border-gray-300"
+      className="w-full rounded border border-gray-700 bg-[#111a12]"
     />
   );
 }

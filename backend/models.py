@@ -63,6 +63,19 @@ class ReportsResponse(BaseModel):
     reports: list[ReportEntry]
 
 
+class DatasetInfo(BaseModel):
+    """One dataset folder under DATASETS_ROOT (optional API for tooling UIs)."""
+
+    name: str
+    split: str
+    num_samples: int
+    root_dir: str
+
+
+class DatasetsListResponse(BaseModel):
+    datasets: list[DatasetInfo]
+
+
 class EngineSelection(BaseModel):
     cv_engine: Literal["local", "cloud"] = "cloud"
     llm_engine: Literal["local", "cloud"] = "cloud"

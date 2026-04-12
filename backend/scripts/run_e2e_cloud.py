@@ -7,7 +7,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 import cv2
 import numpy as np
@@ -25,6 +25,8 @@ PROJECT_ROOT_LOCAL = BACKEND_ROOT_LOCAL.parent
 
 if str(BACKEND_ROOT_LOCAL) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT_LOCAL))
+
+from services.llm_router import ensure_ollama_available  # noqa: E402
 
 from scripts.e2e_shared import (  # noqa: E402
     BALL_INTERPOLATION_MAX_GAP,
@@ -73,6 +75,8 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 DEFAULT_BATCH_SIZE = 16
 DEFAULT_FLOW_MAX_WIDTH = 640
+
+LLMEngineArg = Literal["local", "cloud"]
 
 
 class DownscaledOpticalFlowEstimator:
@@ -488,6 +492,7 @@ def run_e2e_cloud(
     batch_size: int = DEFAULT_BATCH_SIZE,
     flow_max_width: int = DEFAULT_FLOW_MAX_WIDTH,
     device: str | None = None,
+    llm_engine: LLMEngineArg = "cloud",
 ) -> Path:
     if progress_callback is not None:
         progress_callback("Pending")
@@ -594,7 +599,23 @@ def run_e2e_cloud(
             total_cv_frames=total_cv_frames,
         )
     else:
-        final_cards = asyncio.run(run_llm(prompt_records))
+        if llm_engine == "local":
+            if progress_callback is not None:
+                progress_callback("LLM (local)")
+
+            async def _preflight_ollama() -> None:
+                await ensure_ollama_available()
+
+            asyncio.run(_preflight_ollama())
+
+            from scripts.e2e_llm_local import run_llm_local
+
+            async def _local_cards() -> list[dict[str, Any]]:
+                return await run_llm_local(prompt_records)
+
+            final_cards = asyncio.run(_local_cards())
+        else:
+            final_cards = asyncio.run(run_llm(prompt_records))
 
     report_output_path.parent.mkdir(parents=True, exist_ok=True)
     with report_output_path.open("w", encoding="utf-8") as f_out:
@@ -634,11 +655,19 @@ def parse_args() -> argparse.Namespace:
         default="auto",
         help="YOLO device: auto|cuda|mps|cpu (default: auto).",
     )
+    parser.add_argument(
+        "--llm-engine",
+        type=str,
+        choices=("local", "cloud"),
+        default="cloud",
+        help="LLM for coaching completions: local (Ollama) or cloud (Gemini/OpenAI).",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    llm: LLMEngineArg = "local" if args.llm_engine == "local" else "cloud"
     run_e2e_cloud(
         args.video,
         output_prefix=args.output_prefix,
@@ -646,6 +675,7 @@ def main() -> None:
         batch_size=max(1, int(args.batch_size)),
         flow_max_width=max(64, int(args.flow_max_width)),
         device=args.device,
+        llm_engine=llm,
     )
 
 

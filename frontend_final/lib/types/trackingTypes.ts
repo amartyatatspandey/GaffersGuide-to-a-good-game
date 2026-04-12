@@ -18,6 +18,9 @@ export interface TrackingPayload {
   telemetry: {
     total_frames_processed: number;
     frames_optical_flow_fallback: number;
+    /** When ``radar_pixels``, divide coords by ``radar_pixels_per_meter`` for meters. */
+    player_position_space?: "radar_pixels" | "meters";
+    radar_pixels_per_meter?: number;
   };
   frames: TrackingFrame[];
 }

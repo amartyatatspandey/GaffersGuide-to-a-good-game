@@ -28,7 +28,15 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
 from llm_service import gemini_is_configured, generate_coaching_advice
-from models import ChatRequest, ChatResponse, CreateJobResponse, ReportEntry, ReportsResponse
+from models import (
+    ChatRequest,
+    ChatResponse,
+    CreateJobResponse,
+    DatasetInfo,
+    DatasetsListResponse,
+    ReportEntry,
+    ReportsResponse,
+)
 from services.cv_router import CVEngine, CVRouterFactory
 from services.errors import EngineRoutingError
 from services.beta_job_store import BetaJobRecord, BetaJobStore
@@ -50,6 +58,34 @@ load_dotenv(PROJECT_ROOT / ".env")
 load_dotenv(BACKEND_ROOT / ".env")
 
 LOGGER = logging.getLogger(__name__)
+
+# #region agent log
+_AGENT_DEBUG_PATH = PROJECT_ROOT / ".cursor" / "debug-bb63ae.log"
+
+
+def _agent_debug_ndjson(
+    hypothesis_id: str,
+    location: str,
+    message: str,
+    data: dict[str, Any],
+) -> None:
+    try:
+        payload = {
+            "sessionId": "bb63ae",
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
+        }
+        _AGENT_DEBUG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with _AGENT_DEBUG_PATH.open("a", encoding="utf-8") as f_out:
+            f_out.write(json.dumps(payload) + "\n")
+    except Exception:
+        pass
+
+
+# #endregion
 
 app = FastAPI(
     title="Gaffer's Guide — Coaching API",
@@ -118,13 +154,17 @@ def _beta_job_artifact_paths(job_id: str) -> tuple[Path, Path, Path]:
 
 async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
     def progress_callback(step: str) -> None:
+        """Update human-readable step only; do not set ``status=done`` here.
+
+        ``done`` is assigned only after ``runner.run()`` returns so artifact paths
+        and on-disk tracking JSON are consistent when the WebSocket first shows
+        ``done`` (avoids races with ``GET .../tracking``).
+        """
         with _job_store_lock:
             rec = _job_store.get(job_id)
             if not rec:
                 return
             rec.current_step = step
-            if step == "Completed":
-                rec.status = "done"
 
     with _job_store_lock:
         rec = _job_store.get(job_id)
@@ -132,12 +172,19 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
             rec.status = "processing"
             rec.current_step = "Tracking Players"
 
+    with _job_store_lock:
+        rec_for_llm = _job_store.get(job_id)
+        job_llm_engine: LLMEngine = (
+            rec_for_llm.llm_engine if rec_for_llm else "cloud"
+        )
+
     try:
         runner = CVRouterFactory.get(cv_engine)
         report_path = await runner.run(
             job_id=job_id,
             video_path=video_path,
             progress_callback=progress_callback,
+            llm_engine=job_llm_engine,
         )
 
         with _job_store_lock:
@@ -243,6 +290,48 @@ async def list_reports() -> ReportsResponse:
 
     reports.sort(key=lambda r: r.created_at, reverse=True)
     return ReportsResponse(reports=reports)
+
+
+def _count_files_capped(root: Path, cap: int = 50_000) -> int:
+    """Count regular files under ``root`` without walking unbounded trees."""
+    count = 0
+    for p in root.rglob("*"):
+        if p.is_file():
+            count += 1
+            if count >= cap:
+                return cap
+    return count
+
+
+@app.get(
+    "/api/datasets",
+    response_model=DatasetsListResponse,
+    tags=["datasets"],
+)
+async def list_datasets() -> DatasetsListResponse:
+    """
+    List dataset folders (optional; used by some frontends).
+
+    Scans ``DATASETS_ROOT`` (default: ``<repo>/datasets``) for immediate
+    subdirectories; each becomes one row with ``split`` set to ``all``.
+    """
+    root = Path(os.getenv("DATASETS_ROOT", str(PROJECT_ROOT / "datasets"))).resolve()
+    rows: list[DatasetInfo] = []
+    if not root.is_dir():
+        return DatasetsListResponse(datasets=rows)
+
+    for child in sorted(root.iterdir()):
+        if not child.is_dir():
+            continue
+        rows.append(
+            DatasetInfo(
+                name=child.name,
+                split="all",
+                num_samples=_count_files_capped(child),
+                root_dir=str(child.resolve()),
+            )
+        )
+    return DatasetsListResponse(datasets=rows)
 
 
 @app.post(
@@ -474,12 +563,36 @@ async def get_job_tracking(job_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Job not found.")
     tracking_path = BACKEND_ROOT / "output" / f"{job_id}_tracking_data.json"
     if not tracking_path.is_file():
+        # #region agent log
+        _agent_debug_ndjson(
+            "H1",
+            "main.py:get_job_tracking",
+            "tracking file missing (425)",
+            {
+                "job_id_prefix": job_id[:8],
+                "rec_status": rec.status,
+                "rec_current_step": rec.current_step,
+            },
+        )
+        # #endregion
         raise HTTPException(
             status_code=425,
             detail="Tracking timeline not ready yet. Wait for job completion.",
         )
     with tracking_path.open("r", encoding="utf-8") as f_in:
         payload: dict[str, Any] = json.load(f_in)
+    # #region agent log
+    _agent_debug_ndjson(
+        "H1",
+        "main.py:get_job_tracking",
+        "tracking served",
+        {
+            "job_id_prefix": job_id[:8],
+            "rec_status": rec.status,
+            "frame_keys": len(payload.get("frames", [])) if isinstance(payload.get("frames"), list) else -1,
+        },
+    )
+    # #endregion
     return payload
 
 
@@ -804,17 +917,29 @@ async def get_coach_advice(
         with report_file.open("r", encoding="utf-8") as f:
             report_cards: list[dict[str, Any]] = json.load(f)
 
+        llm_skip_reason: str | None = None
         if not skip_llm and llm_engine == "local":
-            report_cards = await _refresh_job_report_cards_with_local_llm(
-                report_cards,
-                llm_concurrency=llm_concurrency,
-            )
+            try:
+                report_cards = await _refresh_job_report_cards_with_local_llm(
+                    report_cards,
+                    llm_concurrency=llm_concurrency,
+                )
+            except EngineRoutingError as exc:
+                llm_skip_reason = f"{exc.code}: {exc.message}"
+                LOGGER.warning(
+                    "Job %s: local LLM refresh skipped (%s)",
+                    job_id,
+                    llm_skip_reason,
+                )
 
         # Determine whether LLM produced text.
         llm_ok = any(bool(c.get("tactical_instruction")) for c in report_cards)
-        pipeline_llm = (
-            f"ok ({llm_engine})" if llm_ok else "skipped"
-        )
+        if llm_skip_reason:
+            pipeline_llm = f"skipped ({llm_skip_reason})"
+        elif llm_ok:
+            pipeline_llm = f"ok ({llm_engine})"
+        else:
+            pipeline_llm = "skipped"
         pipeline = {
             "rule_engine": "ok",
             "rag_synthesizer": "ok",

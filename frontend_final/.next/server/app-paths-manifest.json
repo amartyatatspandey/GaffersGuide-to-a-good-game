@@ -1,0 +1,9 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/debug-log/route": "app/api/debug-log/route.js",
+  "/api/workspace/chat/route": "app/api/workspace/chat/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js",
+  "/workspace/page": "app/workspace/page.js"
+}

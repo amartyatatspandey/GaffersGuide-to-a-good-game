@@ -100,12 +100,11 @@ export function ScrollyTelling() {
                
                {/* Pulse Animation for Zone 14 */}
                <motion.rect 
-                 style={{ opacity: opVis4 }}
+                 style={{ opacity: opVis4, transformOrigin: "300px 250px" }}
                  x="220" y="150" width="160" height="200" 
                  fill="none" stroke="#ffb300" strokeWidth="1"
                  animate={{ scale: [1, 1.1, 1], opacity: [1, 0, 1] }}
                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                 style={{ transformOrigin: '300px 250px' }} // Center of rect
                />
 
                <motion.text 

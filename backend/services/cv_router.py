@@ -9,6 +9,7 @@ from typing import Callable, Literal, Protocol
 import httpx
 
 from services.errors import EngineRoutingError
+from services.llm_router import LLMEngine
 
 CVEngine = Literal["local", "cloud"]
 
@@ -20,6 +21,7 @@ class CVRunner(Protocol):
         job_id: str,
         video_path: Path,
         progress_callback: Callable[[str], None] | None = None,
+        llm_engine: LLMEngine | None = None,
     ) -> Path: ...
 
 
@@ -30,16 +32,22 @@ class LocalCVRunner:
         job_id: str,
         video_path: Path,
         progress_callback: Callable[[str], None] | None = None,
+        llm_engine: LLMEngine | None = None,
     ) -> Path:
         # Lazy import keeps cold-start light for API-only flows.
         from scripts.run_e2e_cloud import run_e2e_cloud
 
-        return await asyncio.to_thread(
-            run_e2e_cloud,
-            video_path,
-            output_prefix=job_id,
-            progress_callback=progress_callback,
-        )
+        engine: LLMEngine = llm_engine if llm_engine is not None else "cloud"
+
+        def _run() -> Path:
+            return run_e2e_cloud(
+                video_path,
+                output_prefix=job_id,
+                progress_callback=progress_callback,
+                llm_engine=engine,
+            )
+
+        return await asyncio.to_thread(_run)
 
 
 class CloudCVRunner:
@@ -49,6 +57,7 @@ class CloudCVRunner:
         job_id: str,
         video_path: Path,
         progress_callback: Callable[[str], None] | None = None,
+        llm_engine: LLMEngine | None = None,
     ) -> Path:
         webhook_url = os.getenv("MODAL_WEBHOOK_URL", "").strip()
         if not webhook_url:

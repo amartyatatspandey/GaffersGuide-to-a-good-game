@@ -1,10 +1,40 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Cloud, Lock, Cpu, Server } from 'lucide-react';
 
+const LS_ENGINE = "gaffer-engine-type";
+const LS_CONNECTIVITY = "gaffer-connectivity";
+const LS_OLLAMA_MODEL = "gaffer-ollama-model";
+
 export function EngineSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const [engineType, setEngineType] = useState<'cloud' | 'local'>('cloud');
+  const [engineType, setEngineType] = useState<'cloud' | 'local'>('local');
   const [connectivity, setConnectivity] = useState<'online' | 'offline'>('online');
+  const [ollamaModel, setOllamaModel] = useState<string>("llama3");
+
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const eng = localStorage.getItem(LS_ENGINE);
+    if (eng === "local" || eng === "cloud") setEngineType(eng);
+    const con = localStorage.getItem(LS_CONNECTIVITY);
+    if (con === "online" || con === "offline") setConnectivity(con);
+    const m = localStorage.getItem(LS_OLLAMA_MODEL);
+    if (m && m.trim()) setOllamaModel(m.trim());
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(LS_ENGINE, engineType);
+  }, [engineType]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(LS_CONNECTIVITY, connectivity);
+  }, [connectivity]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(LS_OLLAMA_MODEL, ollamaModel.trim() || "llama3");
+  }, [ollamaModel]);
 
   if (!isOpen) return null;
 
@@ -101,20 +131,35 @@ export function EngineSettingsModal({ isOpen, onClose }: { isOpen: boolean, onCl
             )}
 
             {engineType === 'local' && connectivity === 'online' && (
-              <div className="animate-fade-in-up py-4 text-center">
+              <div className="animate-fade-in-up py-4 space-y-3 text-center">
                  <Server size={32} className="mx-auto text-cyan-500/50 mb-3" />
                  <h4 className="text-sm font-bold text-cyan-400 mb-1">Distributed Local Node</h4>
-                 <p className="text-xs text-gray-500 max-w-sm mx-auto">Connected to external local network nodes. Splitting Ollama workload across distributed GPUs within your facility.</p>
+                 <p className="text-xs text-gray-500 max-w-sm mx-auto">Chat uses Ollama at <span className="font-mono text-gray-400">OLLAMA_BASE_URL</span> (default <span className="font-mono">http://127.0.0.1:11434</span>).</p>
+                 <div className="text-left pt-2">
+                   <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 font-mono">Ollama model name</label>
+                   <input
+                     type="text"
+                     value={ollamaModel}
+                     onChange={(e) => setOllamaModel(e.target.value)}
+                     placeholder="llama3"
+                     className="w-full bg-[#0a0f0a] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:border-cyan-600"
+                   />
+                 </div>
               </div>
             )}
 
             {engineType === 'local' && connectivity === 'offline' && (
               <div className="animate-fade-in-up">
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 font-mono">Strict Airgap Checkpoint</label>
-                <select className="w-full bg-[#0a0f0a] border border-gray-700 rounded-lg px-4 py-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-sm appearance-none custom-select">
-                  <option>llama3:8b (Recommended)</option>
-                  <option>mistral:instruct</option>
-                  <option>phi3:mini</option>
+                <select
+                  value={ollamaModel}
+                  onChange={(e) => setOllamaModel(e.target.value)}
+                  className="w-full bg-[#0a0f0a] border border-gray-700 rounded-lg px-4 py-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-sm appearance-none custom-select"
+                >
+                  <option value="llama3">llama3 (Recommended)</option>
+                  <option value="llama3:8b">llama3:8b</option>
+                  <option value="mistral">mistral</option>
+                  <option value="phi3">phi3</option>
                 </select>
                 
                 <div className="mt-4 p-3 bg-amber-900/20 border border-amber-800/50 rounded-lg flex items-start gap-3">
@@ -138,9 +183,15 @@ export function EngineSettingsModal({ isOpen, onClose }: { isOpen: boolean, onCl
               engineType === 'local' && connectivity === 'online' ? 'text-cyan-400' : 'text-emerald-500'
             }>{engineType} • {connectivity}</span>
           </div>
-          <button 
-            onClick={onClose}
-            className={`px-6 py-2 rounded font-bold text-sm tracking-wide transition-colors ${
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new Event("gaffer-engine-changed"));
+              }
+              onClose();
+            }}
+            className={`rounded px-6 py-2 text-sm font-bold tracking-wide transition-colors ${
               engineType === 'cloud' ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
             }`}
           >

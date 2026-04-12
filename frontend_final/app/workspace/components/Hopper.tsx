@@ -16,10 +16,13 @@ export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File)
     }
   }, [currentStep, activeJobId, file, onComplete]);
 
-  // Derive current step index to know past/future states
-  const currentIndex = (isProcessing || currentStep === 'Completed') 
-    ? STEPS.indexOf(currentStep) 
-    : -1;
+  const stepIndexInMilestones = STEPS.indexOf(currentStep);
+  const currentIndex =
+    isProcessing || currentStep === 'Completed'
+      ? stepIndexInMilestones >= 0
+        ? stepIndexInMilestones
+        : -1
+      : -1;
 
   if (currentStep === 'Completed') {
     return null;
@@ -33,7 +36,11 @@ export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File)
     setIsUploading(true);
     
     try {
-      const job = await createJob(selectedFile);
+      const llmPref =
+        typeof window !== 'undefined' && localStorage.getItem('gaffer-engine-type') === 'cloud'
+          ? 'cloud'
+          : 'local';
+      const job = await createJob(selectedFile, llmPref);
       setActiveJobId(job.job_id);
       startTracking(job.job_id);
     } catch (err: any) {
@@ -109,11 +116,19 @@ export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File)
       {/* Stepped Progress UI */}
       {isProcessing && (
         <div className="bg-[#111a12] border border-[#1a2420] rounded-xl p-6 shadow-2xl mt-4">
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-6 border-b border-gray-800 pb-3">Telemetry Pipeline Tracker</h3>
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 border-b border-gray-800 pb-3">Telemetry Pipeline Tracker</h3>
+          <p className="text-[11px] font-mono text-emerald-300/90 mb-4">
+            Backend step: <span className="text-gray-100">{currentStep}</span>
+            {stepIndexInMilestones === -1 && currentStep !== 'Pending' && currentStep !== 'Completed' ? (
+              <span className="ml-2 text-gray-500">(not in milestone list)</span>
+            ) : null}
+          </p>
           <div className="flex flex-col gap-5">
             {STEPS.map((step, idx) => {
               const matchesCurrent = step === currentStep;
-              const isPast = idx < currentIndex || currentStep === 'Completed';
+              const isPast =
+                currentStep === 'Completed' ||
+                (currentIndex >= 0 && idx < currentIndex);
               
               return (
                 <div key={step} className="flex items-center gap-4">
