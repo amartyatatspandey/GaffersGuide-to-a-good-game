@@ -35,8 +35,7 @@ def run_dense_pass(
     frames_without_homography = 0
     fallback_frames = 0
     calibration_latency_ms = 0.0
-    for win in windows:
-        for idx in range(win.start_frame, min(win.end_frame + 1, len(frames))):
+    for idx in _iter_window_frame_indices(windows, len(frames)):
             frame = frames[idx]
             h, w = frame.shape[:2]
             estimate = homography.estimate(frame, idx)
@@ -80,3 +79,10 @@ def run_dense_pass(
         fallback_frames=fallback_frames,
         calibration_latency_ms=calibration_latency_ms,
     )
+
+
+def _iter_window_frame_indices(windows: list[Window], frame_count: int):
+    for win in windows:
+        end = min(win.end_frame + 1, frame_count)
+        for idx in range(win.start_frame, end):
+            yield idx

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+output/exp/*.json
+output/exp/bench_tmp/
+output/exp/bench_matrix/
+output/exp/bench_runs/
+output/exp/exp_jobs_store.json
+output/exp/exp_task_queue.json
+data/uploads/

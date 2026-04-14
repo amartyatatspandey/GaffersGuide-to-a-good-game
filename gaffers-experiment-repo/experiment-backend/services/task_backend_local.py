@@ -65,3 +65,9 @@ class LocalFileTaskBackend(TaskBackend):
             enqueued_at_epoch_ms=float(first["enqueued_at_epoch_ms"]),
             homography_weights_dir=Path(str(first["homography_weights_dir"])) if first.get("homography_weights_dir") else None,
         )
+
+    def ack(self, task: TaskPayload) -> None:
+        _ = task
+
+    def fail(self, task: TaskPayload, error: str) -> None:
+        _ = (task, error)

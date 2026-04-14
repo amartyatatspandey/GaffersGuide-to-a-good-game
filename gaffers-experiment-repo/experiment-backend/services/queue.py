@@ -127,6 +127,7 @@ class ExperimentQueue:
                 updated_at=datetime.now(timezone.utc).isoformat(),
             )
             self._metrics.incr("exp.jobs.succeeded")
+            self._metrics.flush_to_disk()
         except Exception as exc:  # noqa: BLE001
             self._store.update(
                 item.job_id,
@@ -137,3 +138,5 @@ class ExperimentQueue:
                 updated_at=datetime.now(timezone.utc).isoformat(),
             )
             self._metrics.incr("exp.jobs.failed")
+            self._metrics.flush_to_disk()
+            raise

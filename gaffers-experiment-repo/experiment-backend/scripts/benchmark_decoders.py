@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
+import platform
 import statistics
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -12,6 +16,10 @@ import cv2
 from services.cv_pipeline import process_video
 
 LOGGER = logging.getLogger(__name__)
+try:
+    import pynvml  # type: ignore[import-not-found]
+except Exception:  # noqa: BLE001
+    pynvml = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,6 +61,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Mark quality gate as passing for this benchmark run.",
     )
+    parser.add_argument(
+        "--baseline-json",
+        type=str,
+        default=None,
+        help="Optional baseline benchmark json for delta comparison metadata.",
+    )
     return parser.parse_args()
 
 
@@ -80,14 +94,59 @@ def _compute_stats(values: list[float]) -> dict[str, float]:
     }
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        while True:
+            chunk = fh.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _try_command(command: list[str]) -> str | None:
+    try:
+        out = subprocess.check_output(command, stderr=subprocess.DEVNULL, text=True).strip()
+        return out or None
+    except Exception:
+        return None
+
+
+def _build_manifest(video_path: Path, run_id: str, args: argparse.Namespace) -> dict[str, object]:
+    git_sha = _try_command(["git", "rev-parse", "HEAD"])
+    gpu_name = _try_command(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"])
+    gpu_driver = _try_command(["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"])
+    cuda_runtime = _try_command(["nvidia-smi", "--query-gpu=cuda_version", "--format=csv,noheader"])
+    return {
+        "schema_version": "exp_bench_v2",
+        "run_id": run_id,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "git_sha": git_sha,
+        "python_version": sys.version.split()[0],
+        "platform": platform.platform(),
+        "runtime_target": args.runtime_target,
+        "hardware_profile": args.hardware_profile,
+        "video_path": str(video_path),
+        "video_sha256": _sha256_file(video_path),
+        "gpu_name": gpu_name,
+        "gpu_driver": gpu_driver,
+        "cuda_runtime": cuda_runtime,
+        "trial_count": max(1, int(args.trials)),
+        "matrix_mode": bool(args.matrix),
+    }
+
+
 def _run_decoder_trials(video_path: Path, trials: int, run_id: str) -> dict[str, dict[str, object]]:
-    output_root = Path("output/exp/bench_tmp") / run_id
+    output_root = Path("output/exp/bench_runs") / run_id / "trials" / "decoder"
     output_root.mkdir(parents=True, exist_ok=True)
     results: dict[str, dict[str, object]] = {}
     for decoder in ("opencv", "pyav"):
         elapsed_values: list[float] = []
         frames_processed: int = 0
+        trial_provenance: list[dict[str, object]] = []
         for idx in range(trials):
+            nvdec_before = _sample_decoder_utilization()
             artifacts = process_video(
                 video_path,
                 output_dir=output_root,
@@ -95,8 +154,18 @@ def _run_decoder_trials(video_path: Path, trials: int, run_id: str) -> dict[str,
                 decoder_mode=decoder,  # type: ignore[arg-type]
             )
             elapsed_values.append(artifacts.elapsed_ms)
+            nvdec_after = _sample_decoder_utilization()
             frames_processed = artifacts.frames_processed
+            observed = max(v for v in [nvdec_before, nvdec_after] if v is not None) if (nvdec_before is not None or nvdec_after is not None) else None
+            trial_provenance.append(
+                {
+                    "trial": idx,
+                    "nvdec_utilization_pct": observed,
+                    "valid_hardware_decode": bool(observed is None or observed > 0.0),
+                }
+            )
         stats = _compute_stats(elapsed_values)
+        hardware_decode_valid = all(bool(t["valid_hardware_decode"]) for t in trial_provenance)
         results[decoder] = {
             "frames_processed": frames_processed,
             "trial_count": trials,
@@ -105,8 +174,29 @@ def _run_decoder_trials(video_path: Path, trials: int, run_id: str) -> dict[str,
             "elapsed_ms_p95": stats["p95"],
             "elapsed_ms_min": stats["min"],
             "elapsed_ms_max": stats["max"],
+            "trial_provenance": trial_provenance,
+            "hardware_decode_valid": hardware_decode_valid,
         }
     return results
+
+
+def _sample_decoder_utilization() -> float | None:
+    if pynvml is None:
+        return None
+    try:
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        util = pynvml.nvmlDeviceGetDecoderUtilization(handle)
+        if isinstance(util, tuple) and util:
+            return float(util[0])
+        return None
+    except Exception:
+        return None
+    finally:
+        try:
+            pynvml.nvmlShutdown()
+        except Exception:
+            pass
 
 
 def main() -> None:
@@ -118,7 +208,10 @@ def main() -> None:
 
     trial_count = max(1, int(args.trials))
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    run_root = Path("output/exp/bench_runs") / run_id
+    run_root.mkdir(parents=True, exist_ok=True)
     results = _run_decoder_trials(video_path, trial_count, run_id)
+    manifest = _build_manifest(video_path, run_id, args)
     duration_min = _video_duration_minutes(video_path)
     opencv_ms = float(results["opencv"]["elapsed_ms_median"])
     pyav_ms = float(results["pyav"]["elapsed_ms_median"])
@@ -129,9 +222,11 @@ def main() -> None:
     }
     payload = {
         "run_id": run_id,
+        "schema_version": "exp_bench_v2",
         "video": str(video_path),
         "duration_minutes": round(duration_min, 3),
         "trial_count": trial_count,
+        "manifest": manifest,
         "results": results,
         "normalized": normalized,
         "decoder_claim_gate": {
@@ -155,7 +250,7 @@ def main() -> None:
             for trial_idx in range(trial_count):
                 artifacts = process_video(
                     video_path,
-                    output_dir=Path("output/exp/bench_matrix") / run_id,
+                    output_dir=run_root / "trials" / "matrix",
                     output_prefix=f"bench_{name}_trial_{trial_idx}",
                     decoder_mode="opencv",
                     cv_engine="cloud",
@@ -216,10 +311,20 @@ def main() -> None:
             "decoder_claim": bool(payload["decoder_claim_gate"]["pass"]),
             "profile_claim": all(bool(v) for k, v in payload["profile_claim_gate"].items() if k != "gate_profile"),
         }
+    if args.baseline_json:
+        payload["baseline_reference"] = str(Path(args.baseline_json).expanduser().resolve())
+
+    benchmark_path = run_root / "benchmark.json"
+    benchmark_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    manifest_path = run_root / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
     output_path = Path(args.output_json).expanduser().resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     LOGGER.info("Wrote benchmark payload to %s", output_path)
+    LOGGER.info("Wrote run benchmark to %s", benchmark_path)
+    LOGGER.info("Wrote run manifest to %s", manifest_path)
 
 
 if __name__ == "__main__":

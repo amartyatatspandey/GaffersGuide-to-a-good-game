@@ -25,12 +25,20 @@ jobs:
       - name: Run NVIDIA benchmark matrix (blocking)
         run: |
           cd experiment-backend
-          python -m scripts.benchmark_decoders ../../backend/data/match_test.mp4 --matrix --runtime-target nvidia --hardware-profile l4 --output-json output/exp/decoder_benchmark_matrix_nvidia.json
-      - name: Upload NVIDIA benchmark artifact
+          python -m scripts.benchmark_decoders ../../backend/data/match_test.mp4 --matrix --trials 5 --runtime-target nvidia --hardware-profile l4 --quality-regression-ok --output-json output/exp/decoder_benchmark_matrix_nvidia.json
+      - name: Compare NVIDIA benchmark vs baseline (blocking)
+        if: ${{ vars.EXP_BASELINE_BENCHMARK_JSON != '' }}
+        run: |
+          cd experiment-backend
+          python -m scripts.compare_benchmarks --current output/exp/decoder_benchmark_matrix_nvidia.json --baseline "${{ vars.EXP_BASELINE_BENCHMARK_JSON }}" --output-json output/exp/benchmark_delta_report_nvidia.json --min-improvement-pct 0.0
+      - name: Upload NVIDIA benchmark artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: decoder-benchmark-nvidia
-          path: experiment-backend/output/exp/decoder_benchmark_matrix_nvidia.json
+          name: decoder-benchmark-nvidia-artifacts
+          path: |
+            experiment-backend/output/exp/decoder_benchmark_matrix_nvidia.json
+            experiment-backend/output/exp/benchmark_delta_report_nvidia.json
+            experiment-backend/output/exp/bench_runs/
 
   apple_mps_tracked:
     runs-on: macos-latest
@@ -48,9 +56,11 @@ jobs:
       - name: Run Apple MPS benchmark matrix (non-blocking)
         run: |
           cd experiment-backend
-          python -m scripts.benchmark_decoders ../../backend/data/match_test.mp4 --matrix --runtime-target apple_mps --hardware-profile mps --output-json output/exp/decoder_benchmark_matrix_mps.json
-      - name: Upload MPS benchmark artifact
+          python -m scripts.benchmark_decoders ../../backend/data/match_test.mp4 --matrix --trials 5 --runtime-target apple_mps --hardware-profile mps --quality-regression-ok --output-json output/exp/decoder_benchmark_matrix_mps.json
+      - name: Upload MPS benchmark artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: decoder-benchmark-mps
-          path: experiment-backend/output/exp/decoder_benchmark_matrix_mps.json
+          name: decoder-benchmark-mps-artifacts
+          path: |
+            experiment-backend/output/exp/decoder_benchmark_matrix_mps.json
+            experiment-backend/output/exp/bench_runs/
