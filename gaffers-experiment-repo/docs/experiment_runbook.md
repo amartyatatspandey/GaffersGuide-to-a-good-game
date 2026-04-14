@@ -23,6 +23,27 @@
 - For local-only operation without Redis, set `EXP_TASK_BACKEND=local`.
 - If Redis is unavailable and `EXP_ALLOW_LOCAL_BACKEND_FALLBACK=1` (default), the backend falls back to local file queue.
 
+## Homography In Experiment Backend
+
+- Experiment backend now uses an experiment-local homography stack under:
+  - `experiment-backend/services/homography_vendor/`
+  - `experiment-backend/services/homography_adapter.py`
+- Coordinates in `tracking_data.json` frames are emitted in pitch space:
+  - `ball_xy` now represents pitch-space coordinates when homography is available.
+  - `coord_space` is set to `pitch`.
+  - `homography_applied` indicates whether the frame used a valid (or fallback) homography.
+- Homography telemetry is included in tracking + job status:
+  - `frames_with_homography`
+  - `frames_without_homography`
+  - `fallback_frames`
+  - `calibration_latency_ms`
+- Optional job input form field:
+  - `homography_weights_dir` (absolute or resolvable path for calibration resources)
+
+Environment toggles:
+- `EXP_HOMOGRAPHY_ENABLED=1|0` (default `1`)
+- `EXP_HOMOGRAPHY_SAMPLE_EVERY=<int>` (default `5`, run calibrator every Nth frame and reuse previous matrix between samples)
+
 ## Smoke Validation
 
 1. Upload `match_test.mp4`.

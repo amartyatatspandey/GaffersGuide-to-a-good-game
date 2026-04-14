@@ -31,6 +31,7 @@ class RedisTaskBackend(TaskBackend):
             "max_parallel_chunks": task.max_parallel_chunks,
             "target_sla_tier": task.target_sla_tier,
             "enqueued_at_epoch_ms": task.enqueued_at_epoch_ms,
+            "homography_weights_dir": str(task.homography_weights_dir) if task.homography_weights_dir else None,
         }
         self._client.rpush(self._queue_key, json.dumps(payload))
 
@@ -52,4 +53,5 @@ class RedisTaskBackend(TaskBackend):
             max_parallel_chunks=int(payload["max_parallel_chunks"]),
             target_sla_tier=str(payload["target_sla_tier"]),  # type: ignore[arg-type]
             enqueued_at_epoch_ms=float(payload["enqueued_at_epoch_ms"]),
+            homography_weights_dir=Path(str(payload["homography_weights_dir"])) if payload.get("homography_weights_dir") else None,
         )

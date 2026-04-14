@@ -29,6 +29,7 @@ class TaskPayload:
     max_parallel_chunks: int
     target_sla_tier: SlaTier
     enqueued_at_epoch_ms: float
+    homography_weights_dir: Path | None = None
 
 
 class TaskBackend(Protocol):

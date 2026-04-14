@@ -36,5 +36,9 @@ def test_job_state_contains_stage_telemetry_contract() -> None:
         "reid_invocations",
         "reid_ms",
         "id_switch_rate",
+        "frames_with_homography",
+        "frames_without_homography",
+        "fallback_frames",
+        "calibration_latency_ms",
     ):
         assert key in telemetry

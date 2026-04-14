@@ -44,6 +44,10 @@ class PipelineArtifacts:
     id_switch_rate: float
     effective_fps: float
     chunks: list[dict[str, object]]
+    frames_with_homography: int
+    frames_without_homography: int
+    fallback_frames: int
+    calibration_latency_ms: float
 
 
 @dataclass(slots=True)
@@ -118,6 +122,7 @@ def process_video(
     quality_mode: str = "balanced",
     chunking_policy: str = "fixed",
     max_parallel_chunks: int = 2,
+    homography_weights_dir: Path | None = None,
 ) -> PipelineArtifacts:
     start = time.perf_counter()
     decode_start = time.perf_counter()
@@ -143,8 +148,17 @@ def process_video(
     total_fast_ms = 0.0
     total_infer_ms = 0.0
     total_post_ms = 0.0
+    homography_frames_with = 0
+    homography_frames_without = 0
+    homography_fallback_frames = 0
+    homography_calibration_latency_ms = 0.0
+    resolved_weights_dir = (
+        homography_weights_dir
+        if homography_weights_dir is not None
+        else Path(__file__).resolve().parents[1] / "resources" / "sn-calibration"
+    )
 
-    def _run_chunk(chunk: DecodedChunk) -> tuple[list[dict[str, object]], float, float, float]:
+    def _run_chunk(chunk: DecodedChunk) -> tuple[list[dict[str, object]], float, float, float, int, int, int, float]:
         chunk_frames = chunk.frames
         fast = run_fast_pass(chunk_frames, quality_mode=quality_mode)
         windows = select_windows(
@@ -157,6 +171,7 @@ def process_video(
             chunk_frames,
             windows=windows,
             runtime_backend=runtime_cfg.backend,
+            homography_weights_dir=resolved_weights_dir,
         )
         adjusted_rows: list[dict[str, object]] = []
         for row in dense.tracked_rows:
@@ -164,7 +179,16 @@ def process_video(
             r["frame_idx"] = int(r["frame_idx"]) + chunk.spec.start_frame
             r["chunk_id"] = chunk.spec.chunk_id
             adjusted_rows.append(r)
-        return adjusted_rows, fast.elapsed_ms, dense.infer_ms, dense.post_ms
+        return (
+            adjusted_rows,
+            fast.elapsed_ms,
+            dense.infer_ms,
+            dense.post_ms,
+            dense.frames_with_homography,
+            dense.frames_without_homography,
+            dense.fallback_frames,
+            dense.calibration_latency_ms,
+        )
 
     # Decode and process in overlap using a bounded queue.
     resolved_workers = _resolve_chunk_workers(max_parallel_chunks)
@@ -221,18 +245,33 @@ def process_video(
     producer.start()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=resolved_workers) as executor:
-        futures: list[concurrent.futures.Future[tuple[list[dict[str, object]], float, float, float]]] = []
+        futures: list[
+            concurrent.futures.Future[tuple[list[dict[str, object]], float, float, float, int, int, int, float]]
+        ] = []
         while True:
             decoded = decoded_queue.get()
             if decoded is None:
                 break
             futures.append(executor.submit(_run_chunk, decoded))
         for fut in futures:
-            rows, fast_ms, infer_ms_chunk, post_ms_chunk = fut.result()
+            (
+                rows,
+                fast_ms,
+                infer_ms_chunk,
+                post_ms_chunk,
+                chunk_frames_with,
+                chunk_frames_without,
+                chunk_fallback_frames,
+                chunk_calib_ms,
+            ) = fut.result()
             async_rows.append(rows)
             total_fast_ms += fast_ms
             total_infer_ms += infer_ms_chunk
             total_post_ms += post_ms_chunk
+            homography_frames_with += chunk_frames_with
+            homography_frames_without += chunk_frames_without
+            homography_fallback_frames += chunk_fallback_frames
+            homography_calibration_latency_ms += chunk_calib_ms
 
     producer.join()
     decode_ms = (time.perf_counter() - decode_start) * 1000.0
@@ -263,6 +302,10 @@ def process_video(
             "post_ms": round(total_post_ms, 2),
             "runtime_backend": runtime_cfg.backend,
             "chunk_count": len(chunks),
+            "frames_with_homography": homography_frames_with,
+            "frames_without_homography": homography_frames_without,
+            "fallback_frames": homography_fallback_frames,
+            "calibration_latency_ms": round(homography_calibration_latency_ms, 2),
         },
         "frames": tracked_rows,
     }
@@ -302,6 +345,10 @@ def process_video(
         reid_ms=reid.reid_ms,
         id_switch_rate=reid.id_switch_rate,
         effective_fps=effective_fps,
+        frames_with_homography=homography_frames_with,
+        frames_without_homography=homography_frames_without,
+        fallback_frames=homography_fallback_frames,
+        calibration_latency_ms=homography_calibration_latency_ms,
         chunks=[
             {
                 "chunk_id": c.chunk_id,

@@ -96,6 +96,7 @@ async def create_job(
     chunking_policy: ChunkingPolicy = Form("fixed"),
     max_parallel_chunks: int = Form(2),
     target_sla_tier: SlaTier = Form("tier_10m"),
+    homography_weights_dir: str | None = Form(default=None),
     idempotency_key: str | None = Form(default=None),
 ) -> CreateJobResponse:
     filename = file.filename or ""
@@ -161,6 +162,7 @@ async def create_job(
         max_parallel_chunks=max(1, int(max_parallel_chunks)),
         target_sla_tier=target_sla_tier,
         enqueued_at_epoch_ms=time.time() * 1000.0,
+        homography_weights_dir=Path(homography_weights_dir).expanduser().resolve() if homography_weights_dir else None,
     )
     task_backend.enqueue(payload)
     if os.getenv("EXP_INLINE_WORKER", "0") == "1":
@@ -178,6 +180,7 @@ async def create_job(
                 max_parallel_chunks=payload.max_parallel_chunks,
                 target_sla_tier=payload.target_sla_tier,
                 enqueued_at_epoch_ms=payload.enqueued_at_epoch_ms,
+                homography_weights_dir=payload.homography_weights_dir,
             )
         )
     return CreateJobResponse(
@@ -225,6 +228,10 @@ async def get_job(job_id: str) -> dict[str, Any]:
             "reid_invocations": job.reid_invocations,
             "reid_ms": job.reid_ms,
             "id_switch_rate": job.id_switch_rate,
+            "frames_with_homography": job.frames_with_homography,
+            "frames_without_homography": job.frames_without_homography,
+            "fallback_frames": job.fallback_frames,
+            "calibration_latency_ms": job.calibration_latency_ms,
         },
         "error": job.error,
         "created_at": job.created_at,
@@ -356,6 +363,10 @@ async def ws_job(websocket: WebSocket, job_id: str) -> None:
                         "reid_invocations": job.reid_invocations,
                         "reid_ms": job.reid_ms,
                         "id_switch_rate": job.id_switch_rate,
+                        "frames_with_homography": job.frames_with_homography,
+                        "frames_without_homography": job.frames_without_homography,
+                        "fallback_frames": job.fallback_frames,
+                        "calibration_latency_ms": job.calibration_latency_ms,
                     },
                     "error": job.error,
                 }

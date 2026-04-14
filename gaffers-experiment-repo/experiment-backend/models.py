@@ -79,3 +79,7 @@ class StageTelemetry(BaseModel):
     reid_invocations: int = 0
     reid_ms: float = 0.0
     id_switch_rate: float = 0.0
+    frames_with_homography: int = 0
+    frames_without_homography: int = 0
+    fallback_frames: int = 0
+    calibration_latency_ms: float = 0.0

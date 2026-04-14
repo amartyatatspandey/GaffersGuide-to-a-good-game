@@ -38,6 +38,7 @@ class LocalFileTaskBackend(TaskBackend):
                     "max_parallel_chunks": task.max_parallel_chunks,
                     "target_sla_tier": task.target_sla_tier,
                     "enqueued_at_epoch_ms": task.enqueued_at_epoch_ms,
+                    "homography_weights_dir": str(task.homography_weights_dir) if task.homography_weights_dir else None,
                 }
             )
             self._write(rows)
@@ -62,4 +63,5 @@ class LocalFileTaskBackend(TaskBackend):
             max_parallel_chunks=int(first["max_parallel_chunks"]),
             target_sla_tier=str(first["target_sla_tier"]),  # type: ignore[arg-type]
             enqueued_at_epoch_ms=float(first["enqueued_at_epoch_ms"]),
+            homography_weights_dir=Path(str(first["homography_weights_dir"])) if first.get("homography_weights_dir") else None,
         )

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -29,3 +30,13 @@ def test_process_video_writes_experiment_artifacts(tmp_path: Path) -> None:
     assert artifacts.tracking_path.is_file()
     assert str(artifacts.report_path).startswith(str(tmp_path))
     assert str(artifacts.tracking_path).startswith(str(tmp_path))
+    payload = json.loads(artifacts.tracking_path.read_text(encoding="utf-8"))
+    telemetry = payload["telemetry"]
+    assert "frames_with_homography" in telemetry
+    assert "frames_without_homography" in telemetry
+    assert "fallback_frames" in telemetry
+    assert "calibration_latency_ms" in telemetry
+    if payload["frames"]:
+        row = payload["frames"][0]
+        assert row.get("coord_space") == "pitch"
+        assert "homography_applied" in row

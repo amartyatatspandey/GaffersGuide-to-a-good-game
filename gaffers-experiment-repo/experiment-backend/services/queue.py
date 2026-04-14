@@ -27,6 +27,7 @@ class QueueItem:
     max_parallel_chunks: int = 2
     target_sla_tier: str = "tier_10m"
     enqueued_at_epoch_ms: float = 0.0
+    homography_weights_dir: Path | None = None
 
 
 class ExperimentQueue:
@@ -67,6 +68,7 @@ class ExperimentQueue:
                 max_parallel_chunks=task.max_parallel_chunks,
                 target_sla_tier=task.target_sla_tier,
                 enqueued_at_epoch_ms=task.enqueued_at_epoch_ms,
+                homography_weights_dir=task.homography_weights_dir,
             )
         )
 
@@ -98,6 +100,7 @@ class ExperimentQueue:
                     quality_mode=item.quality_mode,
                     chunking_policy=item.chunking_policy,
                     max_parallel_chunks=resolved_chunk_parallelism,
+                    homography_weights_dir=item.homography_weights_dir,
                 )
             self._store.update(
                 item.job_id,
@@ -116,6 +119,10 @@ class ExperimentQueue:
                 reid_invocations=artifacts.reid_invocations,
                 reid_ms=round(artifacts.reid_ms, 2),
                 id_switch_rate=artifacts.id_switch_rate,
+                frames_with_homography=artifacts.frames_with_homography,
+                frames_without_homography=artifacts.frames_without_homography,
+                fallback_frames=artifacts.fallback_frames,
+                calibration_latency_ms=round(artifacts.calibration_latency_ms, 2),
                 chunks=artifacts.chunks,
                 updated_at=datetime.now(timezone.utc).isoformat(),
             )
