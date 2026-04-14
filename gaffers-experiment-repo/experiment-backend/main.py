@@ -47,15 +47,36 @@ metrics = MetricsRegistry()
 job_store = ExperimentJobStore(STORE_PATH)
 queue = ExperimentQueue(job_store, metrics, OUTPUT_DIR)
 LOGGER = logging.getLogger(__name__)
+
+
+def ensure_runtime_directories() -> None:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def preflight_check() -> None:
+    ensure_runtime_directories()
+    ffmpeg_ok = shutil.which("ffmpeg") is not None
+    if not ffmpeg_ok:
+        raise RuntimeError("ffmpeg is required for streaming decode.")
+    cloud_mode = os.getenv("EXP_CLOUD_MODE", "0") == "1"
+    if cloud_mode and os.getenv("EXP_TASK_BACKEND", "redis").lower() != "redis":
+        raise RuntimeError("Cloud mode requires redis task backend.")
+
+
 def build_task_backend() -> LocalFileTaskBackend | RedisTaskBackend:
+    cloud_mode = os.getenv("EXP_CLOUD_MODE", "0") == "1"
     backend_name = os.getenv("EXP_TASK_BACKEND", "redis").lower()
+    if cloud_mode and backend_name != "redis":
+        raise RuntimeError("EXP_CLOUD_MODE=1 requires EXP_TASK_BACKEND=redis.")
     if backend_name == "redis":
         redis_url = os.getenv("EXP_REDIS_URL", "redis://127.0.0.1:6379/0")
         queue_key = os.getenv("EXP_REDIS_QUEUE_KEY", "exp:task_queue")
         try:
             return RedisTaskBackend(redis_url, queue_key=queue_key)
         except Exception as exc:  # noqa: BLE001
-            if os.getenv("EXP_ALLOW_LOCAL_BACKEND_FALLBACK", "1") == "1":
+            fallback_default = "0" if cloud_mode else "1"
+            if os.getenv("EXP_ALLOW_LOCAL_BACKEND_FALLBACK", fallback_default) == "1":
                 LOGGER.warning("Redis backend unavailable, falling back to local task backend: %s", exc)
                 return LocalFileTaskBackend(TASK_QUEUE_PATH)
             raise
@@ -75,6 +96,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup() -> None:
+    preflight_check()
     if os.getenv("EXP_INLINE_WORKER", "0") == "1":
         await queue.start()
 
@@ -249,6 +271,9 @@ async def get_tracking(job_id: str) -> dict[str, Any]:
     tracking_path = Path(job.tracking_data_path)
     if not tracking_path.is_file():
         raise HTTPException(status_code=425, detail="Tracking not ready.")
+    if tracking_path.suffix == ".jsonl":
+        frames = [json.loads(line) for line in tracking_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        return {"frames": frames}
     return json.loads(tracking_path.read_text(encoding="utf-8"))
 
 

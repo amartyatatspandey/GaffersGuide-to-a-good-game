@@ -5,6 +5,7 @@ import os
 import time
 import concurrent.futures
 import queue
+import subprocess
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,7 +17,7 @@ import numpy as np
 from services.dense_pass import run_dense_pass
 from services.fast_pass import run_fast_pass
 from services.gpu_runtime import select_gpu_runtime
-from services.merge import merge_chunk_rows
+from services.merge import atomic_write_jsonl, merge_sorted_chunk_jsonl, write_chunk_jsonl
 from services.reid_budget import run_reid_budget_controller
 from services.splitter import ChunkSpec, build_chunks
 from services.window_selector import select_windows
@@ -56,6 +57,46 @@ class DecodedChunk:
     frames: list[np.ndarray]
 
 
+# RGB24: 1920 × 1080 × 3 bytes = 6.22 MB/frame
+# YUV420p: 1920 × 1080 × 1.5 bytes = 3.11 MB/frame
+# Old behavior accumulated many frames/chunks in RAM.
+# New behavior streams decode and bounds in-flight chunks.
+
+
+def stream_yuv_frames(video_path: Path, width: int, height: int) -> Iterator[np.ndarray]:
+    frame_bytes = width * height * 3 // 2
+    cmd = [
+        "ffmpeg",
+        "-i",
+        str(video_path),
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "yuv420p",
+        "-vf",
+        f"scale={width}:{height}",
+        "pipe:1",
+    ]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    if proc.stdout is None:
+        proc.terminate()
+        proc.wait(timeout=5)
+        raise RuntimeError("ffmpeg stream could not be opened.")
+    try:
+        while True:
+            chunk = proc.stdout.read(frame_bytes)
+            if not chunk or len(chunk) < frame_bytes:
+                break
+            yuv = np.frombuffer(chunk, dtype=np.uint8).reshape((height * 3 // 2, width))
+            yield cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_I420)
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except Exception:
+            proc.kill()
+
+
 def _iter_opencv_frames(video_path: Path) -> Iterator[np.ndarray]:
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
@@ -85,13 +126,30 @@ def _iter_pyav_frames(video_path: Path) -> Iterator[np.ndarray]:
         container.close()
 
 
+def _read_video_dimensions(video_path: Path) -> tuple[int, int]:
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        return 1920, 1080
+    try:
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 1920)
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 1080)
+        return max(1, width), max(1, height)
+    finally:
+        cap.release()
+
+
 def _iter_frames(video_path: Path, decoder_mode: DecoderMode) -> tuple[Iterator[np.ndarray], DecoderMode]:
+    if decoder_mode == "opencv":
+        width, height = _read_video_dimensions(video_path)
+        return stream_yuv_frames(video_path, width, height), "opencv"
     if decoder_mode == "pyav":
         try:
             return _iter_pyav_frames(video_path), "pyav"
         except Exception:  # noqa: BLE001
-            return _iter_opencv_frames(video_path), "opencv"
-    return _iter_opencv_frames(video_path), "opencv"
+            width, height = _read_video_dimensions(video_path)
+            return stream_yuv_frames(video_path, width, height), "opencv"
+    width, height = _read_video_dimensions(video_path)
+    return stream_yuv_frames(video_path, width, height), "opencv"
 
 
 def _estimate_total_frames(video_path: Path) -> int:
@@ -136,10 +194,13 @@ def process_video(
     )
     fps = 25
     total_frames_hint = _estimate_total_frames(video_path)
+    frame_width, frame_height = _read_video_dimensions(video_path)
     chunks = build_chunks(
         total_frames=total_frames_hint,
         chunking_policy=chunking_policy,
         fps=fps,
+        frame_width=frame_width,
+        frame_height=frame_height,
     )
     if not chunks:
         chunks = [ChunkSpec(chunk_id="chunk_0", start_frame=0, end_frame=-1)]
@@ -244,6 +305,7 @@ def process_video(
     producer = threading.Thread(target=_producer, daemon=True)
     producer.start()
 
+    semaphore = threading.BoundedSemaphore(value=resolved_workers)
     with concurrent.futures.ThreadPoolExecutor(max_workers=resolved_workers) as executor:
         futures: list[
             concurrent.futures.Future[tuple[list[dict[str, object]], float, float, float, int, int, int, float]]
@@ -252,7 +314,10 @@ def process_video(
             decoded = decoded_queue.get()
             if decoded is None:
                 break
-            futures.append(executor.submit(_run_chunk, decoded))
+            semaphore.acquire()
+            fut = executor.submit(_run_chunk, decoded)
+            fut.add_done_callback(lambda _f: semaphore.release())
+            futures.append(fut)
         for fut in futures:
             (
                 rows,
@@ -281,38 +346,22 @@ def process_video(
         raise RuntimeError("No frames decoded from video.")
     chunks = decoded_chunks if decoded_chunks else chunks
 
-    merged = merge_chunk_rows(async_rows)
-    tracked_rows = merged.frames
+    chunk_dir = output_dir / f"{output_prefix}_chunks"
+    chunk_paths: list[Path] = []
+    for idx, rows in enumerate(async_rows):
+        chunk_path = chunk_dir / f"chunk_{idx}.jsonl"
+        write_chunk_jsonl(chunk_path, rows)
+        chunk_paths.append(chunk_path)
     reid = run_reid_budget_controller(
         frames_processed=frames_processed,
         quality_mode=quality_mode,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    tracking_path = output_dir / f"{output_prefix}_tracking_data.json"
+    tracking_path = output_dir / f"{output_prefix}_tracking_data.jsonl"
     report_path = output_dir / f"{output_prefix}_report.json"
 
-    tracking_payload = {
-        "video_path": str(video_path),
-        "telemetry": {
-            "total_frames_processed": frames_processed,
-            "decode_ms": round(decode_ms, 2),
-            "fast_pass_ms": round(total_fast_ms, 2),
-            "infer_ms": round(total_infer_ms, 2),
-            "post_ms": round(total_post_ms, 2),
-            "runtime_backend": runtime_cfg.backend,
-            "chunk_count": len(chunks),
-            "frames_with_homography": homography_frames_with,
-            "frames_without_homography": homography_frames_without,
-            "fallback_frames": homography_fallback_frames,
-            "calibration_latency_ms": round(homography_calibration_latency_ms, 2),
-        },
-        "frames": tracked_rows,
-    }
-    tracking_path.write_text(
-        json.dumps(tracking_payload, separators=(",", ":")),
-        encoding="utf-8",
-    )
+    atomic_write_jsonl(tracking_path, merge_sorted_chunk_jsonl(chunk_paths))
 
     report_payload = [
         {
