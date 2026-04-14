@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+from pathlib import Path
+
+from services.job_store import ExperimentJobStore
+from services.observability import MetricsRegistry
+from services.queue import ExperimentQueue
+from services.task_backend_local import LocalFileTaskBackend
+from services.task_backend_redis import RedisTaskBackend
+
+ROOT = Path(__file__).resolve().parent
+OUTPUT_DIR = ROOT / "output" / "exp"
+STORE_PATH = OUTPUT_DIR / "exp_jobs_store.json"
+TASK_QUEUE_PATH = OUTPUT_DIR / "exp_task_queue.json"
+LOGGER = logging.getLogger(__name__)
+
+
+async def run() -> None:
+    store = ExperimentJobStore(STORE_PATH)
+    metrics = MetricsRegistry()
+    queue = ExperimentQueue(store, metrics, OUTPUT_DIR)
+    backend_name = os.getenv("EXP_TASK_BACKEND", "redis").lower()
+    if backend_name == "redis":
+        redis_url = os.getenv("EXP_REDIS_URL", "redis://127.0.0.1:6379/0")
+        queue_key = os.getenv("EXP_REDIS_QUEUE_KEY", "exp:task_queue")
+        try:
+            backend = RedisTaskBackend(redis_url, queue_key=queue_key)
+        except Exception as exc:  # noqa: BLE001
+            if os.getenv("EXP_ALLOW_LOCAL_BACKEND_FALLBACK", "1") == "1":
+                LOGGER.warning("Redis backend unavailable, falling back to local task backend: %s", exc)
+                backend = LocalFileTaskBackend(TASK_QUEUE_PATH)
+            else:
+                raise
+    else:
+        backend = LocalFileTaskBackend(TASK_QUEUE_PATH)
+    idle_sleep_seconds = float(os.getenv("EXP_WORKER_IDLE_SLEEP_SECONDS", "0.25"))
+    while True:
+        task = backend.dequeue()
+        if task is None:
+            await asyncio.sleep(max(0.05, idle_sleep_seconds))
+            continue
+        await queue.process_task(task)
+
+
+if __name__ == "__main__":
+    asyncio.run(run())

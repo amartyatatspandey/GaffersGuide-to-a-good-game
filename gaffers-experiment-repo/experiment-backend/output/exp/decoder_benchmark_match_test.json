@@ -1,0 +1,18 @@
+{
+  "video": "/Users/trickyoutlaw/Documents/Coding/PROJECTS/Gaffers-Guide_ULTIMATE/backend/data/match_test.mp4",
+  "results": {
+    "opencv": {
+      "elapsed_ms": 797.09,
+      "frames_processed": 4501
+    },
+    "pyav": {
+      "elapsed_ms": 3281.18,
+      "frames_processed": 4501
+    }
+  },
+  "promotion_gate": {
+    "latency_improvement_pct": -311.64,
+    "min_latency_improvement_pct": 15.0,
+    "pass": false
+  }
+}
