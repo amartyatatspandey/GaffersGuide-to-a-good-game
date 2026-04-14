@@ -1,5 +1,8 @@
 """
-Run DynamicPitchCalibrator on a video file (e.g. match_test.mp4).
+Run pitch calibrator on a video file (e.g. match_test.mp4).
+
+By default uses ``AdvancedPitchCalibrator`` (V2: LM refinement, 1280×720 H lock).
+Pass ``use_advanced_calibration=False`` to use legacy ``DynamicPitchCalibrator``.
 
 Samples frames, computes homography per frame, and prints/writes results.
 CLI defaults match legacy paths; use --video / --output for per-match files
@@ -29,15 +32,29 @@ DEFAULT_WEIGHTS_DIR = BACKEND_ROOT / "references" / "sn-calibration" / "resource
 DEFAULT_SAMPLE_EVERY = 30
 
 
-def run(video_path: Path, weights_dir: Path, sample_every: int, output_json: Path | None) -> None:
+def run(
+    video_path: Path,
+    weights_dir: Path,
+    sample_every: int,
+    output_json: Path | None,
+    *,
+    use_advanced_calibration: bool = True,
+) -> None:
     if not video_path.is_file():
         raise FileNotFoundError(f"Video not found: {video_path}")
     if not weights_dir.is_dir():
         raise FileNotFoundError(f"Weights dir not found: {weights_dir}")
 
-    from scripts.dynamic_homography import DynamicPitchCalibrator
+    if use_advanced_calibration:
+        from scripts.advanced_pitch_calibration import AdvancedPitchCalibrator
 
-    calibrator = DynamicPitchCalibrator(weights_dir)
+        calibrator = AdvancedPitchCalibrator(weights_dir)
+        logger.info("Using AdvancedPitchCalibrator (V2, pitch→1280×720)")
+    else:
+        from scripts.dynamic_homography import DynamicPitchCalibrator
+
+        calibrator = DynamicPitchCalibrator(weights_dir)
+        logger.info("Using DynamicPitchCalibrator (V1 legacy, pitch→native resolution)")
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise RuntimeError(f"Could not open video: {video_path}")
@@ -89,12 +106,16 @@ def ensure_homography_json_for_video(
     video_path: Path,
     *,
     sample_every: int = DEFAULT_SAMPLE_EVERY,
+    use_advanced_calibration: bool = True,
 ) -> Path:
     """
     Resolve homography JSON for ``video_path`` (env override or per-stem under ``output/``).
 
     If the file is missing and ``references/sn-calibration/resources`` exists, runs the
     calibrator synchronously. Otherwise raises ``FileNotFoundError`` with a CLI hint.
+
+    :param use_advanced_calibration: If True (default), generate matrices with
+        ``AdvancedPitchCalibrator`` (1280×720 pitch→image). If False, use V1 native-resolution H.
     """
     from services.pipeline_paths import (
         format_homography_missing_error,
@@ -123,6 +144,7 @@ def ensure_homography_json_for_video(
             weights_dir=weights_dir,
             sample_every=sample_every,
             output_json=expected,
+            use_advanced_calibration=use_advanced_calibration,
         )
 
     if not expected.is_file():
@@ -163,6 +185,11 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Output JSON path. Default: backend/output/{video_stem}_homographies.json",
     )
+    parser.add_argument(
+        "--legacy-v1-calibrator",
+        action="store_true",
+        help="Use DynamicPitchCalibrator (native-res H) instead of AdvancedPitchCalibrator (1280×720).",
+    )
     return parser.parse_args()
 
 
@@ -176,4 +203,5 @@ if __name__ == "__main__":
         weights_dir=weights_dir,
         sample_every=args.sample_every,
         output_json=out,
+        use_advanced_calibration=not args.legacy_v1_calibrator,
     )

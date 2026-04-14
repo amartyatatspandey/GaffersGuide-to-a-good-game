@@ -8,8 +8,9 @@ Reference: backend/references/sn-calibration (EVS Camera Calibration Challenge).
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import cv2
 import numpy as np
@@ -108,6 +109,22 @@ def _extremities_to_homography(
     return homography
 
 
+@dataclass(frozen=True)
+class PitchObservationBundle:
+    """
+    Intermediate calibration observations at segmentation resolution (SEG_WIDTH x SEG_HEIGHT).
+
+    Pixel conventions for polylines / OpenCV: extremities use normalized coords; polylines from
+    sn-calibration use (row, col) per point — see get_line_extremities in detect_extremities.py.
+    """
+
+    semlines: np.ndarray
+    skeletons: dict[str, Any]
+    extremities: dict[str, Any]
+    H_coarse_seg: np.ndarray
+    frame_shape: tuple[int, int]
+
+
 class DynamicPitchCalibrator:
     """
     Standalone calibrator: one video frame (BGR) in -> 3x3 homography (pitch -> image) or None.
@@ -158,28 +175,27 @@ class DynamicPitchCalibrator:
             self._weights_dir,
         )
 
-    def get_homography(self, frame: np.ndarray) -> Optional[np.ndarray]:
+    @property
+    def field(self) -> SoccerPitch:
+        """FIFA pitch model used for line correspondences (read-only)."""
+        return self._field
+
+    def collect_pitch_observations(self, frame: np.ndarray) -> Optional[PitchObservationBundle]:
         """
-        Run SoccerNet inference on a single frame and return the 3x3 homography.
+        Run segmentation through coarse SVD homography at SEG resolution.
 
-        The returned matrix H maps 2D pitch plane (FIFA coordinates, homogeneous) to image
-        coordinates: p_image = H @ p_pitch (with p_* as (x, y, 1)^T). So to map image -> pitch
-        use np.linalg.inv(H).
-
-        :param frame: BGR image (OpenCV convention), shape (H, W, 3), any resolution.
-        :return: 3x3 numpy array (float64) homography pitch -> image, or None if the pitch
-            could not be estimated (e.g. too few line detections).
+        :param frame: BGR (H, W, 3).
+        :return: Bundle with ``H_coarse_seg`` mapping pitch -> segmentation pixels, or None.
         """
         if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
-            logger.warning("get_homography: invalid frame")
+            logger.warning("collect_pitch_observations: invalid frame")
             return None
         if frame.ndim != 3 or frame.shape[2] != 3:
-            logger.warning("get_homography: frame must be BGR (H, W, 3)")
+            logger.warning("collect_pitch_observations: frame must be BGR (H, W, 3)")
             return None
 
-        height_img, width_img = frame.shape[0], frame.shape[1]
+        height_img, width_img = int(frame.shape[0]), int(frame.shape[1])
         try:
-            # Segment at fixed resolution; extremities are in normalized coords
             semlines = self._seg_net.analyse_image(frame)
         except Exception as e:
             logger.exception("Segmentation inference failed: %s", e)
@@ -193,31 +209,44 @@ class DynamicPitchCalibrator:
             height=self.SEG_HEIGHT,
         )
         if not extremities:
-            logger.debug("No line extremities detected")
+            logger.debug("collect_pitch_observations: no line extremities")
             return None
 
-        # Homography is estimated in segmentation resolution; we then scale to actual frame size.
-        # Reference baseline uses same resolution for extremities and camera. We use SEG_* for
-        # the coordinate system in which we built the lines, then we can scale H to full res.
-        # Actually in baseline they use resolution_width/height 960x540 for the *camera* and
-        # store extremities in normalized [0,1]. When building line_matches they multiply by
-        # 960 and 540. So the homography is in 960x540 space. In detect_extremities they use
-        # 640x360 and get_line_extremities uses args.resolution_width/height 640,360. So
-        # extremities are normalized by 640x360. So our line_matches should use width=640, height=360
-        # to be consistent with the segmentation output. Then the homography maps pitch -> image
-        # in 640x360. If the user's frame is different, they need to scale H. So we have two
-        # options: (1) always work in 640x360 and return H for that (user scales); (2) scale H
-        # to the input frame size. Scaling: if we have H for 640x360, and want H' for WxH,
-        # then scale = diag(sx, sy, 1) with sx = W/640, sy = H/360. H' = S @ H. So we can return
-        # H in input frame resolution for convenience.
-        H = _extremities_to_homography(
+        H_seg = _extremities_to_homography(
             extremities,
             self._field,
             width=self.SEG_WIDTH,
             height=self.SEG_HEIGHT,
         )
-        if H is None:
+        if H_seg is None:
             return None
+
+        return PitchObservationBundle(
+            semlines=semlines,
+            skeletons=skeletons,
+            extremities=extremities,
+            H_coarse_seg=H_seg.astype(np.float64),
+            frame_shape=(height_img, width_img),
+        )
+
+    def get_homography(self, frame: np.ndarray) -> Optional[np.ndarray]:
+        """
+        Run SoccerNet inference on a single frame and return the 3x3 homography.
+
+        The returned matrix H maps 2D pitch plane (FIFA coordinates, homogeneous) to image
+        coordinates: p_image = H @ p_pitch (with p_* as (x, y, 1)^T). So to map image -> pitch
+        use np.linalg.inv(H).
+
+        :param frame: BGR image (OpenCV convention), shape (H, W, 3), any resolution.
+        :return: 3x3 numpy array (float64) homography pitch -> image, or None if the pitch
+            could not be estimated (e.g. too few line detections).
+        """
+        obs = self.collect_pitch_observations(frame)
+        if obs is None:
+            return None
+
+        height_img, width_img = obs.frame_shape[0], obs.frame_shape[1]
+        H = obs.H_coarse_seg
 
         # Scale homography from segmentation resolution to actual frame size
         if (width_img, height_img) != (self.SEG_WIDTH, self.SEG_HEIGHT):

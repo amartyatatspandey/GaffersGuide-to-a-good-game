@@ -270,6 +270,10 @@ def run_cv_tracking_batched(
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     homography_json = ensure_homography_json_for_video(video_path)
+    LOGGER.info(
+        "Homography JSON: %s (V2 advanced calibrator when auto-generated; H in 1280×720 space).",
+        homography_json,
+    )
     radar = TacticalRadar(json_path=homography_json, video_res=(width, height))
 
     telemetry = CVTelemetry()
