@@ -1,451 +1,599 @@
 {
   "philosophies": [
     {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Positional Play / Pep Guardiola",
-      "fc_role_recommendations": [
-        "False 9",
-        "Inverted Fullback"
-      ],
+      "fc_role_recommendations": ["False 9", "Inverted Fullback"],
       "quote": "The intention is to overload the midfield to gain numerical superiority.",
-      "tactical_translation": "The analytical engine has identified a mathematical 'Midfield  Disconnect', characterized by a spatial gap exceeding 25 meters between the defensive line  and the midfield pivot. This structural flaw isolates the defensive unit and leaves Zone 14  completely unpatrolled, rendering the team highly susceptible to central transitions. Drawing  upon the Positional Play doctrines of Pep Guardiola, the tactical resolution requires ascending  numerical superiority to compress this void. The AI Coaching Engine recommends an  immediate structural shift utilizing FC 25 Player Roles. Deploy the central striker in a **False 9**  role with a 'Build-Up' focus; this instructs the forward to abandon the highest line and drop  deep into the disconnected pocket, serving as a primary playmaker. Concurrently, reconfigure  the traditional wide defender into an **Inverted Fullback** (designated as Falseback in FC 25)  with a 'Balanced' focus. This programmatic adjustment forces the fullback to abandon the  touchline and adopt a central midfield position during possession phases. By executing these  simultaneous Role modifications, the spatial disconnect is mathematically erased, forging a  dense, overload-heavy midfield lattice capable of suffocating opposition counter-attacks and  dominating central ball progression."
+      "tactical_translation": "The analytical engine has identified a mathematical 'Midfield Disconnect', characterized by a spatial gap exceeding 25 meters between the defensive line and the midfield pivot. This structural flaw isolates the defensive unit and leaves Zone 14 completely unpatrolled, rendering the team highly susceptible to central transitions. Drawing upon the Positional Play doctrines of Pep Guardiola, the tactical resolution requires ascending numerical superiority to compress this void. The AI Coaching Engine recommends an immediate structural shift utilizing FC 25 Player Roles. Deploy the central striker in a **False 9** role with a 'Build-Up' focus; this instructs the forward to abandon the highest line and drop deep into the disconnected pocket, serving as a primary playmaker. Concurrently, reconfigure the traditional wide defender into an **Inverted Fullback** (designated as Falseback in FC 25) with a 'Balanced' focus. This programmatic adjustment forces the fullback to abandon the touchline and adopt a central midfield position during possession phases. By executing these simultaneous Role modifications, the spatial disconnect is mathematically erased, forging a dense, overload-heavy midfield lattice capable of suffocating opposition counter-attacks and dominating central ball progression."
     },
     {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Artificial Transitions / Roberto De Zerbi",
-      "fc_role_recommendations": null,
-      "quote": "If you receive the ball with the sole and from the front, you can play for the side  you want. There you have total control of the ball.",
-      "tactical_translation": "A 'Midfield Disconnect' is currently hindering optimal ball progression  from the defensive third, as the vertical distance to the midfield line prevents safe passing  combinations. Influenced by Roberto De Zerbi's philosophy of baiting the press, this structural  gap can be weaponized rather than merely patched. The engine recommends assigning a  defensive midfielder to the **Center Half** role with a 'Defend' focus. This programmatic  instruction forces the midfielder to drop deep between the center-backs during possession,  physically bridging the spatial gap. Concurrently, deploy a **Deep-Lying Playmaker** ahead of  this triad. By utilizing short, calculated square passes, this role effectively pauses the play,  baiting the opposition's forward line into jumping the passing lanes. As the opponent advances  to press, they naturally vacate the space behind them. The Deep-Lying Playmaker can then  execute rapid, vertical line-breaking passes into the newly formed spatial voids, turning the  initial midfield disconnect into a platform for lethal artificial transitions."
+      "fc_role_recommendations": ["Center Half", "Deep-Lying Playmaker"],
+      "quote": "If you receive the ball with the sole and from the front, you can play for the side you want. There you have total control of the ball.",
+      "tactical_translation": "A 'Midfield Disconnect' is currently hindering optimal ball progression from the defensive third, as the vertical distance to the midfield line prevents safe passing combinations. Influenced by Roberto De Zerbi's philosophy of baiting the press, this structural gap can be weaponized rather than merely patched. The engine recommends assigning a defensive midfielder to the **Center Half** role with a 'Defend' focus. This programmatic instruction forces the midfielder to drop deep between the center-backs during possession, physically bridging the spatial gap. Concurrently, deploy a **Deep-Lying Playmaker** ahead of this triad. By utilizing short, calculated square passes, this role effectively pauses the play, baiting the opposition's forward line into jumping the passing lanes. As the opponent advances to press, they naturally vacate the space behind them. The Deep-Lying Playmaker can then execute rapid, vertical line-breaking passes into the newly formed spatial voids, turning the initial midfield disconnect into a platform for lethal artificial transitions."
     },
     {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Asymmetrical Overloads / Xabi Alonso",
-      "fc_role_recommendations": null,
-      "quote": "Building with seven players often results in them having a numerical superiority in  their low build-up phase. This allows them to play through the press.",
-      "tactical_translation": "The tracking algorithms indicate a severe 'Midfield Disconnect',  resulting in isolated forwards and a lack of progressive passing options through the center of  the pitch. To resolve this geometric flaw, the system draws upon Xabi Alonso's tactical  blueprint at Bayer Leverkusen, which utilizes profound asymmetry to create passing networks.  The recommendation is to anchor the center of the pitch by deploying a **Box-to-Box  Midfielder** on a 'Balanced' focus, ensuring that a physical presence dynamically links the  defensive and attacking thirds. To compensate for dropping the midfield deep to close the  disconnect, width must be aggressively manufactured on one flank. Assign an **Attacking  Wingback** on an 'Attack' focus to bomb forward down the touchline. This asymmetrical shape  forces the opposition to shift horizontally, which simultaneously condenses the central vertical  space and naturally closes the midfield disconnect, allowing your Box-to-Box Midfielder to  operate in a numerically superior, compressed environment."
+      "fc_role_recommendations": ["Box-to-Box Midfielder", "Attacking Wingback"],
+      "quote": "Building with seven players often results in them having a numerical superiority in their low build-up phase. This allows them to play through the press.",
+      "tactical_translation": "The tracking algorithms indicate a severe 'Midfield Disconnect', resulting in isolated forwards and a lack of progressive passing options through the center of the pitch. To resolve this geometric flaw, the system draws upon Xabi Alonso's tactical blueprint at Bayer Leverkusen, which utilizes profound asymmetry to create passing networks. The recommendation is to anchor the center of the pitch by deploying a **Box-to-Box Midfielder** on a 'Balanced' focus, ensuring that a physical presence dynamically links the defensive and attacking thirds. To compensate for dropping the midfield deep to close the disconnect, width must be aggressively manufactured on one flank. Assign an **Attacking Wingback** on an 'Attack' focus to bomb forward down the touchline. This asymmetrical shape forces the opposition to shift horizontally, which simultaneously condenses the central vertical space and naturally closes the midfield disconnect, allowing your Box-to-Box Midfielder to operate in a numerically superior, compressed environment."
     },
     {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Space Between the Lines / Arsene Wenger",
-      "fc_role_recommendations": null,
+      "fc_role_recommendations": ["Playmaker", "Shadow Striker"],
       "quote": "The way to progress the ball up the field, then, is by finding players in those gaps.",
-      "tactical_translation": "A 'Midfield Disconnect' has been detected, creating a sterile  possession environment where the defensive line cycles the ball without vertical penetration.  Inspired by Arsene Wenger's emphasis on intricate passing within the pockets of space  between the opposition's lines, the structural remedy requires injecting dynamic movement  into the disconnected void. The AI suggests deploying a central midfielder as a **Playmaker**  with a 'Roaming' focus. This Player Role grants the AI the freedom to abandon strict positional  adherence and drift laterally and vertically into the exact geometric center of the disconnected  space. To provide a progressive outlet for this Playmaker, assign the advanced midfielder the  **Shadow Striker** role with an 'Attack' focus. The Shadow Striker will make late, untracked runs  from the newly connected midfield zone directly into the penalty area, ensuring that once the  ball is progressed into the pocket, there is an immediate, high-speed vertical threat to exploit  the opposition's defensive line."
+      "tactical_translation": "A 'Midfield Disconnect' has been detected, creating a sterile possession environment where the defensive line cycles the ball without vertical penetration. Inspired by Arsene Wenger's emphasis on intricate passing within the pockets of space between the opposition's lines, the structural remedy requires injecting dynamic movement into the disconnected void. The AI suggests deploying a central midfielder as a **Playmaker** with a 'Roaming' focus. This Player Role grants the AI the freedom to abandon strict positional adherence and drift laterally and vertically into the exact geometric center of the disconnected space. To provide a progressive outlet for this Playmaker, assign the advanced midfielder the **Shadow Striker** role with an 'Attack' focus. The Shadow Striker will make late, untracked runs from the newly connected midfield zone directly into the penalty area, ensuring that once the ball is progressed into the pocket, there is an immediate, high-speed vertical threat to exploit the opposition's defensive line."
     },
     {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Total Football Cohesion / Arrigo Sacchi",
-      "fc_role_recommendations": null,
+      "fc_role_recommendations": ["Ball-Playing Defender", "Half-Winger"],
       "quote": "If you're far away from your team mates, you're not a team.",
-      "tactical_translation": "The spatial analysis reveals a 'Midfield Disconnect', fundamentally  violating the core tenets of team cohesion and leaving the defensive line dangerously isolated.  Drawing from Arrigo Sacchi's absolute requirement for compact, synchronized team  movement, the tactical resolution involves pushing the defensive line upward while drawing the  midfield inward. The engine dictates the deployment of a **Ball-Playing Defender** with a  'Build-Up' focus. This specific FC 25 Role instructs the center-back to step aggressively out of  the defensive line during possession, acting as an auxiliary holding midfielder and physically  erasing the vertical gap. Simultaneously, utilize a **Half-Winger (Mezzala)** on a 'Balanced'  focus. As the Ball-Playing Defender steps up, the Half-Winger will drift into the half-spaces,  providing a dynamic, angled passing option that ensures the team moves as a single,  impenetrable 25-meter block, completely eliminating the structural disconnect."
+      "tactical_translation": "The spatial analysis reveals a 'Midfield Disconnect', fundamentally violating the core tenets of team cohesion and leaving the defensive line dangerously isolated. Drawing from Arrigo Sacchi's absolute requirement for compact, synchronized team movement, the tactical resolution involves pushing the defensive line upward while drawing the midfield inward. The engine dictates the deployment of a **Ball-Playing Defender** with a 'Build-Up' focus. This specific FC 25 Role instructs the center-back to step aggressively out of the defensive line during possession, acting as an auxiliary holding midfielder and physically erasing the vertical gap. Simultaneously, utilize a **Half-Winger (Mezzala)** on a 'Balanced' focus. As the Ball-Playing Defender steps up, the Half-Winger will drift into the half-spaces, providing a dynamic, angled passing option that ensures the team moves as a single, impenetrable 25-meter block, completely eliminating the structural disconnect."
     },
     {
-      "tags": [
-        "Suicidal High Line"
-      ],
-      "author": "Angeball / Ange Postecoglou",
-      "fc_role_recommendations": null,
-      "quote": "It's not just about running anywhere, it's about going to the areas that we work on  constantly, and if it looks fluid, that makes us harder to stop.",
-      "tactical_translation": "The tracking data has triggered a 'Suicidal High Line' alert: the  defensive line's average Y-coordinate exceeds 40 meters, yet the forward line is failing to apply  pressure (distance to ball > 3.5m). This mathematically invites catastrophic balls over the top.  Embracing the high-risk, high-reward philosophy of Ange Postecoglou, the solution is not to  drop the line, but to mathematically mitigate the space behind it. The engine mandates the  deployment of a **Sweeper Keeper** with a 'Balanced' focus. This Role fundamentally alters the  goalkeeper's pathfinding AI, instructing them to hold a high starting position outside the  penalty area to sweep up uncontested through balls. Furthermore, deploy an **Inverted  Fullback** (Falseback) to step into the midfield. This ensures that even if the ball is turned over,  there is a dense central blockade that prevents the opposition from immediately executing a  measured, long-distance pass into the vulnerable space behind your aggressive defensive line."
+      "tags": ["Midfield Disconnect"],
+      "author": "Fluid Press Architecture / Thomas Tuchel",
+      "fc_role_recommendations": ["Segundo Volante", "Playmaker"],
+      "quote": "We want to be dominant with the ball and aggressive without it. The two are not contradictory.",
+      "tactical_translation": "The spatial diagnostics have confirmed a 'Midfield Disconnect' is fracturing the team's ability to sustain fluid press-to-possession sequences. Channeling Thomas Tuchel's hybrid tactical identity — demanding structural dominance both in and out of possession — the engine prescribes a dual-engine midfield fix. Deploy a central midfielder in the **Segundo Volante** role with a 'Balanced' focus. This role programs the player to make aggressive, late runs from deep into the disconnected zone, physically threading the gap with vertical movement. Immediately ahead, anchor a **Playmaker** on a 'Roaming' focus to serve as the positional pivot within the pocket. The Segundo Volante's energy provides the vertical bridge while the Playmaker's spatial intelligence creates local triangles, filling the disconnect with both physical presence and technical combination play."
     },
     {
-      "tags": [
-        "Suicidal High Line"
-      ],
-      "author": "High Line Offside Trap / Arrigo Sacchi",
-      "fc_role_recommendations": null,
-      "quote": "The defensive line to be no more than 25 metres away from attacking line.",
-      "tactical_translation": "A 'Suicidal High Line' has been flagged, indicating a severe  misalignment between defensive height and forward pressing intensity. According to Arrigo  Sacchi's principles, a high line is only viable if it acts as a synchronized offside trap to compress  the pitch. To execute this within the FC 25 engine, assign one center-back to the **Stopper**  role with a 'Balanced' focus. The Stopper is programmatically driven to step out of the  defensive alignment to aggressively tackle and intercept the ball carrier before a pass can be  played. To protect the space vacated by the Stopper, deploy a central midfielder in a  **Holding** role with a 'Defend' focus. This player will statically occupy the passing lanes  directly in front of the remaining defenders, effectively shielding the high line from immediate  vertical threat while the Stopper nullifies the un-pressured ball carrier."
+      "tags": ["Midfield Disconnect"],
+      "author": "Positional Overload / Arne Slot",
+      "fc_role_recommendations": ["Half-Winger", "Deep-Lying Playmaker"],
+      "quote": "We want to dominate by occupying the right spaces, not just by running more.",
+      "tactical_translation": "The engine has detected a chronic 'Midfield Disconnect' driven by the team's wide players holding the touchline too rigidly, leaving the central corridor barren. Inspired by Arne Slot's Feyenoord and Liverpool systems — built on disciplined positional overloads in central zones — the AI prescribes a structural recalibration. Assign both wide midfielders to the **Half-Winger (Mezzala)** role with a 'Balanced' focus. Rather than stretching the field, they will drift inside and physically populate the disconnected central pocket, creating a dense numerical block. To regulate the tempo of this reconfigured shape, deploy a **Deep-Lying Playmaker** with a 'Defend' focus as the base of the midfield triangle. This player's positional anchoring prevents the overloaded center from becoming chaotic, ensuring the disconnect is filled with organized, structured passing options rather than uncoordinated bodies."
     },
     {
-      "tags": [
-        "Suicidal High Line"
-      ],
-      "author": "High-Intensity Man-Marking / Marcelo Bielsa",
-      "fc_role_recommendations": null,
-      "quote": "High-intensity pressing, fluid attacking movements, and meticulous preparation.",
-      "tactical_translation": "The mathematical presence of a 'Suicidal High Line' indicates that your  high defensive block is being betrayed by a passive forward line, leaving vast tracts of space  vulnerable to exploitation. To secure the high line, you must implement Marcelo Bielsa's  philosophy of relentless, high-intensity pressing to deny the opposition the time necessary to  measure a long pass. The AI engine recommends transforming your passive wide players into  an **Inside Forward** role with an 'Attack' or 'Roaming' focus. This instructs them to violently  cut inside and press the opposition center-backs directly. Support this vanguard by deploying a  **Box-to-Box Midfielder** on a 'Balanced' focus, whose AI behavior will drive them to hound  the opposition's deep-lying playmakers. By enforcing immediate spatial pressure on the ball  carrier, the geometric vulnerability of the high line is mathematically neutralized, as the  opponent is forced into rushed, inaccurate clearances rather than targeted through balls."
-    },
-    {
-      "tags": [
-        "Suicidal High Line"
-      ],
-      "author": "Alpine Klopp Pressing / Ralph Hasenhüttl",
-      "fc_role_recommendations": null,
-      "quote": "This is the time we can move to the ball, put pressure on the guy who gets it.",
-      "tactical_translation": "A 'Suicidal High Line' has been detected due to an uncoordinated  pressing distance in the final third. To protect the high defensive deployment, Ralph  Hasenhüttl's methodology of utilizing specific pressing triggers must be activated. The  recommendation is to assign your primary striker to the **Advanced Forward** role with an  'Attack' focus. The Advanced Forward will aggressively initiate the first line of pressure the  moment an opposition defender receives a sub-optimal pass or faces their own goal. To cut off  the lateral escape routes for the pressured defender, utilize a **Wide Playmaker** on the flank.  While traditionally a creative role, in this structural context, the Wide Playmaker's tendency to  drift centrally cuts off the inner passing lanes, creating a geometric trap. This coordinated  front-line aggression ensures the opposition is denied the requisite time and space to exploit  the high defensive line."
-    },
-    {
-      "tags": [
-        "Suicidal High Line"
-      ],
-      "author": "Vertical Compactness / Unai Emery",
-      "fc_role_recommendations": null,
-      "quote": "Most importantly, it's getting the balance and positioning on the pitch with and  without the ball.",
-      "tactical_translation": "The spatial analysis reveals a 'Suicidal High Line' that is entirely  disconnected from the team's pressing structure, rendering the defense dangerously exposed.  Channeling Unai Emery's philosophy of establishing a high yet stable medium block, the tactical  resolution requires stabilizing the defensive unit rather than relying on erratic pressing. Instruct  your center-backs to utilize the standard **Defender** role with a strict 'Defend' focus,  ensuring they hold a perfectly horizontal, cohesive line without stepping out erratically. Directly  ahead of them, deploy a **Deep-Lying Playmaker** with a 'Defend' focus. This Role ensures the  midfielder acts as a dedicated screen, closing down the passing lanes that lead into the space  behind the defense. By solidifying the vertical compactness and refusing to let the defensive  line fracture, the team can safely maintain a high block without succumbing to the  mathematical vulnerabilities of un-pressured long balls."
-    },
-    {
-      "tags": [
-        "Parked Bus"
-      ],
-      "author": "Catenaccio & The Low Block / Jose Mourinho",
-      "fc_role_recommendations": null,
-      "quote": "As we say in Portugal, they brought the bus and they left the bus in front of the  goal.",
-      "tactical_translation": "The engine has detected that your team is currently trapped in a  'Parked Bus' scenario. The deepest defender is entrenched within your own 18-yard box, and  the team's overall convex hull area has collapsed to under 900 square meters. You are  absorbing immense momentum but lack an outlet to relieve the pressure. To transition out of  this extreme low block, you must employ Jose Mourinho's counter-attacking blueprint. Deploy  a **Target Forward** with an 'Attack' focus. This player provides a massive, physical focal point  capable of receiving and shielding long, desperate clearances from your defensive third. To  deliver these precise clearances under immense pressure, convert one of your entrenched  center-backs into a **Ball-Playing Defender** with a 'Build-Up' focus. This role enhances the  defender's AI to look for immediate, line-breaking long passes the moment possession is won,  effectively bypassing the congested midfield and utilizing the Target Forward to drag your  entire team up the pitch."
-    },
-    {
-      "tags": [
-        "Parked Bus"
-      ],
-      "author": "3-4-3 Wide Overloads / Antonio Conte",
-      "fc_role_recommendations": null,
-      "quote": "By occupying the centre, teams can switch the ball through it to different areas of  the field if they cannot break through in the initial area.",
-      "tactical_translation": "You are attempting to break down an opposition 'Parked Bus' that has  completely sealed off the central channels and compressed the penalty area. Drawing upon  Antonio Conte's 3-4-3 systemic principles, the mathematical solution to a vertically  compressed defense is to apply extreme horizontal stretching. The AI recommends deploying  an **Attacking Wingback** on an 'Attack' focus on both flanks. These roles are  programmatically instructed to hug the absolute touchline and bomb forward, forcing the  opposition's defensive block to widen and create internal gaps. To exploit the spatial fracturing  caused by this horizontal stretch, utilize an **Inside Forward** with a 'Roaming' focus. Starting  wide but aggressively cutting into the newly formed channels between the stretched  opposition defenders, the Inside Forward will dismantle the low block through dynamic, angled  runs into the penalty area."
-    },
-    {
-      "tags": [
-        "Parked Bus"
-      ],
-      "author": "Positional Staggering / Pep Guardiola",
-      "fc_role_recommendations": null,
-      "quote": "This staggering creates interior spaces and passing lanes within the opposition's  formation.",
-      "tactical_translation": "The opponent has established a 'Parked Bus', reducing the actionable  space in the final third to near zero. Following the Positional Play doctrines of Pep Guardiola,  breaking this block requires precise positional staggering to exploit the half-spaces and disrupt  the defensive line. The engine dictates the deployment of a **Half-Winger (Mezzala)** with an  'Attack' focus. This role explicitly programs the midfielder to operate in the half-spaces—the  channels between the opposition's fullbacks and center-backs—forcing the defenders into  difficult marking decisions. Complement this by utilizing a **False 9** with a 'Build-Up' focus.  The False 9 will drop deep, dragging a central defender out of the entrenched line. The  Half-Winger can then penetrate the exact geometric void left by the displaced defender,  mathematically dismantling the structural integrity of the parked bus."
-    },
-    {
-      "tags": [
-        "Parked Bus"
-      ],
-      "author": "Tight Space Combinations / Arsene Wenger",
-      "fc_role_recommendations": [
-        "Playmaker",
-        "Poacher"
-      ],
-      "quote": "If you eat caviar every day, it is difficult to return to sausages.",
-      "tactical_translation": "The opposition is operating a 'Parked Bus', resulting in a heavily  congested penalty area that neutralizes traditional crossing and long-range shooting. Inspired  by Arsene Wenger's Arsenal sides, the solution requires hyper-precise, high-speed passing  combinations within incredibly tight geometric confines. The AI coaching engine recommends  deploying a central **Playmaker** with a 'Roaming' focus. This grants the AI the fluidity to  constantly seek out microscopic pockets of space just outside the 18-yard box to orchestrate  one-touch passes. To finish these intricate moves, deploy a **Poacher** with an 'Attack' focus.  The Poacher's AI is explicitly designed to lurk on the absolute edge of the defensive line, making  short, razor-sharp movements to latch onto the Playmaker's through balls, effectively  bypassing the dense defensive block through speed of thought and precise spatial timing."
-    },
-    {
-      "tags": [
-        "Parked Bus"
-      ],
-      "author": "Artificial Transitions / Roberto De Zerbi",
-      "fc_role_recommendations": null,
-      "quote": "Instead of viewing pressing as a threat, De Zerbi sees it as an opportunity to  exploit.",
-      "tactical_translation": "You are facing a resolute 'Parked Bus' that refuses to step out of their  defensive third, neutralizing your positional attacks. Using Roberto De Zerbi's philosophy, you  must create artificial transitions by baiting the opposition out of their low block. Instruct your  midfield pivot to operate as a **Deep-Lying Playmaker** with a 'Defend' focus. Hold possession  deep in your own half, utilizing the sole of the foot to pause play. This deliberate lethargy will  eventually frustrate the opposition and bait their forward line into pressing. The moment the  opposition block expands and steps forward to press, launch a direct, vertical pass to an  **Advanced Forward** on an 'Attack' focus. The Advanced Forward will instantly exploit the  newly created space behind the advancing defensive line, turning a stagnant parked bus into a  highly profitable counter-attacking opportunity."
-    },
-    {
-      "tags": [
-        "Lethargic Press"
-      ],
-      "author": "Pressing Triggers / Ralph Hasenhüttl",
-      "fc_role_recommendations": null,
-      "quote": "The centre-back shapes to pass long to his partner. Danny Ings presses the  recipient.",
-      "tactical_translation": "The tracking system has flagged a 'Lethargic Press': the average  distance between your forward line and the opposition ball carrier exceeds 3 meters in the final  third, allowing the opponent to build up flawlessly. To rectify this passivity, the team must  implement Ralph Hasenhüttl's aggressive pressing triggers. The engine recommends assigning  your primary striker to the **Advanced Forward** role. This role's AI naturally seeks to close  down center-backs the moment they receive the ball facing their own goal. Crucially, support  this initial press by deploying a **Shadow Striker** immediately behind them. As the Advanced  Forward forces the ball carrier into a rushed decision, the Shadow Striker is perfectly  positioned to aggressively step into the passing lanes and intercept the subsequent panic pass,  converting lethargy into high-turnover defensive aggression."
-    },
-    {
-      "tags": [
-        "Lethargic Press"
-      ],
-      "author": "Holistic Man-Marking / Marcelo Bielsa",
-      "fc_role_recommendations": null,
-      "quote": "But does an aggressive press complement a man-marking rather than a  zone-oriented defensive approach?",
-      "tactical_translation": "A 'Lethargic Press' has compromised your team's out-of-possession  structure, allowing the opposition to dictate the tempo of the match unhindered. To eradicate  this spatial looseness, you must adopt Marcelo Bielsa's philosophy of exhaustive, high-intensity  man-marking. The AI dictates the deployment of a **Box-to-Box Midfielder** on a 'Balanced'  focus. This role possesses the requisite AI engine engine to relentlessly track opposition  midfielders from box to box, denying them an inch of Euclidean space. Simultaneously, assign  your wide players the **Inside Forward** role with a 'Balanced' focus. Rather than passively  holding the wing, they will aggressively pinch inward to suffocate the opposition's central  defenders during build-up phases. This programmatic shift ensures an overwhelming,  man-to-man physical presence that mathematically eliminates the spatial lethargy of the  press."
-    },
-    {
-      "tags": [
-        "Lethargic Press"
-      ],
-      "author": "Counter-Pressing Density / Pep Guardiola",
-      "fc_role_recommendations": null,
-      "quote": "Without the ball, we are a disastrous team, a horrible team, so we need the ball.",
-      "tactical_translation": "The algorithms indicate a 'Lethargic Press' specifically during the  defensive transition phase; your team is failing to immediately close down the ball after losing  possession. Following Pep Guardiola's counter-pressing (Gegenpressing) principles, the  solution is not merely running faster, but ensuring extreme numerical density around the ball  zone prior to the turnover. The AI recommends utilizing a **False 9** to drop deep from the  forward line, alongside a **Half-Winger (Mezzala)** tucking in from the midfield. This structural  configuration inherently packs the central zone with bodies during your possession phase.  Consequently, the moment the ball is lost, your players are already mathematically within the  3-meter pressing threshold of the opposition, allowing for an instantaneous, suffocating  counter-press that completely eradicates transitional lethargy."
-    },
-    {
-      "tags": [
-        "Lethargic Press",
-        "Parked Bus"
-      ],
-      "author": "Mid-Block Pressing Traps / Unai Emery",
-      "fc_role_recommendations": null,
-      "quote": "If the central midfielders were close and narrow, they would press forwards, ready  to press wide once the ball was forced there.",
-      "tactical_translation": "Your team's high press has been flagged as 'Lethargic', resulting in  players being easily bypassed and exhausting themselves without recovering the ball. Unai  Emery's tactical approach suggests that when a high press is inefficient, the team must drop  into a compact mid-block to spring calculated pressing traps. The engine recommends setting  your wide players to the **Wide Midfielder** role with a 'Defend' focus. They will drop deep to  form a rigid bank of four, encouraging the opposition to push the ball down the flanks.  Concurrently, deploy a **Holding** midfielder in the center. Once the ball is forced wide, the  Wide Midfielder and the Holding midfielder will aggressively collapse on the touchline, using  the sideline as an extra defender. This geometric trap converts a lethargic, uncoordinated press  into a highly efficient, targeted spatial lockdown."
-    },
-    {
-      "tags": [
-        "Lethargic Press"
-      ],
-      "author": "Asymmetrical Rest Defense / Xabi Alonso",
-      "fc_role_recommendations": null,
-      "quote": "The asymmetrical approach forces Leverkusen to focus on playing on the right  side. This obliges the opponent to place a lot of players on the same side.",
-      "tactical_translation": "A 'Lethargic Press' is allowing the opposition to effortlessly switch the  play and bypass your defensive structure. Xabi Alonso solves this by utilizing an asymmetrical  shape that dictates where the opposition is allowed to play. The AI advises deploying a  **Deep-Lying Playmaker** on a 'Defend' focus to rigidly lock down the central channels, forcing  the opponent to build up on the flanks. On one side, deploy an **Attacking Wingback** high up  the pitch. This asymmetry intentionally leaves space behind the wingback, baiting the  opposition to attack that specific flank. Because the trap is pre-calculated, your defensive unit  is already shifted and primed to press aggressively the moment the ball enters this specific  spatial quadrant, entirely curing the lethargy of a generalized, full-pitch press."
-    },
-    {
-      "tags": [
-        "Over-Stretched Formation"
-      ],
-      "author": "Absolute Compactness / Arrigo Sacchi",
-      "fc_role_recommendations": null,
-      "quote": "The team move through all areas of the pitch as a short and compact block without  cracks.",
-      "tactical_translation": "The tracking data has triggered a critical 'Over-Stretched Formation'  alert: the vertical distance from your deepest center-back to your highest striker exceeds the  mathematical threshold of 45 meters. This ruptures passing networks and creates massive  voids between the lines. Channeling Arrigo Sacchi's non-negotiable 25-meter compactness  rule, the AI engine demands an immediate structural compression from both ends of the pitch.  Instruct your center-backs to adopt the **Ball-Playing Defender** role with a 'Build-Up' focus;  this AI behavior forces the defensive line to step significantly higher up the pitch during  possession. Simultaneously, deploy your striker in a **False 9** role. The False 9 will abandon  the high defensive line and drop deep into the midfield. These synchronized programmatic  adjustments physically squeeze the team's formation together, restoring the geometric  integrity of the compact block."
-    },
-    {
-      "tags": [
-        "Over-Stretched Formation"
-      ],
-      "author": "High Line Stability / Unai Emery",
-      "fc_role_recommendations": null,
-      "quote": "Most importantly, it's getting the balance and positioning on the pitch with and  without the ball.",
-      "tactical_translation": "An 'Over-Stretched Formation' has been detected because your  forward line is initiating a high press while your defensive line is retreating out of fear of the  counter-attack, tearing the team's shape in half. Utilizing Unai Emery's philosophy of  maintaining a high line within a medium block, the tactical resolution is to anchor the center of  the pitch. Assign your center-backs to the standard **Defender** role with a strict 'Defend'  focus, instructing them to hold a high, unyielding line rather than dropping deep. To protect this  line and prevent the stretch, deploy a **Deep-Lying Playmaker** with a 'Defend' focus directly  in front of them. This creates a rigid structural spine that connects the defensive third to the  pressing forwards, preventing the horizontal lines from expanding beyond the 45-meter safety  threshold."
-    },
-    {
-      "tags": [
-        "Over-Stretched Formation"
-      ],
-      "author": "The Low Block Anchor / Jose Mourinho",
-      "fc_role_recommendations": null,
-      "quote": "They restrict the space for opposition players to exploit. It is a more static form of  defence.",
-      "tactical_translation": "Your team is suffering from an 'Over-Stretched Formation' while  attempting to defend a lead, as eager midfielders push forward while the defense drops deep  into a low block. To rectify this dangerous expansion, you must embrace Jose Mourinho's  defensive solidity. The AI recommends assigning a defensive midfielder to the **Center Half**  role. This player will permanently drop between the center-backs, cementing the low block and  signaling to the rest of the midfield to remain deep and compact. To provide a singular out-ball  without requiring the rest of the team to stretch the formation by running forward, deploy a  **Target Forward** on an 'Attack' focus. The team can remain completely compressed within a  30-meter block, using the physical prowess of the Target Forward to absorb long clearances  without compromising the team's structural density."
-    },
-    {
-      "tags": [
-        "Over-Stretched Formation"
-      ],
-      "author": "Central Occupation / Antonio Conte",
-      "fc_role_recommendations": null,
-      "quote": "In the 4-3-3 shape, the wide movements of the central players left the centre of  the pitch largely unoccupied.",
-      "tactical_translation": "The tracking algorithms reveal an 'Over-Stretched Formation' heavily  localized in the central vertical channels, as your wingers stay wide and the central midfield is  hollowed out. Drawing upon Antonio Conte's emphasis on central occupation, the geometric  solution requires flooding the central column with dynamic runners. The engine dictates the  deployment of a **Box-to-Box Midfielder** on a 'Balanced' focus. Their immense work rate AI  ensures they continuously link the deep defensive line to the attacking third. To further  compress the central void, utilize a **Shadow Striker** on an 'Attack' focus. As the Shadow  Striker drops from the forward line to receive the ball and the Box-to-Box midfielder pushes up,  they mathematically intersect in the center of the pitch, effectively tying the over-stretched  formation back together through relentless central occupation."
-    },
-    {
-      "tags": [
-        "Over-Stretched Formation"
-      ],
-      "author": "Baiting Expansion / Roberto De Zerbi",
-      "fc_role_recommendations": [
-        "Center Half",
-        "Playmaker"
-      ],
-      "quote": "The brilliant lies in how these calculated passes and movements open up space  further up the pitch, turning a moment of potential risk into a platform for progression.",
-      "tactical_translation": "An 'Over-Stretched Formation' is occurring out of possession as your  team frantically chases the ball. To resolve this, you must apply Roberto De Zerbi's  methodology: stop chasing and instead force the opponent to stretch their own formation. The  AI coaching engine recommends settling into a compact shape by using a **Center Half** to  anchor the defense and invite the opponent to press high. Once the opponent over-commits  and stretches their own lines to apply pressure, deploy a central **Playmaker** with a 'Roaming'  focus to receive the ball in the newly created pockets. By maintaining your own deep, highly  compressed structural block and letting the opponent stretch themselves, you geometrically  invert the mathematical flaw, creating massive tracts of space for your Playmaker to exploit  without compromising your own team's 45-meter compactness limit."
-    },
-    {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Pep Guardiola / Positional Play",
-      "quote": "In all team sports, the secret is to overload one side of the pitch so that the opponent  must tilt its own defence to cope.",
-      "tactical_translation": "1. Instruct the false 9 to drop precisely into the flagged central gap  between their defense and midfield lines. 2. Invert both fullbacks into the half-spaces to pin  their wingers centrally and isolate their block. 3. Play a vertical line-breaking pass directly into  the false 9 to instantly generate a 4v2 numerical overload in the center of the pitch."
+      "fc_role_recommendations": null,
+      "quote": "In all team sports, the secret is to overload one side of the pitch so that the opponent must tilt its own defence to cope.",
+      "tactical_translation": "1. Instruct the false 9 to drop precisely into the flagged central gap between their defense and midfield lines. 2. Invert both fullbacks into the half-spaces to pin their wingers centrally and isolate their block. 3. Play a vertical line-breaking pass directly into the false 9 to instantly generate a 4v2 numerical overload in the center of the pitch."
     },
     {
-      "tags": [
-        "Suicidal High Line"
-      ],
-      "author": "Jürgen Klopp / Gegenpressing",
-      "quote": "Gegenpressing is the best playmaker in the world.",
-      "tactical_translation": "1. Trigger an immediate, aggressive 3-man swarm on the ball carrier the  second they take a heavy touch to exploit their lack of ball control. 2. Upon winning the ball,  forbid all square passes; the first look must be entirely vertical. 3. Launch a first-time through  ball into the half-space behind the high defensive line for the winger to exploit with raw pace."
-    },
-    {
-      "tags": [
-        "Parked Bus"
-      ],
-      "author": "Roberto De Zerbi / Positional Play",
-      "quote": "If you receive the ball with the sole and from the front, you can play for the side you  want. There you have total control.",
-      "tactical_translation": "1. Instruct the defensive pivot to receive the ball utilizing the sole of the  foot, facing forward, and pausing completely. 2. Wait for this physical pause to bait an  opposition midfielder into breaking the low block structure out of sheer frustration. 3. Execute  a rapid square pass to the third man, penetrating the specific spatial void left by the pressing  defender."
-    },
-    {
-      "tags": [
-        "Lethargic Press"
-      ],
-      "author": "Fernando Diniz / Relationism",
-      "quote": "The ball is the absolute protagonist. The players must naturally intertwine and form  relationships around it.",
-      "tactical_translation": "1. Abandon positional symmetry entirely and tilt seven outfield players to  the exact side of the ball. 2. Initiate rapid 'toco y me voy' (pass and move) combinations to  cognitively overload their passive, loose press. 3. Form a diagonal 'escadinha' (stepladder)  passing structure to mathematically walk the ball up the touchline past their static, lethargic  markers."
-    },
-    {
-      "tags": [
-        "Midfield Disconnect",
-        "Parked Bus"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Diego Simeone / Pragmatism",
+      "fc_role_recommendations": null,
       "quote": "Effort is non-negotiable.",
-      "tactical_translation": "1. Compress the team immediately into a highly rigid 4-4-2 low block,  dropping the defensive line to the absolute edge of the 18-yard box. 2. Concede possession in  the wide areas, keeping the entire central column impenetrable. 3. Upon regaining the ball,  bypass their disjointed midfield with a direct, long diagonal pass to the blind side of their  isolated center-backs."
+      "tactical_translation": "1. Compress the team immediately into a highly rigid 4-4-2 low block, dropping the defensive line to the absolute edge of the 18-yard box. 2. Concede possession in the wide areas, keeping the entire central column impenetrable. 3. Upon regaining the ball, bypass their disjointed midfield with a direct, long diagonal pass to the blind side of their isolated center-backs."
     },
     {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Sam Allardyce / Direct Play",
+      "fc_role_recommendations": null,
       "quote": "I play to the strengths of the players I have at my disposal.",
-      "tactical_translation": "1. Instruct the goalkeeper or deepest center-back to bypass the buildup  phase entirely to avoid midfield turnovers. 2. Launch a high, targeted long ball directly over the  opposition's first line of pressure into the disconnected zone. 3. Commit three aggressive  midfielders to swarm the drop zone and win the physical second-ball duel in the mathematical  gap."
+      "tactical_translation": "1. Instruct the goalkeeper or deepest center-back to bypass the buildup phase entirely to avoid midfield turnovers. 2. Launch a high, targeted long ball directly over the opposition's first line of pressure into the disconnected zone. 3. Commit three aggressive midfielders to swarm the drop zone and win the physical second-ball duel in the mathematical gap."
     },
     {
-      "tags": [
-        "Parked Bus",
-        "Suicidal High Line"
-      ],
-      "author": "José Mourinho / Pragmatism",
-      "quote": "He who has the ball has fear.",
-      "tactical_translation": "1. Relinquish possession entirely and drop into a compact mid-block to  draw their defensive line even higher up the pitch. 2. Instruct the weak-side winger to abandon  the touchline and tuck aggressively into the central half-space. 3. Win the ball and immediately  play a one-touch diagonal pass into the space behind the fullbacks for the inverted winger to  chase."
-    },
-    {
-      "tags": [
-        "Parked Bus"
-      ],
-      "author": "Mikel Arteta / Positional Play",
-      "quote": "We have to be dominant, we have to control the game, and we have to dictate the  rules.",
-      "tactical_translation": "1. Form a rigid 3-2-5 box-midfield possession structure to completely  suffocate their transition threat. 2. Overload the left half-space to force their deeply  compressed block to shift horizontally. 3. Execute a highly automated cut-back pass from the  byline directly into Zone 14 for a late-arriving midfielder to strike first-time."
-    },
-    {
-      "tags": [
-        "Lethargic Press"
-      ],
-      "author": "Carlo Ancelotti / Functional Play",
-      "quote": "Tactics are about putting players in the best position to express their qualities.",
-      "tactical_translation": "1. Instruct your deep-lying playmaker to drop between the center-backs  to survey the pitch geometrically without pressure. 2. Push both fullbacks into extremely high,  asymmetrical attacking positions on the touchlines. 3. Dictate a precise, sweeping 40-yard  diagonal pass to the overlapping fullback, bypassing the passive block entirely and stretching  the pitch."
-    },
-    {
-      "tags": [
-        "Midfield Disconnect",
-        "Over-Stretched Formation"
-      ],
-      "author": "Julian Nagelsmann / Gegenpressing",
-      "quote": "Thirty percent of coaching is tactics, seventy percent social competence.",
-      "tactical_translation": "1. Shift into an ultra-aggressive 5-2-3 structure with the wingers  positioned strictly on their strong foot. 2. Pin the opposition fullbacks to the absolute extreme  edges of the touchline to expand the gaps between their defenders. 3. Execute rapid central  rotations, sending the advanced midfielder driving vertically through the massive gap in their  compromised core."
-    },
-    {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Fernando Diniz / Relationism",
+      "fc_role_recommendations": null,
       "quote": "We play within the chaos of the match rather than wanting to eliminate it.",
-      "tactical_translation": "1. Create extreme localized density by moving the attacking midfielder  and opposite winger to the ball side, ignoring spatial balance. 2. Execute a 'corta luz' (dummy),  allowing the ball to roll through the legs of the first attacker. 3. Have the second attacker  receive the dummy and execute a 'tabela' (wall pass) straight through the heart of the  compressed penalty area."
+      "tactical_translation": "1. Create extreme localized density by moving the attacking midfielder and opposite winger to the ball side, ignoring spatial balance. 2. Execute a 'corta luz' (dummy), allowing the ball to roll through the legs of the first attacker. 3. Have the second attacker receive the dummy and execute a 'tabela' (wall pass) straight through the heart of the compressed penalty area."
     },
     {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Ralf Rangnick / Gegenpressing",
+      "fc_role_recommendations": null,
       "quote": "It is about the quick transition... you have eight seconds to finish an attack.",
-      "tactical_translation": "1. Set the pressing trap strictly in the middle third, maintaining absolute  vertical compactness. 2. Once the opponent passes into the disconnected void, collapse on  the receiver with three players instantly to win the ball. 3. Regain possession and execute a  vertical through ball into the penalty area within exactly eight seconds, exploiting their  unorganized transition phase."
+      "tactical_translation": "1. Set the pressing trap strictly in the middle third, maintaining absolute vertical compactness. 2. Once the opponent passes into the disconnected void, collapse on the receiver with three players instantly to win the ball. 3. Regain possession and execute a vertical through ball into the penalty area within exactly eight seconds, exploiting their unorganized transition phase."
     },
     {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Sun Tzu / Military Strategy",
+      "fc_role_recommendations": null,
       "quote": "All warfare is based on deception. Appear where you are not expected.",
-      "tactical_translation": "1. Instruct the deepest midfielder to feign a slow, methodical back-pass  to the goalkeeper to lure their defensive line even higher. 2. Order the fastest striker to ghost  onto the blind side of their slowest center-back in preparation. 3. The goalkeeper must  immediately launch a devastating, one-touch 60-yard pass over the top directly into the  striker's path."
+      "tactical_translation": "1. Instruct the deepest midfielder to feign a slow, methodical back-pass to the goalkeeper to lure their defensive line even higher. 2. Order the fastest striker to ghost onto the blind side of their slowest center-back in preparation. 3. The goalkeeper must immediately launch a devastating, one-touch 60-yard pass over the top directly into the striker's path."
     },
     {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Niccolò Machiavelli / Military Strategy",
-      "quote": "A commander should arrange the army so that the first line can be received by the  second and by the third.",
-      "tactical_translation": "1. Identify the specific horizontal chasm where the opponent's first line  lacks geometrical support from their second line. 2. Instruct your ball-playing center-back to  drive forcefully into this empty space with the ball at their feet. 3. Commit to a 4v3 offensive  transition, knowing the opponent fundamentally lacks the structural depth to cover the  breached line."
+      "fc_role_recommendations": null,
+      "quote": "A commander should arrange the army so that the first line can be received by the second and by the third.",
+      "tactical_translation": "1. Identify the specific horizontal chasm where the opponent's first line lacks geometrical support from their second line. 2. Instruct your ball-playing center-back to drive forcefully into this empty space with the ball at their feet. 3. Commit to a 4v3 offensive transition, knowing the opponent fundamentally lacks the structural depth to cover the breached line."
     },
     {
-      "tags": [
-        "Lethargic Press"
-      ],
-      "author": "Pep Guardiola / Positional Play",
-      "quote": "The intention is to move the opponent, not the ball.",
-      "tactical_translation": "1. Circulate the ball methodically in a U-shape across the backline to  mathematically drag the lethargic block entirely to one side. 2. Ensure your fastest winger  remains hugging the chalk of the touchline on the completely opposite, weak side. 3. Once the  opponent is clustered, hit a rapid switch of play to isolate the winger in a pristine 1v1 against the  fullback."
-    },
-    {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Carlo Ancelotti / Functional Play",
+      "fc_role_recommendations": null,
       "quote": "Dominating the midfield dictates the tempo and recycles the ball.",
-      "tactical_translation": "1. Command the primary playmaker to drop out of the final third and  anchor themselves entirely inside the unpoliced gap. 2. Filter every single buildup pass through  this player to establish immediate rhythm and operational control. 3. Use this deep pivot to  create localized 3v2 triangles, drawing out their isolated center-backs and slipping the wingers  in behind."
+      "tactical_translation": "1. Command the primary playmaker to drop out of the final third and anchor themselves entirely inside the unpoliced gap. 2. Filter every single buildup pass through this player to establish immediate rhythm and operational control. 3. Use this deep pivot to create localized 3v2 triangles, drawing out their isolated center-backs and slipping the wingers in behind."
     },
     {
-      "tags": [
-        "Parked Bus"
-      ],
-      "author": "Sean Dyche / Direct Play",
-      "quote": "Keep them one side. Shuffle and slide.",
-      "tactical_translation": "1. Maintain an impenetrable 4-4-2 shape, aggressively shuffling to trap  the ball carrier against the touchline to restrict passing angles. 2. Win the ball via a physical  tackle and immediately clear it into the wide channels directly behind their high fullbacks. 3.  Instruct your target man to pin their center-back and win the aerial duel to secure high-pitch  possession."
-    },
-    {
-      "tags": [
-        "Midfield Disconnect"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Johan Cruyff / Positional Play",
+      "fc_role_recommendations": null,
       "quote": "Playing football is very simple, but playing simple football is the hardest thing there is.",
-      "tactical_translation": "1. Instruct both wingers to stand on the literal chalk of the touchlines to  physically stretch the penalty area defensive block to its maximum limit. 2. Play rapid,  one-touch ground passes strictly around the perimeter of the box to shift their defensive gaze.  3. Hold the ball wide, wait for the defense to shift, and slip a reverse pass to a late-arriving  central midfielder crashing Zone 14."
+      "tactical_translation": "1. Instruct both wingers to stand on the literal chalk of the touchlines to physically stretch the penalty area defensive block to its maximum limit. 2. Play rapid, one-touch ground passes strictly around the perimeter of the box to shift their defensive gaze. 3. Hold the ball wide, wait for the defense to shift, and slip a reverse pass to a late-arriving central midfielder crashing Zone 14."
     },
     {
-      "tags": [
-        "Lethargic Press"
-      ],
-      "author": "Roberto De Zerbi / Positional Play",
-      "quote": "We use the goalkeeper as an extra outfield player to create superiority.",
-      "tactical_translation": "1. Instruct the goalkeeper to step up to the edge of the penalty box,  acting definitively as a third center-back in possession. 2. Command the center-backs to split  wide and stand completely still with the ball to infuriate the passive press. 3. Once an opponent  breaks rank and sprints forward in frustration, thread a vertical pass straight through the  vacated lane."
-    },
-    {
-      "tags": [
-        "Parked Bus"
-      ],
-      "author": "Helenio Herrera / Catenaccio",
-      "quote": "If you play for yourself, you play for your opponents; if you play for the team, you play  for yourself.",
-      "tactical_translation": "1. Deploy the sweeper exactly 10 yards behind the defensive line to act  as an absolute safety net against long, hopeful balls. 2. Implement strict man-to-man marking  on their isolated forwards to physically and psychologically neutralize them. 3. Instruct the  fullbacks to sprint 50 yards up the pitch on the counter, ruthlessly exploiting the massive  chasms in the opponent's elongated shape."
-    },
-    {
-      "tags": [
-        "Over-Stretched Formation"
-      ],
-      "author": "Antonio Conte / Pragmatism",
-      "quote": "You have to be prepared to play in different parts of the pitch.",
-      "tactical_translation": "1. Command the wing-backs to push exceptionally high and pin the  opposition's defensive line deep into their own half. 2. Instruct the inside forwards to drop deep  into the disconnected midfield zone to receive the ball. 3. Play the ball into the inside forwards'  feet to create a mathematically flawless 5v4 numerical advantage in the final third."
-    },
-    {
-      "tags": [
-        "Suicidal High Line"
-      ],
+      "tags": ["Midfield Disconnect"],
       "author": "Julian Nagelsmann / Gegenpressing",
-      "quote": "The quality of the players at your disposal will ensure you play well within a good  tactical set-up.",
-      "tactical_translation": "1. Form a central midfield diamond to numerically overwhelm the core of  the pitch and cut off all short passing options. 2. Force the opposition to attempt panicked, long  clearances over your high press. 3. Win the second ball in midfield and instantly execute a  chipped through-ball to the center forward, perfectly exploiting the high line's recovery phase."
+      "fc_role_recommendations": null,
+      "quote": "Thirty percent of coaching is tactics, seventy percent social competence.",
+      "tactical_translation": "1. Shift into an ultra-aggressive 5-2-3 structure with the wingers positioned strictly on their strong foot. 2. Pin the opposition fullbacks to the absolute extreme edges of the touchline to expand the gaps between their defenders. 3. Execute rapid central rotations, sending the advanced midfielder driving vertically through the massive gap in their compromised core."
     },
     {
-      "tags": [
-        "Parked Bus"
-      ],
-      "author": "José Mourinho / Pragmatism",
-      "quote": "Stop taking the moral high ground, look for advantages on vulnerable players.",
-      "tactical_translation": "1. Utilize real-time analytics to identify the opposition defender who is on  a yellow card or physically exhausted within the low block. 2. Shift your most aggressive 1v1  dribbler exclusively to that defender's side to create an isolated, relentless overload. 3. Feed the  dribbler continuously, forcing the compromised defender to either concede a penalty or  irreparably break the defensive line."
+      "tags": ["Suicidal High Line"],
+      "author": "Angeball / Ange Postecoglou",
+      "fc_role_recommendations": ["Sweeper Keeper", "Inverted Fullback"],
+      "quote": "It's not just about running anywhere, it's about going to the areas that we work on constantly, and if it looks fluid, that makes us harder to stop.",
+      "tactical_translation": "The tracking data has triggered a 'Suicidal High Line' alert: the defensive line's average Y-coordinate exceeds 40 meters, yet the forward line is failing to apply pressure (distance to ball > 3.5m). This mathematically invites catastrophic balls over the top. Embracing the high-risk, high-reward philosophy of Ange Postecoglou, the solution is not to drop the line, but to mathematically mitigate the space behind it. The engine mandates the deployment of a **Sweeper Keeper** with a 'Balanced' focus. This Role fundamentally alters the goalkeeper's pathfinding AI, instructing them to hold a high starting position outside the penalty area to sweep up uncontested through balls. Furthermore, deploy an **Inverted Fullback** (Falseback) to step into the midfield. This ensures that even if the ball is turned over, there is a dense central blockade that prevents the opposition from immediately executing a measured, long-distance pass into the vulnerable space behind your aggressive defensive line."
     },
     {
-      "tags": [
-        "Lethargic Press",
-        "Suicidal High Line"
-      ],
+      "tags": ["Suicidal High Line"],
+      "author": "High Line Offside Trap / Arrigo Sacchi",
+      "fc_role_recommendations": ["Stopper", "Holding"],
+      "quote": "The defensive line to be no more than 25 metres away from attacking line.",
+      "tactical_translation": "A 'Suicidal High Line' has been flagged, indicating a severe misalignment between defensive height and forward pressing intensity. According to Arrigo Sacchi's principles, a high line is only viable if it acts as a synchronized offside trap to compress the pitch. To execute this within the FC 25 engine, assign one center-back to the **Stopper** role with a 'Balanced' focus. The Stopper is programmatically driven to step out of the defensive alignment to aggressively tackle and intercept the ball carrier before a pass can be played. To protect the space vacated by the Stopper, deploy a central midfielder in a **Holding** role with a 'Defend' focus. This player will statically occupy the passing lanes directly in front of the remaining defenders, effectively shielding the high line from immediate vertical threat while the Stopper nullifies the un-pressured ball carrier."
+    },
+    {
+      "tags": ["Suicidal High Line"],
+      "author": "High-Intensity Man-Marking / Marcelo Bielsa",
+      "fc_role_recommendations": ["Inside Forward", "Box-to-Box Midfielder"],
+      "quote": "High-intensity pressing, fluid attacking movements, and meticulous preparation.",
+      "tactical_translation": "The mathematical presence of a 'Suicidal High Line' indicates that your high defensive block is being betrayed by a passive forward line, leaving vast tracts of space vulnerable to exploitation. To secure the high line, you must implement Marcelo Bielsa's philosophy of relentless, high-intensity pressing to deny the opposition the time necessary to measure a long pass. The AI engine recommends transforming your passive wide players into an **Inside Forward** role with an 'Attack' or 'Roaming' focus. This instructs them to violently cut inside and press the opposition center-backs directly. Support this vanguard by deploying a **Box-to-Box Midfielder** on a 'Balanced' focus, whose AI behavior will drive them to hound the opposition's deep-lying playmakers. By enforcing immediate spatial pressure on the ball carrier, the geometric vulnerability of the high line is mathematically neutralized, as the opponent is forced into rushed, inaccurate clearances rather than targeted through balls."
+    },
+    {
+      "tags": ["Suicidal High Line"],
+      "author": "Alpine Klopp Pressing / Ralph Hasenhüttl",
+      "fc_role_recommendations": ["Advanced Forward", "Wide Playmaker"],
+      "quote": "This is the time we can move to the ball, put pressure on the guy who gets it.",
+      "tactical_translation": "A 'Suicidal High Line' has been detected due to an uncoordinated pressing distance in the final third. To protect the high defensive deployment, Ralph Hasenhüttl's methodology of utilizing specific pressing triggers must be activated. The recommendation is to assign your primary striker to the **Advanced Forward** role with an 'Attack' focus. The Advanced Forward will aggressively initiate the first line of pressure the moment an opposition defender receives a sub-optimal pass or faces their own goal. To cut off the lateral escape routes for the pressured defender, utilize a **Wide Playmaker** on the flank. While traditionally a creative role, in this structural context, the Wide Playmaker's tendency to drift centrally cuts off the inner passing lanes, creating a geometric trap. This coordinated front-line aggression ensures the opposition is denied the requisite time and space to exploit the high defensive line."
+    },
+    {
+      "tags": ["Suicidal High Line"],
+      "author": "Vertical Compactness / Unai Emery",
+      "fc_role_recommendations": ["Defender", "Deep-Lying Playmaker"],
+      "quote": "Most importantly, it's getting the balance and positioning on the pitch with and without the ball.",
+      "tactical_translation": "The spatial analysis reveals a 'Suicidal High Line' that is entirely disconnected from the team's pressing structure, rendering the defense dangerously exposed. Channeling Unai Emery's philosophy of establishing a high yet stable medium block, the tactical resolution requires stabilizing the defensive unit rather than relying on erratic pressing. Instruct your center-backs to utilize the standard **Defender** role with a strict 'Defend' focus, ensuring they hold a perfectly horizontal, cohesive line without stepping out erratically. Directly ahead of them, deploy a **Deep-Lying Playmaker** with a 'Defend' focus. This Role ensures the midfielder acts as a dedicated screen, closing down the passing lanes that lead into the space behind the defense. By solidifying the vertical compactness and refusing to let the defensive line fracture, the team can safely maintain a high block without succumbing to the mathematical vulnerabilities of un-pressured long balls."
+    },
+    {
+      "tags": ["Suicidal High Line"],
+      "author": "Controlled Aggression / Thomas Tuchel",
+      "fc_role_recommendations": ["Sweeper Keeper", "Stopper"],
+      "quote": "A high line is not reckless if every player understands their role in protecting it.",
+      "tactical_translation": "The diagnostics confirm a 'Suicidal High Line' scenario where the defensive unit is operating at peak vertical height without the positional discipline to maintain shape. Thomas Tuchel's approach — blending aggressive defensive lines with meticulous role-assignment discipline — provides the structural remedy. The engine prescribes deploying a **Sweeper Keeper** with a 'Balanced' focus as the immediate safety net, programming the goalkeeper to occupy a position 8–12 yards off the line to intercept through balls. Critically, restructure the defensive line itself by assigning one center-back to the **Stopper** role. The Stopper's AI will preemptively step out and duel the ball carrier before a line-breaking pass is released, effectively collapsing the threat at its source rather than dealing with the consequence. These twin adjustments transform a suicidal exposure into a controlled, aggressive defensive posture."
+    },
+    {
+      "tags": ["Suicidal High Line"],
+      "author": "Proactive Line Management / Erik ten Hag",
+      "fc_role_recommendations": ["Ball-Playing Defender", "Holding"],
+      "quote": "The defensive line must be dynamic. It compresses, it holds, it steps — but always as a unit.",
+      "tactical_translation": "The 'Suicidal High Line' flag indicates the defensive unit is maintaining extreme height but fragmenting under transition pressure, with individual defenders making uncoordinated decisions. Influenced by Erik ten Hag's Ajax and Manchester United defensive principles — where the line is managed proactively as a synchronized unit — the AI prescribes a structural reinforcement protocol. Assign one center-back to the **Ball-Playing Defender** role with a 'Build-Up' focus. This instructs that defender to step into midfield during possession phases, physically compressing the space between the lines and making the high line maintainable without a structural vacuum forming. Ahead of the defensive unit, anchor a **Holding** midfielder with a strict 'Defend' focus as a positional shield. This player's programmatic tendency to fill gaps in front of the back line prevents the high defensive unit from being exposed by single, incisive passes into the channels."
+    },
+    {
+      "tags": ["Suicidal High Line"],
       "author": "Jürgen Klopp / Gegenpressing",
+      "fc_role_recommendations": null,
+      "quote": "Gegenpressing is the best playmaker in the world.",
+      "tactical_translation": "1. Trigger an immediate, aggressive 3-man swarm on the ball carrier the second they take a heavy touch to exploit their lack of ball control. 2. Upon winning the ball, forbid all square passes; the first look must be entirely vertical. 3. Launch a first-time through ball into the half-space behind the high defensive line for the winger to exploit with raw pace."
+    },
+    {
+      "tags": ["Suicidal High Line"],
+      "author": "Julian Nagelsmann / Gegenpressing",
+      "fc_role_recommendations": null,
+      "quote": "The quality of the players at your disposal will ensure you play well within a good tactical set-up.",
+      "tactical_translation": "1. Form a central midfield diamond to numerically overwhelm the core of the pitch and cut off all short passing options. 2. Force the opposition to attempt panicked, long clearances over your high press. 3. Win the second ball in midfield and instantly execute a chipped through-ball to the center forward, perfectly exploiting the high line's recovery phase."
+    },
+    {
+      "tags": ["Suicidal High Line", "Lethargic Press"],
+      "author": "Jürgen Klopp / Gegenpressing",
+      "fc_role_recommendations": null,
       "quote": "We have to play heavy metal football.",
-      "tactical_translation": "1. Push the entire defensive line up to the halfway line to completely  compress the playing area and suffocate the opponent's spatial awareness. 2. Instruct the  midfield three to lock onto their nearest markers, eliminating all short passing options entirely.  3. Force the lethargic opponent to pass backward to the goalkeeper, triggering an all-out sprint  to force an immediate error in the six-yard box."
+      "tactical_translation": "1. Push the entire defensive line up to the halfway line to completely compress the playing area and suffocate the opponent's spatial awareness. 2. Instruct the midfield three to lock onto their nearest markers, eliminating all short passing options entirely. 3. Force the lethargic opponent to pass backward to the goalkeeper, triggering an all-out sprint to force an immediate error in the six-yard box."
     },
     {
-      "tags": [
-        "Midfield Disconnect"
-      ],
-      "author": "Sam Allardyce / Direct Play",
-      "quote": "There is more focus on set pieces and physicality because teams corrected to the  craze of small quick forwards.",
-      "tactical_translation": "1. Bypass the center of the pitch entirely to strictly avoid turning the ball  over in the transition zones. 2. Instruct the fullbacks to hit early, looping crosses toward the  penalty spot from deep, wide areas. 3. Position your largest, most physically dominant striker  directly on their smallest center-back to win the aerial duel and capitalize on the  mathematically stretched defense."
+      "tags": ["Suicidal High Line", "Parked Bus"],
+      "author": "José Mourinho / Pragmatism",
+      "fc_role_recommendations": null,
+      "quote": "He who has the ball has fear.",
+      "tactical_translation": "1. Relinquish possession entirely and drop into a compact mid-block to draw their defensive line even higher up the pitch. 2. Instruct the weak-side winger to abandon the touchline and tuck aggressively into the central half-space. 3. Win the ball and immediately play a one-touch diagonal pass into the space behind the fullbacks for the inverted winger to chase."
     },
     {
-      "tags": [
-        "Parked Bus"
-      ],
+      "tags": ["Parked Bus"],
+      "author": "Catenaccio & The Low Block / Jose Mourinho",
+      "fc_role_recommendations": ["Target Forward", "Ball-Playing Defender"],
+      "quote": "As we say in Portugal, they brought the bus and they left the bus in front of the goal.",
+      "tactical_translation": "The engine has detected that your team is currently trapped in a 'Parked Bus' scenario. The deepest defender is entrenched within your own 18-yard box, and the team's overall convex hull area has collapsed to under 900 square meters. You are absorbing immense momentum but lack an outlet to relieve the pressure. To transition out of this extreme low block, you must employ Jose Mourinho's counter-attacking blueprint. Deploy a **Target Forward** with an 'Attack' focus. This player provides a massive, physical focal point capable of receiving and shielding long, desperate clearances from your defensive third. To deliver these precise clearances under immense pressure, convert one of your entrenched center-backs into a **Ball-Playing Defender** with a 'Build-Up' focus. This role enhances the defender's AI to look for immediate, line-breaking long passes the moment possession is won, effectively bypassing the congested midfield and utilizing the Target Forward to drag your entire team up the pitch."
+    },
+    {
+      "tags": ["Parked Bus"],
+      "author": "3-4-3 Wide Overloads / Antonio Conte",
+      "fc_role_recommendations": ["Attacking Wingback", "Inside Forward"],
+      "quote": "By occupying the centre, teams can switch the ball through it to different areas of the field if they cannot break through in the initial area.",
+      "tactical_translation": "You are attempting to break down an opposition 'Parked Bus' that has completely sealed off the central channels and compressed the penalty area. Drawing upon Antonio Conte's 3-4-3 systemic principles, the mathematical solution to a vertically compressed defense is to apply extreme horizontal stretching. The AI recommends deploying an **Attacking Wingback** on an 'Attack' focus on both flanks. These roles are programmatically instructed to hug the absolute touchline and bomb forward, forcing the opposition's defensive block to widen and create internal gaps. To exploit the spatial fracturing caused by this horizontal stretch, utilize an **Inside Forward** with a 'Roaming' focus. Starting wide but aggressively cutting into the newly formed channels between the stretched opposition defenders, the Inside Forward will dismantle the low block through dynamic, angled runs into the penalty area."
+    },
+    {
+      "tags": ["Parked Bus"],
+      "author": "Positional Staggering / Pep Guardiola",
+      "fc_role_recommendations": ["Half-Winger", "False 9"],
+      "quote": "This staggering creates interior spaces and passing lanes within the opposition's formation.",
+      "tactical_translation": "The opponent has established a 'Parked Bus', reducing the actionable space in the final third to near zero. Following the Positional Play doctrines of Pep Guardiola, breaking this block requires precise positional staggering to exploit the half-spaces and disrupt the defensive line. The engine dictates the deployment of a **Half-Winger (Mezzala)** with an 'Attack' focus. This role explicitly programs the midfielder to operate in the half-spaces — the channels between the opposition's fullbacks and center-backs — forcing the defenders into difficult marking decisions. Complement this by utilizing a **False 9** with a 'Build-Up' focus. The False 9 will drop deep, dragging a central defender out of the entrenched line. The Half-Winger can then penetrate the exact geometric void left by the displaced defender, mathematically dismantling the structural integrity of the parked bus."
+    },
+    {
+      "tags": ["Parked Bus"],
+      "author": "Tight Space Combinations / Arsene Wenger",
+      "fc_role_recommendations": ["Playmaker", "Poacher"],
+      "quote": "If you eat caviar every day, it is difficult to return to sausages.",
+      "tactical_translation": "The opposition is operating a 'Parked Bus', resulting in a heavily congested penalty area that neutralizes traditional crossing and long-range shooting. Inspired by Arsene Wenger's Arsenal sides, the solution requires hyper-precise, high-speed passing combinations within incredibly tight geometric confines. The AI coaching engine recommends deploying a central **Playmaker** with a 'Roaming' focus. This grants the AI the fluidity to constantly seek out microscopic pockets of space just outside the 18-yard box to orchestrate one-touch passes. To finish these intricate moves, deploy a **Poacher** with an 'Attack' focus. The Poacher's AI is explicitly designed to lurk on the absolute edge of the defensive line, making short, razor-sharp movements to latch onto the Playmaker's through balls, effectively bypassing the dense defensive block through speed of thought and precise spatial timing."
+    },
+    {
+      "tags": ["Parked Bus"],
+      "author": "Artificial Transitions / Roberto De Zerbi",
+      "fc_role_recommendations": ["Deep-Lying Playmaker", "Advanced Forward"],
+      "quote": "Instead of viewing pressing as a threat, De Zerbi sees it as an opportunity to exploit.",
+      "tactical_translation": "You are facing a resolute 'Parked Bus' that refuses to step out of their defensive third, neutralizing your positional attacks. Using Roberto De Zerbi's philosophy, you must create artificial transitions by baiting the opposition out of their low block. Instruct your midfield pivot to operate as a **Deep-Lying Playmaker** with a 'Defend' focus. Hold possession deep in your own half, utilizing the sole of the foot to pause play. This deliberate lethargy will eventually frustrate the opposition and bait their forward line into pressing. The moment the opposition block expands and steps forward to press, launch a direct, vertical pass to an **Advanced Forward** on an 'Attack' focus. The Advanced Forward will instantly exploit the newly created space behind the advancing defensive line, turning a stagnant parked bus into a highly profitable counter-attacking opportunity."
+    },
+    {
+      "tags": ["Parked Bus"],
+      "author": "Structural Overload / Erik ten Hag",
+      "fc_role_recommendations": ["Inverted Fullback", "Shadow Striker"],
+      "quote": "When they sit deep, you need the quality and movement to unlock them — the structure must create the chance.",
+      "tactical_translation": "A resolute 'Parked Bus' has compressed all central access routes, forcing the attacking unit into predictable, telegraphed moves. Borrowing from Erik ten Hag's Ajax blueprint — which systematically created overloads in central zones using fullback inversions and late midfield runners — the engine prescribes a layered structural attack. Deploy both fullbacks in the **Inverted Fullback** role with an 'Attack' focus, programming them to flood the half-spaces and create a numerical mismatch between the three and the low block's wingers. Simultaneously, assign the second striker or attacking midfielder the **Shadow Striker** role with an 'Attack' focus. As the inverted fullbacks draw defensive attention outward, the Shadow Striker exploits the vacated interior lane with a sharp diagonal run, receiving between the lines in the pocket directly in front of the compressed defensive shape."
+    },
+    {
+      "tags": ["Parked Bus"],
+      "author": "Direct Penetration / Sean Dyche",
+      "fc_role_recommendations": ["Target Forward", "Attacking Wingback"],
+      "quote": "Keep them one side. Shuffle and slide.",
+      "tactical_translation": "The opposition 'Parked Bus' is proving impenetrable to combination play, as their compact shape absorbs every intricate passing sequence. Channeling Sean Dyche's pragmatic directness, the engine recommends abandoning positional complexity in favor of ruthless physical penetration. Deploy a **Target Forward** with an 'Attack' focus as the primary aerial threat. The Target Forward's AI is programmed to aggressively contest every aerial ball delivered into the penalty area, generating second-ball situations that disorder the organized defensive block. To deliver the required ammunition, deploy **Attacking Wingbacks** on both flanks with an 'Attack' focus, programming them to drive deep to the byline and deliver early, low crosses into the Target Forward's movement zone. The combination of aerial dominance and relentless width physically stretches the bus horizontally until structural cracks appear."
+    },
+    {
+      "tags": ["Parked Bus"],
+      "author": "Roberto De Zerbi / Positional Play",
+      "fc_role_recommendations": null,
+      "quote": "If you receive the ball with the sole and from the front, you can play for the side you want. There you have total control.",
+      "tactical_translation": "1. Instruct the defensive pivot to receive the ball utilizing the sole of the foot, facing forward, and pausing completely. 2. Wait for this physical pause to bait an opposition midfielder into breaking the low block structure out of sheer frustration. 3. Execute a rapid square pass to the third man, penetrating the specific spatial void left by the pressing defender."
+    },
+    {
+      "tags": ["Parked Bus"],
+      "author": "Mikel Arteta / Positional Play",
+      "fc_role_recommendations": null,
+      "quote": "We have to be dominant, we have to control the game, and we have to dictate the rules.",
+      "tactical_translation": "1. Form a rigid 3-2-5 box-midfield possession structure to completely suffocate their transition threat. 2. Overload the left half-space to force their deeply compressed block to shift horizontally. 3. Execute a highly automated cut-back pass from the byline directly into Zone 14 for a late-arriving midfielder to strike first-time."
+    },
+    {
+      "tags": ["Parked Bus"],
       "author": "Diego Simeone / Pragmatism",
+      "fc_role_recommendations": null,
       "quote": "Games are won by the team that exploits the space left by the opponent.",
-      "tactical_translation": "1. Maintain a rigid 3-5-2 structure, utilizing the far-side wingback to stay  as wide as mathematically possible to stretch their compressed block. 2. Focus all build-up play  strictly through the middle to overload the central defenders. 3. Once the defense collapses  inward to deal with the central overload, execute a rapid, floated diagonal pass to the isolated  wingback arriving at the far post."
+      "tactical_translation": "1. Maintain a rigid 3-5-2 structure, utilizing the far-side wingback to stay as wide as mathematically possible to stretch their compressed block. 2. Focus all build-up play strictly through the middle to overload the central defenders. 3. Once the defense collapses inward to deal with the central overload, execute a rapid, floated diagonal pass to the isolated wingback arriving at the far post."
+    },
+    {
+      "tags": ["Parked Bus"],
+      "author": "José Mourinho / Pragmatism",
+      "fc_role_recommendations": null,
+      "quote": "Stop taking the moral high ground, look for advantages on vulnerable players.",
+      "tactical_translation": "1. Utilize real-time analytics to identify the opposition defender who is on a yellow card or physically exhausted within the low block. 2. Shift your most aggressive 1v1 dribbler exclusively to that defender's side to create an isolated, relentless overload. 3. Feed the dribbler continuously, forcing the compromised defender to either concede a penalty or irreparably break the defensive line."
+    },
+    {
+      "tags": ["Parked Bus"],
+      "author": "Helenio Herrera / Catenaccio",
+      "fc_role_recommendations": null,
+      "quote": "If you play for yourself, you play for your opponents; if you play for the team, you play for yourself.",
+      "tactical_translation": "1. Deploy the sweeper exactly 10 yards behind the defensive line to act as an absolute safety net against long, hopeful balls. 2. Implement strict man-to-man marking on their isolated forwards to physically and psychologically neutralize them. 3. Instruct the fullbacks to sprint 50 yards up the pitch on the counter, ruthlessly exploiting the massive chasms in the opponent's elongated shape."
+    },
+    {
+      "tags": ["Parked Bus", "Midfield Disconnect"],
+      "author": "Diego Simeone / Pragmatism",
+      "fc_role_recommendations": null,
+      "quote": "Effort is non-negotiable.",
+      "tactical_translation": "1. Compress the team immediately into a highly rigid 4-4-2 low block, dropping the defensive line to the absolute edge of the 18-yard box. 2. Concede possession in the wide areas, keeping the entire central column impenetrable. 3. Upon regaining the ball, bypass their disjointed midfield with a direct, long diagonal pass to the blind side of their isolated center-backs."
+    },
+    {
+      "tags": ["Lethargic Press"],
+      "author": "Pressing Triggers / Ralph Hasenhüttl",
+      "fc_role_recommendations": ["Advanced Forward", "Shadow Striker"],
+      "quote": "The centre-back shapes to pass long to his partner. Danny Ings presses the recipient.",
+      "tactical_translation": "The tracking system has flagged a 'Lethargic Press': the average distance between your forward line and the opposition ball carrier exceeds 3 meters in the final third, allowing the opponent to build up flawlessly. To rectify this passivity, the team must implement Ralph Hasenhüttl's aggressive pressing triggers. The engine recommends assigning your primary striker to the **Advanced Forward** role. This role's AI naturally seeks to close down center-backs the moment they receive the ball facing their own goal. Crucially, support this initial press by deploying a **Shadow Striker** immediately behind them. As the Advanced Forward forces the ball carrier into a rushed decision, the Shadow Striker is perfectly positioned to aggressively step into the passing lanes and intercept the subsequent panic pass, converting lethargy into high-turnover defensive aggression."
+    },
+    {
+      "tags": ["Lethargic Press"],
+      "author": "Holistic Man-Marking / Marcelo Bielsa",
+      "fc_role_recommendations": ["Box-to-Box Midfielder", "Inside Forward"],
+      "quote": "But does an aggressive press complement a man-marking rather than a zone-oriented defensive approach?",
+      "tactical_translation": "A 'Lethargic Press' has compromised your team's out-of-possession structure, allowing the opposition to dictate the tempo of the match unhindered. To eradicate this spatial looseness, you must adopt Marcelo Bielsa's philosophy of exhaustive, high-intensity man-marking. The AI dictates the deployment of a **Box-to-Box Midfielder** on a 'Balanced' focus. This role possesses the requisite AI engine to relentlessly track opposition midfielders from box to box, denying them an inch of space. Simultaneously, assign your wide players the **Inside Forward** role with a 'Balanced' focus. Rather than passively holding the wing, they will aggressively pinch inward to suffocate the opposition's central defenders during build-up phases. This programmatic shift ensures an overwhelming, man-to-man physical presence that mathematically eliminates the spatial lethargy of the press."
+    },
+    {
+      "tags": ["Lethargic Press"],
+      "author": "Counter-Pressing Density / Pep Guardiola",
+      "fc_role_recommendations": ["False 9", "Half-Winger"],
+      "quote": "Without the ball, we are a disastrous team, a horrible team, so we need the ball.",
+      "tactical_translation": "The algorithms indicate a 'Lethargic Press' specifically during the defensive transition phase; your team is failing to immediately close down the ball after losing possession. Following Pep Guardiola's counter-pressing (Gegenpressing) principles, the solution is not merely running faster, but ensuring extreme numerical density around the ball zone prior to the turnover. The AI recommends utilizing a **False 9** to drop deep from the forward line, alongside a **Half-Winger (Mezzala)** tucking in from the midfield. This structural configuration inherently packs the central zone with bodies during your possession phase. Consequently, the moment the ball is lost, your players are already mathematically within the 3-meter pressing threshold of the opposition, allowing for an instantaneous, suffocating counter-press that completely eradicates transitional lethargy."
+    },
+    {
+      "tags": ["Lethargic Press", "Parked Bus"],
+      "author": "Mid-Block Pressing Traps / Unai Emery",
+      "fc_role_recommendations": ["Wide Midfielder", "Holding"],
+      "quote": "If the central midfielders were close and narrow, they would press forwards, ready to press wide once the ball was forced there.",
+      "tactical_translation": "Your team's high press has been flagged as 'Lethargic', resulting in players being easily bypassed and exhausting themselves without recovering the ball. Unai Emery's tactical approach suggests that when a high press is inefficient, the team must drop into a compact mid-block to spring calculated pressing traps. The engine recommends setting your wide players to the **Wide Midfielder** role with a 'Defend' focus. They will drop deep to form a rigid bank of four, encouraging the opposition to push the ball down the flanks. Concurrently, deploy a **Holding** midfielder in the center. Once the ball is forced wide, the Wide Midfielder and the Holding midfielder will aggressively collapse on the touchline, using the sideline as an extra defender. This geometric trap converts a lethargic, uncoordinated press into a highly efficient, targeted spatial lockdown."
+    },
+    {
+      "tags": ["Lethargic Press"],
+      "author": "Asymmetrical Rest Defense / Xabi Alonso",
+      "fc_role_recommendations": ["Deep-Lying Playmaker", "Attacking Wingback"],
+      "quote": "The asymmetrical approach forces Leverkusen to focus on playing on the right side. This obliges the opponent to place a lot of players on the same side.",
+      "tactical_translation": "A 'Lethargic Press' is allowing the opposition to effortlessly switch the play and bypass your defensive structure. Xabi Alonso solves this by utilizing an asymmetrical shape that dictates where the opposition is allowed to play. The AI advises deploying a **Deep-Lying Playmaker** on a 'Defend' focus to rigidly lock down the central channels, forcing the opponent to build up on the flanks. On one side, deploy an **Attacking Wingback** high up the pitch. This asymmetry intentionally leaves space behind the wingback, baiting the opposition to attack that specific flank. Because the trap is pre-calculated, your defensive unit is already shifted and primed to press aggressively the moment the ball enters this specific spatial quadrant, entirely curing the lethargy of a generalized, full-pitch press."
+    },
+    {
+      "tags": ["Lethargic Press"],
+      "author": "Coordinated Press Windows / Arne Slot",
+      "fc_role_recommendations": ["Advanced Forward", "Wide Midfielder"],
+      "quote": "We don't press constantly. We press at the exact moment when the opponent is most vulnerable.",
+      "tactical_translation": "The 'Lethargic Press' flag indicates your team is attempting to press without a defined trigger window, exhausting energy without winning possession. Arne Slot's Liverpool system addresses this through deliberately timed, coordinated press activation moments rather than constant high-intensity pressure. The engine prescribes deploying the striker in the **Advanced Forward** role with an 'Attack' focus, programming the AI to activate pressure specifically when the opposition goalkeeper or center-back receives the ball with their back to play. To coordinate the press cohesively, assign both wide midfielders to the **Wide Midfielder** role with a 'Balanced' focus. Their programmatic tendency to track back and maintain defensive shape ensures the press is triggered as a synchronized unit, not a fragmented scramble — converting lethargic individual effort into decisive, energy-efficient collective pressure."
+    },
+    {
+      "tags": ["Lethargic Press"],
+      "author": "Press Architecture / Thomas Tuchel",
+      "fc_role_recommendations": ["Inside Forward", "Segundo Volante"],
+      "quote": "Pressing must have a structure. Without structure, you just run. With structure, you trap.",
+      "tactical_translation": "The diagnostic engine has identified a 'Lethargic Press' pattern where players are pressing reactively and individually rather than as a coordinated, structured unit. Tuchel's pressing methodology at Chelsea and Bayern Munich demanded architecturally precise press shapes with designated triggers and escape closers. The AI prescribes converting the wide forwards to the **Inside Forward** role with a 'Roaming' focus. This programs them to aggressively cut inside the moment the opposition's fullback receives, creating a geometric trap against the touchline. To close the central escape route simultaneously, deploy a **Segundo Volante** with a 'Balanced' focus in the midfield. The Segundo Volante's dynamic forward runs are repurposed here as aggressive press-closers, physically blocking the central passing lane and forcing the opposition into the sideline trap. The result is a geometric press with guaranteed closure on two axes simultaneously."
+    },
+    {
+      "tags": ["Lethargic Press"],
+      "author": "Fernando Diniz / Relationism",
+      "fc_role_recommendations": null,
+      "quote": "The ball is the absolute protagonist. The players must naturally intertwine and form relationships around it.",
+      "tactical_translation": "1. Abandon positional symmetry entirely and tilt seven outfield players to the exact side of the ball. 2. Initiate rapid 'toco y me voy' (pass and move) combinations to cognitively overload their passive, loose press. 3. Form a diagonal 'escadinha' (stepladder) passing structure to mathematically walk the ball up the touchline past their static, lethargic markers."
+    },
+    {
+      "tags": ["Lethargic Press"],
+      "author": "Carlo Ancelotti / Functional Play",
+      "fc_role_recommendations": null,
+      "quote": "Tactics are about putting players in the best position to express their qualities.",
+      "tactical_translation": "1. Instruct your deep-lying playmaker to drop between the center-backs to survey the pitch geometrically without pressure. 2. Push both fullbacks into extremely high, asymmetrical attacking positions on the touchlines. 3. Dictate a precise, sweeping 40-yard diagonal pass to the overlapping fullback, bypassing the passive block entirely and stretching the pitch."
+    },
+    {
+      "tags": ["Lethargic Press"],
+      "author": "Pep Guardiola / Positional Play",
+      "fc_role_recommendations": null,
+      "quote": "The intention is to move the opponent, not the ball.",
+      "tactical_translation": "1. Circulate the ball methodically in a U-shape across the backline to mathematically drag the lethargic block entirely to one side. 2. Ensure your fastest winger remains hugging the chalk of the touchline on the completely opposite, weak side. 3. Once the opponent is clustered, hit a rapid switch of play to isolate the winger in a pristine 1v1 against the fullback."
+    },
+    {
+      "tags": ["Lethargic Press"],
+      "author": "Roberto De Zerbi / Positional Play",
+      "fc_role_recommendations": null,
+      "quote": "We use the goalkeeper as an extra outfield player to create superiority.",
+      "tactical_translation": "1. Instruct the goalkeeper to step up to the edge of the penalty box, acting definitively as a third center-back in possession. 2. Command the center-backs to split wide and stand completely still with the ball to infuriate the passive press. 3. Once an opponent breaks rank and sprints forward in frustration, thread a vertical pass straight through the vacated lane."
+    },
+    {
+      "tags": ["Over-Stretched Formation"],
+      "author": "Absolute Compactness / Arrigo Sacchi",
+      "fc_role_recommendations": ["Ball-Playing Defender", "False 9"],
+      "quote": "The team move through all areas of the pitch as a short and compact block without cracks.",
+      "tactical_translation": "The tracking data has triggered a critical 'Over-Stretched Formation' alert: the vertical distance from your deepest center-back to your highest striker exceeds the mathematical threshold of 45 meters. This ruptures passing networks and creates massive voids between the lines. Channeling Arrigo Sacchi's non-negotiable 25-meter compactness rule, the AI engine demands an immediate structural compression from both ends of the pitch. Instruct your center-backs to adopt the **Ball-Playing Defender** role with a 'Build-Up' focus; this AI behavior forces the defensive line to step significantly higher up the pitch during possession. Simultaneously, deploy your striker in a **False 9** role. The False 9 will abandon the high defensive line and drop deep into the midfield. These synchronized programmatic adjustments physically squeeze the team's formation together, restoring the geometric integrity of the compact block."
+    },
+    {
+      "tags": ["Over-Stretched Formation"],
+      "author": "High Line Stability / Unai Emery",
+      "fc_role_recommendations": ["Defender", "Deep-Lying Playmaker"],
+      "quote": "Most importantly, it's getting the balance and positioning on the pitch with and without the ball.",
+      "tactical_translation": "An 'Over-Stretched Formation' has been detected because your forward line is initiating a high press while your defensive line is retreating out of fear of the counter-attack, tearing the team's shape in half. Utilizing Unai Emery's philosophy of maintaining a high line within a medium block, the tactical resolution is to anchor the center of the pitch. Assign your center-backs to the standard **Defender** role with a strict 'Defend' focus, instructing them to hold a high, unyielding line rather than dropping deep. To protect this line and prevent the stretch, deploy a **Deep-Lying Playmaker** with a 'Defend' focus directly in front of them. This creates a rigid structural spine that connects the defensive third to the pressing forwards, preventing the horizontal lines from expanding beyond the 45-meter safety threshold."
+    },
+    {
+      "tags": ["Over-Stretched Formation"],
+      "author": "The Low Block Anchor / Jose Mourinho",
+      "fc_role_recommendations": ["Center Half", "Target Forward"],
+      "quote": "They restrict the space for opposition players to exploit. It is a more static form of defence.",
+      "tactical_translation": "Your team is suffering from an 'Over-Stretched Formation' while attempting to defend a lead, as eager midfielders push forward while the defense drops deep into a low block. To rectify this dangerous expansion, you must embrace Jose Mourinho's defensive solidity. The AI recommends assigning a defensive midfielder to the **Center Half** role. This player will permanently drop between the center-backs, cementing the low block and signaling to the rest of the midfield to remain deep and compact. To provide a singular out-ball without requiring the rest of the team to stretch the formation by running forward, deploy a **Target Forward** on an 'Attack' focus. The team can remain completely compressed within a 30-meter block, using the physical prowess of the Target Forward to absorb long clearances without compromising the team's structural density."
+    },
+    {
+      "tags": ["Over-Stretched Formation"],
+      "author": "Central Occupation / Antonio Conte",
+      "fc_role_recommendations": ["Box-to-Box Midfielder", "Shadow Striker"],
+      "quote": "In the 4-3-3 shape, the wide movements of the central players left the centre of the pitch largely unoccupied.",
+      "tactical_translation": "The tracking algorithms reveal an 'Over-Stretched Formation' heavily localized in the central vertical channels, as your wingers stay wide and the central midfield is hollowed out. Drawing upon Antonio Conte's emphasis on central occupation, the geometric solution requires flooding the central column with dynamic runners. The engine dictates the deployment of a **Box-to-Box Midfielder** on a 'Balanced' focus. Their immense work rate AI ensures they continuously link the deep defensive line to the attacking third. To further compress the central void, utilize a **Shadow Striker** on an 'Attack' focus. As the Shadow Striker drops from the forward line to receive the ball and the Box-to-Box midfielder pushes up, they mathematically intersect in the center of the pitch, effectively tying the over-stretched formation back together through relentless central occupation."
+    },
+    {
+      "tags": ["Over-Stretched Formation"],
+      "author": "Baiting Expansion / Roberto De Zerbi",
+      "fc_role_recommendations": ["Center Half", "Playmaker"],
+      "quote": "The brilliant lies in how these calculated passes and movements open up space further up the pitch, turning a moment of potential risk into a platform for progression.",
+      "tactical_translation": "An 'Over-Stretched Formation' is occurring out of possession as your team frantically chases the ball. To resolve this, you must apply Roberto De Zerbi's methodology: stop chasing and instead force the opponent to stretch their own formation. The AI coaching engine recommends settling into a compact shape by using a **Center Half** to anchor the defense and invite the opponent to press high. Once the opponent over-commits and stretches their own lines to apply pressure, deploy a central **Playmaker** with a 'Roaming' focus to receive the ball in the newly created pockets. By maintaining your own deep, highly compressed structural block and letting the opponent stretch themselves, you geometrically invert the mathematical flaw, creating massive tracts of space for your Playmaker to exploit without compromising your own team's 45-meter compactness limit."
+    },
+    {
+      "tags": ["Over-Stretched Formation"],
+      "author": "Shape Preservation / Arne Slot",
+      "fc_role_recommendations": ["Wide Midfielder", "Holding"],
+      "quote": "Our shape is our strength. The moment we lose the shape, we lose control of the game.",
+      "tactical_translation": "The spatial algorithms have identified an 'Over-Stretched Formation' driven by wide players pushing aggressively forward while the defensive unit fails to shift upward in response. Arne Slot's Feyenoord system was built on an almost obsessive preservation of the team's defensive shape, ensuring no individual role could catastrophically expand the team's vertical footprint. The engine prescribes converting wide attacking players to the **Wide Midfielder** role with a 'Balanced' focus, programming them to maintain a strict horizontal discipline and resist the urge to advance beyond their designated line. In the center, anchor a **Holding** midfielder with a 'Defend' focus as the formation's structural spine. The Holding player's static positioning acts as a gravitational center for the team's shape, preventing the formation from ballooning beyond the 45-meter compactness threshold regardless of transitions."
+    },
+    {
+      "tags": ["Over-Stretched Formation"],
+      "author": "Fluid Compression / Thomas Tuchel",
+      "fc_role_recommendations": ["Inverted Fullback", "Segundo Volante"],
+      "quote": "I want us to be a team that is brave with the ball and disciplined without it. Both at the same time.",
+      "tactical_translation": "A critical 'Over-Stretched Formation' has been detected, with the team expanding dangerously during both possession and defensive transition phases. Tuchel's hybrid tactical identity — demanding simultaneous positional discipline and technical bravery — provides the structural resolution. Deploy the fullbacks in the **Inverted Fullback** role with a 'Balanced' focus. Rather than bombing up the flank and extending the team's vertical length, they will drift centrally into midfield, physically compressing the formation's width and overall footprint. To provide vertical dynamism without stretching the shape, deploy a **Segundo Volante** with a 'Balanced' focus. Their programmatic late runs from a conservative starting position mean they only expand the formation after the structural foundation is secure, ensuring the team compresses and expands as a controlled, synchronized unit."
+    },
+    {
+      "tags": ["Over-Stretched Formation"],
+      "author": "Antonio Conte / Pragmatism",
+      "fc_role_recommendations": null,
+      "quote": "You have to be prepared to play in different parts of the pitch.",
+      "tactical_translation": "1. Command the wing-backs to push exceptionally high and pin the opposition's defensive line deep into their own half. 2. Instruct the inside forwards to drop deep into the disconnected midfield zone to receive the ball. 3. Play the ball into the inside forwards' feet to create a mathematically flawless 5v4 numerical advantage in the final third."
+    },
+    {
+      "tags": ["Over-Stretched Formation", "Midfield Disconnect"],
+      "author": "Julian Nagelsmann / Gegenpressing",
+      "fc_role_recommendations": null,
+      "quote": "Thirty percent of coaching is tactics, seventy percent social competence.",
+      "tactical_translation": "1. Shift into an ultra-aggressive 5-2-3 structure with the wingers positioned strictly on their strong foot. 2. Pin the opposition fullbacks to the absolute extreme edges of the touchline to expand the gaps between their defenders. 3. Execute rapid central rotations, sending the advanced midfielder driving vertically through the massive gap in their compromised core."
+    },
+    {
+      "tags": ["Wide Overload / Channel Isolation"],
+      "author": "Width as a Weapon / Antonio Conte",
+      "fc_role_recommendations": ["Attacking Wingback", "Inside Forward"],
+      "quote": "The wide areas are the motorway. Use them to generate traffic where the opponent cannot cope.",
+      "tactical_translation": "The spatial diagnostics have flagged a 'Wide Overload / Channel Isolation' opportunity: the opposition is concentrating defensive density centrally, leaving both wide channels with fewer than two defenders covering a 15-meter zone. Antonio Conte's 3-4-3 philosophy converts this structural vulnerability into a systematic scoring platform. The engine prescribes deploying **Attacking Wingbacks** on both flanks with an 'Attack' focus, programming them to push to the absolute touchline and hold width aggressively. This forces the opposition's compressed central block to make an impossible decision: shift wide and open the center, or hold narrow and surrender the channel completely. To exploit the resulting defensive indecision, assign the wide forwards to the **Inside Forward** role with a 'Roaming' focus. As the Wingback pins the defensive line wide, the Inside Forward cuts in behind, exploiting the exact geometric corridor the opposition has been unable to cover."
+    },
+    {
+      "tags": ["Wide Overload / Channel Isolation"],
+      "author": "Touchline Dominance / Ange Postecoglou",
+      "fc_role_recommendations": ["Attacking Wingback", "Advanced Forward"],
+      "quote": "I want us to own the wide areas so completely that they feel claustrophobic in the center.",
+      "tactical_translation": "The analysis has detected a 'Wide Overload / Channel Isolation' scenario where the opposition's defensive shape has collapsed inward, creating uncontested space in both wide channels. Ange Postecoglou's Angeball system is architecturally designed to exploit exactly this scenario, using relentless width to generate byline dominance and cut-back opportunities. The AI prescribes placing both fullbacks in the **Attacking Wingback** role with an 'Attack' focus, programming them to maintain the highest possible wide position and deliver early crosses and cut-backs from deep positions. This forces all five opposition defenders to engage laterally. Simultaneously, assign the striker to the **Advanced Forward** role with an 'Attack' focus. The Advanced Forward's AI drives them to attack the near post on crosses and exploit the defensive vacuum created when the opposition's center-backs are drawn toward the channels."
+    },
+    {
+      "tags": ["Wide Overload / Channel Isolation"],
+      "author": "Inverted Width / Pep Guardiola",
+      "fc_role_recommendations": ["Inverted Fullback", "Wide Playmaker"],
+      "quote": "We use the width not to cross, but to open the center. The winger goes wide; the fullback inverts.",
+      "tactical_translation": "The tracking system has identified a 'Wide Overload / Channel Isolation' pattern where deploying conventional width is creating predictable crossing situations rather than genuine overloads. Pep Guardiola's inverted width concept resolves this by simultaneously occupying the wide channel and the central corridor, creating a two-dimensional trap for the opposition. The engine prescribes deploying fullbacks in the **Inverted Fullback** role with an 'Attack' focus, programming them to abandon the touchline and flood the half-spaces as the wide players pin defenders to the sideline. To occupy the wide channel itself and deliver the vertical threat, assign wide midfielders to the **Wide Playmaker** role with a 'Roaming' focus. Their AI tendency to drift and combine ensures the wide channel is consistently engaged while the real attacking overload unfolds in the interior corridor vacated by the inverted fullback's presence."
+    },
+    {
+      "tags": ["Wide Overload / Channel Isolation"],
+      "author": "Channel Exploitation / Marcelo Bielsa",
+      "fc_role_recommendations": ["Inside Forward", "Attacking Wingback"],
+      "quote": "The channel between the fullback and center-back is the most valuable piece of real estate on the pitch.",
+      "tactical_translation": "A 'Wide Overload / Channel Isolation' opportunity has been identified: the space between the opposition's right fullback and right center-back measures a consistent 8-meter gap throughout the build-up phase. Marcelo Bielsa's attacking philosophy treats this specific channel as the primary penetration corridor in his entire system. The AI recommends deploying an **Inside Forward** on the opposite flank with a 'Roaming' focus. The Inside Forward will drift across the pitch and attack the far-side channel in diagonal runs, arriving untracked as the defensive line shifts to cover the near-side threat. To generate the width that forces the defensive line to shift and widen the channel, simultaneously deploy an **Attacking Wingback** on the near flank with an 'Attack' focus, creating the initial horizontal pressure that unlocks the opposite channel for the Inside Forward's diagonal penetration."
+    },
+    {
+      "tags": ["Wide Overload / Channel Isolation"],
+      "author": "Overload and Release / Xabi Alonso",
+      "fc_role_recommendations": ["Attacking Wingback", "Half-Winger"],
+      "quote": "We overload one side completely, then release to the other side with a single pass that undoes everything they built.",
+      "tactical_translation": "The analysis confirms a 'Wide Overload / Channel Isolation' situation where the opposition is numerically overloaded on one flank. Xabi Alonso's Leverkusen system converts these situations by using the overload as a decoy — concentrating five players on one side to collapse the opposition's defensive shape, then releasing instantly to the opposite wide channel with a single switch pass. The engine prescribes deploying an **Attacking Wingback** with an 'Attack' focus on the overloaded side to anchor the press. On the opposite flank, assign the wide midfielder to the **Half-Winger** role with an 'Attack' focus. The Half-Winger maintains an aggressive starting position far upfield on the weak side. When the opposition collapses to deal with the near-side overload, a single diagonal switch pass to the Half-Winger creates an immediate 1v1 against the retreating fullback in a completely isolated channel."
+    },
+    {
+      "tags": ["Wide Overload / Channel Isolation"],
+      "author": "Direct Wide Penetration / Sean Dyche",
+      "fc_role_recommendations": ["Attacking Wingback", "Target Forward"],
+      "quote": "Win the wide battle, deliver the ball, and put your best header in the box. Simple.",
+      "tactical_translation": "The system has detected a 'Wide Overload / Channel Isolation' condition where the opposition's central block is deep and narrow, creating open wide channels that are best exploited through direct, physical means. Sean Dyche's pragmatic wide-play philosophy rejects complex combination sequences in favor of ruthless channel domination and aerial delivery. The engine prescribes deploying **Attacking Wingbacks** on both flanks with an 'Attack' focus, programming them to advance directly down the channel, win physical duels against the fullback, and deliver early crosses from the widest possible position. In the penalty area, anchor a **Target Forward** with an 'Attack' focus. The Target Forward's AI is specifically designed to aggressively contest every ball delivered into the box, creating knock-downs and second-ball opportunities that the arriving midfielders can convert — a mathematically reliable scoring mechanism against a deep, narrow defensive block."
+    },
+    {
+      "tags": ["Defensive Transition Breakdown"],
+      "author": "Gegenpressing Lock / Jürgen Klopp",
+      "fc_role_recommendations": ["Box-to-Box Midfielder", "Advanced Forward"],
+      "quote": "If you win the ball back in five seconds, you prevent 95% of counter-attacks before they begin.",
+      "tactical_translation": "The engine has flagged a 'Defensive Transition Breakdown': within 3 seconds of possession loss, the team's average pressing distance to the ball carrier exceeds 6 meters, creating a clear counter-attack corridor. Jürgen Klopp's Gegenpressing philosophy treats the moment of possession loss as the single most important defensive moment. The AI prescribes converting the primary striker to the **Advanced Forward** role with an 'Attack' focus. Counterintuitively, the Advanced Forward's role in transition is to immediately press backward onto the ball carrier the instant possession is lost, rather than holding a forward position. Simultaneously, deploy a **Box-to-Box Midfielder** with a 'Balanced' focus whose programmatic AI drives them to sprint aggressively toward the ball at the moment of turnover. The synchronized, two-player immediate press collapses the counter-attack corridor before it can be exploited."
+    },
+    {
+      "tags": ["Defensive Transition Breakdown"],
+      "author": "Structural Rest Defense / Xabi Alonso",
+      "fc_role_recommendations": ["Holding", "Inverted Fullback"],
+      "quote": "We always have a player who does not join the attack. Someone must protect the space.",
+      "tactical_translation": "A 'Defensive Transition Breakdown' has been detected, driven by the entire team committing to attacking phases without designating a player to protect the transition corridor. Xabi Alonso's Leverkusen system resolves this through a permanent, pre-designated rest defense structure — a specific player who never advances regardless of the attacking situation. The AI prescribes anchoring a **Holding** midfielder with a strict 'Defend' focus as the permanent transitional shield. This player's AI will refuse to advance beyond a designated line even during peak attacking moments, ensuring that the moment possession is lost, there is an immediate physical presence between the opposition and the defensive line. Simultaneously, program one fullback into the **Inverted Fullback** role with a 'Balanced' focus, keeping them tucked into the midfield rather than advancing, creating a second transitional barrier that structurally prevents the breakdown from developing."
+    },
+    {
+      "tags": ["Defensive Transition Breakdown"],
+      "author": "Positional Security / Pep Guardiola",
+      "fc_role_recommendations": ["False 9", "Deep-Lying Playmaker"],
+      "quote": "Before we attack, we must be organized to defend. The two are the same thing.",
+      "tactical_translation": "The diagnostics confirm a 'Defensive Transition Breakdown' pattern occurring specifically when the team enters the final third — the attacking structure lacks a positional anchor, leaving the defensive unit exposed to rapid counter-attacks upon turnover. Guardiola's positional play doctrine insists that attacking structures must contain their own defensive security, with the team's geometry inherently protecting against transition even during peak offensive moments. The AI prescribes deploying the striker in a **False 9** role with a 'Build-Up' focus; by dropping deep, the False 9 physically occupies the space the opposition would use as the counter-attack launch point. Concurrently, anchor the deepest midfielder in the **Deep-Lying Playmaker** role with a 'Defend' focus to serve as the transition-prevention pivot, ensuring that even after a turnover, there are two players between the opposition and the defensive line."
+    },
+    {
+      "tags": ["Defensive Transition Breakdown"],
+      "author": "Counter-Transition Protocol / Thomas Tuchel",
+      "fc_role_recommendations": ["Segundo Volante", "Stopper"],
+      "quote": "Transitions are matches within matches. Win the transition war and you win the game.",
+      "tactical_translation": "A critical 'Defensive Transition Breakdown' has been flagged: upon losing possession, the team is failing to reorganize defensively within the required 4-second window, resulting in the opposition generating 1v1 and 2v1 situations against the isolated defensive line. Thomas Tuchel's tactical framework places an extraordinary emphasis on transition management, treating each defensive transition as a discrete tactical event requiring structured resolution. The engine prescribes deploying a **Segundo Volante** with a 'Balanced' focus on one side of midfield. The Segundo Volante's AI drives aggressive recovery runs, making them the first midfielder to sprint backward when possession is lost. Ahead of the defensive line, anchor one center-back in the **Stopper** role with a 'Balanced' focus, programming them to step out aggressively and engage the ball carrier during the transition window, disrupting the counter-attack's momentum before it develops into a structured threat."
+    },
+    {
+      "tags": ["Defensive Transition Breakdown"],
+      "author": "Man-Oriented Recovery / Marcelo Bielsa",
+      "fc_role_recommendations": ["Box-to-Box Midfielder", "Defender"],
+      "quote": "The recovery run is as important as the forward run. They are the same run in reverse.",
+      "tactical_translation": "The 'Defensive Transition Breakdown' data reveals that upon losing possession, individual players are jogging back to positional lines rather than sprinting to mark specific opposition players, allowing the counter-attack to develop with numerical parity. Bielsa's man-oriented system dissolves this problem by assigning every outfield player a specific opposition marker that they must immediately track during the defensive transition phase. The engine prescribes deploying central midfielders in the **Box-to-Box Midfielder** role with a 'Balanced' focus, as their programmatic AI drives them to physically track opposition midfielders across all zones. Back four defenders are set to the standard **Defender** role with a strict 'Defend' focus, ensuring they hold a rigid, high horizontal line that prevents the counter-attacking forward from finding a gap between disorganized retreating defenders."
+    },
+    {
+      "tags": ["Defensive Transition Breakdown"],
+      "author": "Compact Block Reset / Unai Emery",
+      "fc_role_recommendations": ["Wide Midfielder", "Holding"],
+      "quote": "The team must reorganize instantly. Not in five seconds. Instantly.",
+      "tactical_translation": "The 'Defensive Transition Breakdown' flag indicates the team is bleeding counter-attacks due to an inability to reset into a defensively organized block within the critical 3-second window following a turnover. Unai Emery's emphasis on immediate, drilled defensive reorganization provides the structural fix. The engine prescribes setting wide attacking players to the **Wide Midfielder** role with a 'Defend' focus. This role's AI programs them to prioritize defensive track-back over offensive repositioning the moment possession is lost, ensuring the wide channels collapse rapidly. In the center, anchor a **Holding** midfielder with a 'Defend' focus as the immediate defensive reset point — a fixed positional anchor around which the rest of the disorganized team can reform, reestablishing the defensive shape within the critical window before the counter-attack can exploit the structural vacuum."
+    },
+    {
+      "tags": ["Striker Isolation / No Service"],
+      "author": "Target Man Solution / Sam Allardyce",
+      "fc_role_recommendations": ["Target Forward", "Ball-Playing Defender"],
+      "quote": "If you cannot play through the press, play over it. Find the man who can win that ball.",
+      "tactical_translation": "The AI has flagged a 'Striker Isolation / No Service' pattern: the primary forward is receiving fewer than 8 touches per 20-minute period and the average pass distance to the striker exceeds 30 meters, indicating the team's build-up is failing to connect with the attacking line. Sam Allardyce's pragmatic solution attacks this directly — rather than attempting to create intricate passing sequences that the press is blocking, the system leverages the isolation itself. Deploy the striker in the **Target Forward** role with an 'Attack' focus, programming the AI to position specifically to win aerial duels and shield long balls under pressure. To execute the delivery, convert one center-back to the **Ball-Playing Defender** role with a 'Build-Up' focus. This role enhances the defender's AI to identify and execute long, targeted passes directly to the Target Forward, bypassing the press entirely and using the forward's physical dominance to create playable second-ball situations."
+    },
+    {
+      "tags": ["Striker Isolation / No Service"],
+      "author": "False 9 Integration / Pep Guardiola",
+      "fc_role_recommendations": ["False 9", "Half-Winger"],
+      "quote": "The striker who drops deep does not abandon the attack. He becomes the attack.",
+      "tactical_translation": "The 'Striker Isolation / No Service' diagnostic indicates the central forward is stranded at the highest line with no viable passing options, as the opposition's mid-block is cutting all forward passing lanes. Guardiola's False 9 concept resolves striker isolation by fundamentally redefining the striker's role within the team's passing network. The engine prescribes converting the isolated striker to the **False 9** role with a 'Build-Up' focus. The False 9's AI programs the player to abandon the high line and drop into the midfield pocket, transforming them from a service receiver into a central playmaker who creates the service for others. To fill the space vacated by the dropping False 9 and maintain the attacking threat, assign the wide midfielders to the **Half-Winger (Mezzala)** role with an 'Attack' focus, programming them to make late runs into the penalty area as the False 9 draws defensive attention toward the midfield."
+    },
+    {
+      "tags": ["Striker Isolation / No Service"],
+      "author": "Movement to Create / Roberto De Zerbi",
+      "fc_role_recommendations": ["Poacher", "Playmaker"],
+      "quote": "The striker must move to receive, not wait to receive. The movement is the pass.",
+      "tactical_translation": "The 'Striker Isolation / No Service' flag reveals that the team's forward is statically occupying the central channel, making their movement predictable and easy to track for the opposition's defensive line. Roberto De Zerbi's attacking philosophy demands that strikers generate their own service through intelligent movement — drawing defenders and creating passing angles that did not exist before the run. The AI prescribes deploying the striker in the **Poacher** role with an 'Attack' focus. The Poacher's AI generates rapid, sharp diagonal movements across the defensive line, constantly creating new passing angles for the supporting players to exploit. To convert these movement-generated angles into actual service, deploy a central midfielder in the **Playmaker** role with a 'Roaming' focus, programming them to seek out and thread passes into the Poacher's movement corridors as they open."
+    },
+    {
+      "tags": ["Striker Isolation / No Service"],
+      "author": "Wide Service Creation / Arsene Wenger",
+      "fc_role_recommendations": ["Advanced Forward", "Wide Playmaker"],
+      "quote": "If the center is blocked, you must generate the service from wide. The striker's job is to be there when the ball arrives.",
+      "tactical_translation": "The 'Striker Isolation / No Service' data confirms that central passing routes to the forward are completely blocked, with the opposition's two holding midfielders screening all vertical lanes. Arsene Wenger's Arsenal solved striker isolation by generating service from deep wide positions — using technically gifted wide players to find the striker through diagonal balls that bypassed the central screen. The engine prescribes deploying the striker in the **Advanced Forward** role with an 'Attack' focus, programming the AI to attack the near post and make diagonal runs into the space between the defensive line and their screening midfield. To generate the diagonal service, assign both wide players to the **Wide Playmaker** role with a 'Roaming' focus. The Wide Playmaker's AI programs them to cut infield and search for the diagonal pass through the screening midfield into the Advanced Forward's movement corridor."
+    },
+    {
+      "tags": ["Striker Isolation / No Service"],
+      "author": "Shadow Service / Marcelo Bielsa",
+      "fc_role_recommendations": ["Shadow Striker", "Attacking Wingback"],
+      "quote": "The isolated striker is not the problem. He is the solution, if you attack the space around him.",
+      "tactical_translation": "The 'Striker Isolation / No Service' diagnostic reveals that rather than solving the isolation directly, the mathematical opportunity is to use the isolated striker as a decoy and attack the defensive spaces his presence creates. Bielsa's system exploits striker isolation by saturating the areas around the forward with high-energy runners who benefit from the defensive attention drawn toward the lone striker. The AI prescribes deploying a second forward in the **Shadow Striker** role with an 'Attack' focus. The Shadow Striker operates directly behind the isolated forward, exploiting the defensive coverage drawn toward the target striker to receive uncontested in the pocket. On both flanks, deploy **Attacking Wingbacks** with an 'Attack' focus to generate wide service and crossing options, ensuring that even when the central service route is blocked, the Shadow Striker can receive from wide angles, creating a multi-axis service solution around the isolated forward."
+    },
+    {
+      "tags": ["Striker Isolation / No Service"],
+      "author": "Link-Play Resolution / Arne Slot",
+      "fc_role_recommendations": ["Complete Forward", "Segundo Volante"],
+      "quote": "The forward must be the connector, not just the finisher. Receive, link, move again.",
+      "tactical_translation": "A persistent 'Striker Isolation / No Service' pattern has been detected where the team's entire attacking phase is breaking down because the forward cannot receive, retain, and link play under defensive pressure. Arne Slot's forward-as-connector philosophy prescribes resolving this by assigning the striker a more expansive role within the build-up structure. The engine recommends deploying the striker in the **Complete Forward** role with a 'Balanced' focus. The Complete Forward's AI programs the player to drop short to receive, lay off quickly, and then explosively re-position into goal-scoring areas — creating a dynamic, repeatable link-play circuit. To supply the Complete Forward consistently and exploit the run they make after laying the ball off, assign a central midfielder to the **Segundo Volante** role with a 'Balanced' focus. The Segundo Volante's late-arriving runs arrive perfectly timed into the space the Complete Forward has vacated, turning isolation into a flowing two-man combination."
+    },
+    {
+      "tags": ["High Turnover Zone / Pressing Trap Failure"],
+      "author": "Trap Architecture / Ralph Hasenhüttl",
+      "fc_role_recommendations": ["Wide Midfielder", "Holding"],
+      "quote": "We do not press randomly. We press into corners. The sideline is my eleventh player.",
+      "tactical_translation": "The analytics have flagged a 'High Turnover Zone / Pressing Trap Failure': your team is generating turnovers in uncontrolled areas, specifically in central midfield zones where there is no numerical superiority following the dispossession, allowing the opposition to immediately recycle possession. Ralph Hasenhüttl's pressing trap philosophy demands that turnovers are generated only in pre-designed geometric zones where the team already has numerical advantage positioned to exploit the regained ball. The AI prescribes setting wide players to the **Wide Midfielder** role with a 'Defend' focus, programming them to funnel the opposition down the flank toward the touchline. Once the trap is sprung and the ball is forced wide, a **Holding** midfielder with a 'Defend' focus collapses from the center to create a 3v1 numerical superiority in the trap zone. This ensures that every triggered turnover occurs in a location where immediate, organized exploitation of the possession is structurally guaranteed."
+    },
+    {
+      "tags": ["High Turnover Zone / Pressing Trap Failure"],
+      "author": "Counterpressing Windows / Pep Guardiola",
+      "fc_role_recommendations": ["False 9", "Inverted Fullback"],
+      "quote": "When we lose the ball, we do not chase. We surround. In three seconds, we suffocate.",
+      "tactical_translation": "The 'High Turnover Zone / Pressing Trap Failure' diagnostic indicates that while the team is successfully winning the ball back, the turnovers are occurring in positions where the team cannot mount an immediate, threatening attack — specifically in wide areas during the opposition's build-up. Guardiola's counterpressing philosophy demands not just winning the ball, but winning it in positions of pre-loaded numerical and spatial superiority. The engine prescribes deploying the striker in the **False 9** role with a 'Build-Up' focus, ensuring a central body is always positioned in Zone 14 to immediately receive following any turnover in the midfield. Simultaneously, set both fullbacks to the **Inverted Fullback** role with a 'Balanced' focus, keeping them tucked inside rather than advanced, creating a dense central cluster that means every central turnover immediately produces a 4v2 platform for instant vertical transition."
+    },
+    {
+      "tags": ["High Turnover Zone / Pressing Trap Failure"],
+      "author": "Controlled Chaos / Marcelo Bielsa",
+      "fc_role_recommendations": ["Box-to-Box Midfielder", "Advanced Forward"],
+      "quote": "The press is never random. Every player knows exactly where to run before the ball is lost.",
+      "tactical_translation": "The 'High Turnover Zone / Pressing Trap Failure' data reveals that pressing is occurring but without pre-set structure, meaning turnovers happen in uncoordinated zones where the team's immediate second-ball contesters are too far away to capitalize. Bielsa's pressing system solves this by pre-loading every pressing scenario with scripted recovery positions — each outfield player has a designated trap zone and designated second-ball responsibility before the press is triggered. The AI prescribes deploying central midfielders in the **Box-to-Box Midfielder** role with a 'Balanced' focus, programming their aggressive second-ball recovery AI to activate the moment a pressing trap is triggered. In the forward line, deploy the striker as an **Advanced Forward** with an 'Attack' focus, whose AI will press the ball carrier from the front while the Box-to-Box Midfielders converge from behind, creating a complete geometric encirclement of the trapped ball carrier."
+    },
+    {
+      "tags": ["High Turnover Zone / Pressing Trap Failure"],
+      "author": "Vertical Transition Exploitation / Jürgen Klopp",
+      "fc_role_recommendations": ["Shadow Striker", "Attacking Wingback"],
+      "quote": "The moment we win the ball back, I want to see a sprint, not a walk. The counter is the reward for the press.",
+      "tactical_translation": "The 'High Turnover Zone / Pressing Trap Failure' flag identifies that the team is winning possession through pressing but failing to immediately convert these turnovers into attacking threats, with the ball recycled slowly and the defensive opponent reorganizing before the attack can materialize. Klopp's system treats the moment of regained possession as a pre-loaded attacking opportunity that must be exploited within 3 seconds. The AI prescribes deploying a **Shadow Striker** with an 'Attack' focus who maintains a forward starting position during the pressing phase, ready to receive immediately upon turnover. On both flanks, deploy **Attacking Wingbacks** with an 'Attack' focus who hold advanced wide positions even during the press. The moment possession is regained, this pre-loaded attacking structure — Shadow Striker centrally, Wingbacks wide — immediately creates a 3v3 break before the opposition can recover their defensive shape."
+    },
+    {
+      "tags": ["High Turnover Zone / Pressing Trap Failure"],
+      "author": "Midfield Turnover Recycling / Arne Slot",
+      "fc_role_recommendations": ["Deep-Lying Playmaker", "Half-Winger"],
+      "quote": "The pressing trap succeeds when winning the ball is also winning position. The two must happen simultaneously.",
+      "tactical_translation": "The 'High Turnover Zone / Pressing Trap Failure' analysis confirms the team is creating turnovers in low-value positions — wide areas and the defensive third — where the subsequent transition produces no meaningful attacking threat. Arne Slot's pressing system is designed to trigger turnovers specifically in the opponent's half, in positions where regained possession immediately translates to a high-value attacking platform. The engine prescribes anchoring a **Deep-Lying Playmaker** with a 'Defend' focus to serve as the control pivot for the press — their position in front of the defensive line means they never drift forward and distort the press structure. To push the pressing trap into the opponent's half, deploy wide midfielders in the **Half-Winger** role with a 'Balanced' focus, programming them to position aggressively high on the flanks. When the press forces a sideways or backward pass to the wide area, the Half-Winger is already positioned in the opposition half to immediately contest, generating turnovers in zones where the team's attacking platform is already pre-loaded."
+    },
+    {
+      "tags": ["High Turnover Zone / Pressing Trap Failure"],
+      "author": "De-Zone Pressing / Unai Emery",
+      "fc_role_recommendations": ["Inside Forward", "Stopper"],
+      "quote": "Pressing without structure is just running. My teams press with a plan.",
+      "tactical_translation": "The 'High Turnover Zone / Pressing Trap Failure' diagnostic indicates the press is being triggered indiscriminately, with players pressing in zones they cannot win the ball in, exhausting themselves and creating dangerous counter-attack corridors. Unai Emery's structured pressing approach defines specific press-activation zones and explicitly prohibits pressing outside these zones, preserving player energy and ensuring every press is mechanically sound. The engine prescribes deploying wide forwards in the **Inside Forward** role with a 'Balanced' focus. Their tendency to drift inside rather than pressing from the wide position forces the opposition toward the touchline — the pre-designated press zone — without committing to reckless wide pursuit. One center-back is assigned the **Stopper** role with a 'Balanced' focus, programming them to aggressively step into the designated press zone when the ball is forced wide, creating the 2v1 trap in the exact location the system has pre-designated as the high-value turnover zone."
     }
   ]
 }
