@@ -1,0 +1,22 @@
+# Scope for graphify: skip vendored legacy tree and media (user preference)
+_archive/
+
+# Video / audio
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+*.m4v
+*.mp3
+*.wav
+*.m4a
+*.ogg
+
+# Raster / vector images
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
