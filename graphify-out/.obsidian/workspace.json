@@ -4,20 +4,20 @@
     "type": "split",
     "children": [
       {
-        "id": "d1d74c155b482316",
+        "id": "c578005478dd25ed",
         "type": "tabs",
         "children": [
           {
-            "id": "a1dbba6cda3d6e7c",
+            "id": "fc0014ea8e3af717",
             "type": "leaf",
             "state": {
               "type": "canvas",
               "state": {
                 "file": "obsidian/graph.canvas",
                 "viewState": {
-                  "x": 10298.454204031428,
-                  "y": -7833.927380826629,
-                  "zoom": -3.6037780843178426
+                  "x": 7039.935698928547,
+                  "y": 34946.79554914699,
+                  "zoom": -3.5711870344479872
                 }
               },
               "icon": "lucide-layout-dashboard",
@@ -172,7 +172,7 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "a1dbba6cda3d6e7c",
+  "active": "fc0014ea8e3af717",
   "lastOpenFiles": [
     "obsidian/_COMMUNITY_Community 70.md",
     "obsidian/_COMMUNITY_Community 69.md",

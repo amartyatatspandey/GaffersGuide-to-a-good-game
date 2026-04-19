@@ -18,6 +18,7 @@ from services.dense_pass import run_dense_pass
 from services.fast_pass import run_fast_pass
 from services.gpu_runtime import select_gpu_runtime
 from services.merge import atomic_write_jsonl, merge_sorted_chunk_jsonl, write_chunk_jsonl
+from services.paths import BENCHMARK_TMP_DIR, SN_CALIBRATION_RESOURCES_DIR
 from services.reid_budget import run_reid_budget_controller
 from services.splitter import ChunkSpec, build_chunks
 from services.window_selector import select_windows
@@ -216,7 +217,7 @@ def process_video(
     resolved_weights_dir = (
         homography_weights_dir
         if homography_weights_dir is not None
-        else Path(__file__).resolve().parents[1] / "resources" / "sn-calibration"
+        else SN_CALIBRATION_RESOURCES_DIR
     )
 
     def _run_chunk(chunk: DecodedChunk) -> tuple[list[dict[str, object]], float, float, float, int, int, int, float]:
@@ -410,7 +411,7 @@ def process_video(
 
 
 def benchmark_decoders(video_path: Path) -> dict[str, dict[str, float | int]]:
-    output_dir = Path(__file__).resolve().parents[1] / "output" / "bench_tmp"
+    output_dir = BENCHMARK_TMP_DIR
     results: dict[str, dict[str, float | int]] = {}
     for decoder in ("opencv", "pyav"):
         artifacts = process_video(

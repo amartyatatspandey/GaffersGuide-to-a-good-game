@@ -25,18 +25,30 @@ logger = logging.getLogger(__name__)
 # Vendored sn-calibration ``src`` (production must not import from backend/references/).
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
 _REF_DIR = _BACKEND_ROOT / "calibration" / "sn_calibration_vendor"
+_CALIBRATION_DIR = _BACKEND_ROOT / "calibration"
 if not _REF_DIR.is_dir() or not (_REF_DIR / "src").is_dir():
     raise ImportError(
         f"sn-calibration vendor tree not found at {_REF_DIR}/src. "
         "See ARCHITECTURE_RESTRUCTURING_PLAN.md — restore backend/calibration/sn_calibration_vendor from upstream."
     )
 import sys
+if str(_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_ROOT))
+if str(_CALIBRATION_DIR) not in sys.path:
+    sys.path.insert(0, str(_CALIBRATION_DIR))
 if str(_REF_DIR) not in sys.path:
-    sys.path.insert(0, str(_REF_DIR))
+    # Keep backend package imports (e.g. calibration.soccer_pitch_adapter) ahead of vendor modules.
+    sys.path.append(str(_REF_DIR))
+_cal_mod = sys.modules.get("calibration")
+if _cal_mod is not None:
+    cal_file = Path(getattr(_cal_mod, "__file__", "") or "")
+    if not str(cal_file).startswith(str(_BACKEND_ROOT / "calibration")):
+        # Avoid third-party/vendor calibration package shadowing backend/calibration.
+        sys.modules.pop("calibration", None)
 
 from src.detect_extremities import SegmentationNetwork
 
-from calibration.soccer_pitch_adapter import create_pitch_model
+from soccer_pitch_adapter import create_pitch_model
 from scripts.pipeline_core.calibration.geometry import estimate_extremities_homography
 from scripts.pipeline_core.calibration.inference import run_segmentation_and_extremities
 

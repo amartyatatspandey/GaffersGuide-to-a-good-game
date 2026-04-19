@@ -32,16 +32,13 @@ from models import (
 )
 from services.job_store import ExperimentJob, ExperimentJobStore
 from services.observability import MetricsRegistry
+from services.paths import OUTPUT_ROOT, STORE_PATH, TASK_QUEUE_PATH, UPLOAD_ROOT
 from services.queue import ExperimentQueue, QueueItem
 from services.task_backend import TaskPayload
-from services.task_backend_local import LocalFileTaskBackend
-from services.task_backend_redis import RedisTaskBackend
+from services.task_backend_factory import build_task_backend
 
-ROOT = Path(__file__).resolve().parent
-OUTPUT_DIR = ROOT / "output" / "exp"
-UPLOAD_DIR = ROOT / "data" / "uploads"
-STORE_PATH = OUTPUT_DIR / "exp_jobs_store.json"
-TASK_QUEUE_PATH = OUTPUT_DIR / "exp_task_queue.json"
+OUTPUT_DIR = OUTPUT_ROOT
+UPLOAD_DIR = UPLOAD_ROOT
 
 metrics = MetricsRegistry()
 job_store = ExperimentJobStore(STORE_PATH)
@@ -62,25 +59,6 @@ def preflight_check() -> None:
     cloud_mode = os.getenv("EXP_CLOUD_MODE", "0") == "1"
     if cloud_mode and os.getenv("EXP_TASK_BACKEND", "redis").lower() != "redis":
         raise RuntimeError("Cloud mode requires redis task backend.")
-
-
-def build_task_backend() -> LocalFileTaskBackend | RedisTaskBackend:
-    cloud_mode = os.getenv("EXP_CLOUD_MODE", "0") == "1"
-    backend_name = os.getenv("EXP_TASK_BACKEND", "redis").lower()
-    if cloud_mode and backend_name != "redis":
-        raise RuntimeError("EXP_CLOUD_MODE=1 requires EXP_TASK_BACKEND=redis.")
-    if backend_name == "redis":
-        redis_url = os.getenv("EXP_REDIS_URL", "redis://127.0.0.1:6379/0")
-        queue_key = os.getenv("EXP_REDIS_QUEUE_KEY", "exp:task_queue")
-        try:
-            return RedisTaskBackend(redis_url, queue_key=queue_key)
-        except Exception as exc:  # noqa: BLE001
-            fallback_default = "0" if cloud_mode else "1"
-            if os.getenv("EXP_ALLOW_LOCAL_BACKEND_FALLBACK", fallback_default) == "1":
-                LOGGER.warning("Redis backend unavailable, falling back to local task backend: %s", exc)
-                return LocalFileTaskBackend(TASK_QUEUE_PATH)
-            raise
-    return LocalFileTaskBackend(TASK_QUEUE_PATH)
 
 
 task_backend = build_task_backend()

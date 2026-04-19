@@ -111,5 +111,44 @@
       "total_files": 286,
       "total_words": 171199
     }
+  },
+  "three_layer_pipeline_verification": {
+    "date": "2026-04-19",
+    "layer1_automated_gate": {
+      "status": "pass",
+      "invariants_script": "pass",
+      "pytest": "9 passed"
+    },
+    "layer2_api_smoke": {
+      "status": "pass",
+      "health_status": 200,
+      "coach_advice_skip_llm_status": 200,
+      "advice_items_len": 1
+    },
+    "layer3_match_test_e2e": {
+      "status": "pass_after_fix",
+      "video": "backend/data/match_test.mp4",
+      "output_prefix": "match_test_final",
+      "first_attempt": "fail: ModuleNotFoundError calibration.soccer_pitch_adapter during calibrator import",
+      "remediation": "Path-order hardening in advanced_pitch_calibration.py and dynamic_homography.py to avoid vendor calibration package shadowing.",
+      "final_attempt": "pass",
+      "artifacts": {
+        "tracking_data": "backend/output/match_test_final_tracking_data.json",
+        "tactical_metrics": "backend/output/match_test_final_tactical_metrics.json",
+        "report": "backend/output/match_test_final_report.json",
+        "homography_json": "backend/output/match_test_homographies.json"
+      },
+      "artifact_checks": {
+        "tracking_data_exists": true,
+        "tactical_metrics_len": 4301,
+        "report_len": 6
+      }
+    },
+    "graphify_detect_snapshot": {
+      "path": "graphify-out/.graphify_detect.json",
+      "total_files": 286,
+      "total_words": 171199,
+      "status": "current"
+    }
   }
 }

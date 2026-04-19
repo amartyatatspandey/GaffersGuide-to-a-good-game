@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 # Vendored sn-calibration ``src`` (join_points); must match dynamic_homography vendor root.
 _REF_DIR = Path(__file__).resolve().parent.parent.parent / "calibration" / "sn_calibration_vendor"
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
+_CALIBRATION_DIR = _BACKEND_ROOT / "calibration"
 import sys
 
 if not _REF_DIR.is_dir() or not (_REF_DIR / "src").is_dir():
@@ -32,9 +34,19 @@ if not _REF_DIR.is_dir() or not (_REF_DIR / "src").is_dir():
         "See ARCHITECTURE_RESTRUCTURING_PLAN.md."
     )
 if str(_REF_DIR) not in sys.path:
-    sys.path.insert(0, str(_REF_DIR))
+    # Keep backend package imports (e.g. calibration.soccer_pitch_adapter) ahead of vendor modules.
+    sys.path.append(str(_REF_DIR))
+if str(_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_ROOT))
+if str(_CALIBRATION_DIR) not in sys.path:
+    sys.path.insert(0, str(_CALIBRATION_DIR))
+_cal_mod = sys.modules.get("calibration")
+if _cal_mod is not None:
+    cal_file = Path(getattr(_cal_mod, "__file__", "") or "")
+    if not str(cal_file).startswith(str(_BACKEND_ROOT / "calibration")):
+        sys.modules.pop("calibration", None)
 
-from calibration.soccer_pitch_adapter import SoccerPitch, join_points  # noqa: E402
+from soccer_pitch_adapter import SoccerPitch, join_points  # noqa: E402
 
 SEG_W = DynamicPitchCalibrator.SEG_WIDTH
 SEG_H = DynamicPitchCalibrator.SEG_HEIGHT

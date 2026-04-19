@@ -66,5 +66,50 @@
     "max_parallel_chunks": 3,
     "target_sla_tier": "tier_5m",
     "enqueued_at_epoch_ms": 1775047600611.378
+  },
+  {
+    "job_id": "bc4dbe3e49874984a22ce906d16e2506",
+    "video_path": "/Users/trickyoutlaw/Documents/Coding/PROJECTS/phoenix-work/gaffers-experiment-repo/experiment-backend/data/uploads/bc4dbe3e49874984a22ce906d16e2506.mp4",
+    "cv_engine": "local",
+    "llm_engine": "local",
+    "decoder_mode": "pyav",
+    "runtime_target": "apple_mps",
+    "hardware_profile": "mps",
+    "quality_mode": "fast",
+    "chunking_policy": "auto",
+    "max_parallel_chunks": 3,
+    "target_sla_tier": "tier_5m",
+    "enqueued_at_epoch_ms": 1776616150792.356,
+    "homography_weights_dir": null
+  },
+  {
+    "job_id": "79875623019f491ab6fa964e86114694",
+    "video_path": "/Users/trickyoutlaw/Documents/Coding/PROJECTS/phoenix-work/gaffers-experiment-repo/experiment-backend/data/uploads/79875623019f491ab6fa964e86114694.mp4",
+    "cv_engine": "local",
+    "llm_engine": "local",
+    "decoder_mode": "pyav",
+    "runtime_target": "apple_mps",
+    "hardware_profile": "mps",
+    "quality_mode": "fast",
+    "chunking_policy": "auto",
+    "max_parallel_chunks": 3,
+    "target_sla_tier": "tier_5m",
+    "enqueued_at_epoch_ms": 1776616171921.232,
+    "homography_weights_dir": null
+  },
+  {
+    "job_id": "d7ecd3d437504ed2ae952c990085173a",
+    "video_path": "/Users/trickyoutlaw/Documents/Coding/PROJECTS/phoenix-work/gaffers-experiment-repo/experiment-backend/data/uploads/d7ecd3d437504ed2ae952c990085173a.mp4",
+    "cv_engine": "local",
+    "llm_engine": "local",
+    "decoder_mode": "pyav",
+    "runtime_target": "apple_mps",
+    "hardware_profile": "mps",
+    "quality_mode": "fast",
+    "chunking_policy": "auto",
+    "max_parallel_chunks": 3,
+    "target_sla_tier": "tier_5m",
+    "enqueued_at_epoch_ms": 1776616184740.9438,
+    "homography_weights_dir": null
   }
 ]

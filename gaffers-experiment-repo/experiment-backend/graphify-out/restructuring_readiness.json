@@ -1,0 +1,72 @@
+{
+  "generated_at": "2026-04-19T16:30:40.808953+00:00",
+  "git_branch": "Pheonix",
+  "inventory": {
+    "runtime_entrypoints": [
+      "main.py",
+      "worker_main.py",
+      "services/cv_pipeline.py",
+      "services/homography_adapter.py"
+    ],
+    "rule_findings": {
+      "legacy_or_reference_runtime_imports": "none_detected",
+      "runtime_sys_path_mutation": "none_detected",
+      "cross_layer_service_to_scripts": "none_detected",
+      "god_nodes": [
+        "services/cv_pipeline.py (~426 LOC)",
+        "main.py (~406 LOC)"
+      ]
+    }
+  },
+  "decoupling_changes": {
+    "rule12": [
+      "Added services/task_backend_factory.py to centralize backend selection/fallback policy.",
+      "Added services/paths.py for canonical runtime paths and calibration resources.",
+      "Removed duplicate backend/path wiring from main.py and worker_main.py."
+    ],
+    "rule34": [
+      "cv_pipeline.py now depends on services/paths constants rather than inline path math.",
+      "Added scripts/verify_architecture_invariants.py policy gate.",
+      "Added tests/test_architecture_invariants.py to enforce invariants in pytest."
+    ]
+  },
+  "verification": {
+    "layer1": {
+      "status": "pass",
+      "invariants_script": "pass",
+      "pytest": "8 passed"
+    },
+    "layer2": {
+      "status": "pass",
+      "health_status": 200,
+      "coach_advice_status": 200,
+      "advice_items_len": 1
+    },
+    "layer3": {
+      "status": "pass",
+      "video": "backend/data/match_test.mp4",
+      "output_prefix": "exp_match_test_final",
+      "artifacts": {
+        "report": "experiment-backend/output/exp/exp_match_test_final_report.json",
+        "tracking_jsonl": "experiment-backend/output/exp/exp_match_test_final_tracking_data.jsonl"
+      },
+      "artifact_checks": {
+        "report_len": 1,
+        "tracking_rows": 4501
+      }
+    }
+  },
+  "graph_checkpoint": {
+    "command": "python -m graphify update experiment-backend",
+    "graph_json": "experiment-backend/graphify-out/graph.json",
+    "nodes": 200,
+    "edges": 342,
+    "communities": 17
+  },
+  "closure_checklist": {
+    "rule1_quarantine_runtime_imports": "implemented",
+    "rule2_path_centralization": "implemented",
+    "rule3_pipeline_boundary_split": "implemented_via_factory_and_paths_shims",
+    "rule4_coupling_reduction_and_gates": "implemented_with_invariant_test_gate"
+  }
+}
