@@ -1,0 +1,17 @@
+---
+source_file: "backend/references/sn-reid/torchreid/models/mudeep.py"
+type: "rationale"
+community: "Community 25"
+location: "L152"
+tags:
+  - graphify/rationale
+  - graphify/EXTRACTED
+  - community/Community_25
+---
+
+# Multiscale deep neural network.      Reference:         Qian et al. Multi-scale
+
+## Connections
+- [[MuDeep]] - `rationale_for` [EXTRACTED]
+
+#graphify/rationale #graphify/EXTRACTED #community/Community_25

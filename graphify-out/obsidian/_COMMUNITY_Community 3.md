@@ -1,0 +1,213 @@
+---
+type: community
+cohesion: 0.05
+members: 159
+---
+
+# Community 3
+
+**Cohesion:** 0.05 - loosely connected
+**Members:** 159 nodes
+
+## Members
+- [[.__init__()_236]] - code - backend/services/beta_job_store.py
+- [[.__init__()_237]] - code - backend/services/beta_queue.py
+- [[.__init__()_234]] - code - backend/services/observability.py
+- [[.__str__()_5]] - code - backend/services/errors.py
+- [[._load()]] - code - backend/services/beta_job_store.py
+- [[._persist()]] - code - backend/services/beta_job_store.py
+- [[._worker_loop()]] - code - backend/services/beta_queue.py
+- [[.create()]] - code - backend/services/beta_job_store.py
+- [[.delete()]] - code - backend/services/beta_job_store.py
+- [[.enqueue()]] - code - backend/services/beta_queue.py
+- [[.find_by_idempotency()]] - code - backend/services/beta_job_store.py
+- [[.get()]] - code - backend/services/beta_job_store.py
+- [[.incr()]] - code - backend/services/observability.py
+- [[.observe_ms()]] - code - backend/services/observability.py
+- [[.snapshot()]] - code - backend/services/observability.py
+- [[.start()]] - code - backend/services/beta_queue.py
+- [[.to_detail()]] - code - backend/services/errors.py
+- [[.update()_8]] - code - backend/services/beta_job_store.py
+- [[Auto-spawn ``ollama serve`` when the daemon is down and forking is allowed.]] - rationale - backend/services/ollama_client.py
+- [[Backward-compatible alias for existing callers.]] - rationale - backend/services/llm_router.py
+- [[BaseModel]] - code
+- [[BetaJobRecord]] - code - backend/services/beta_job_store.py
+- [[BetaJobStore]] - code - backend/services/beta_job_store.py
+- [[BetaPipelineQueue]] - code - backend/services/beta_queue.py
+- [[BetaQueueItem]] - code - backend/services/beta_queue.py
+- [[Build a shared prompt contract for chatadvice responses.]] - rationale - backend/services/llm_policy.py
+- [[CVRouterFactory]] - code - backend/services/cv_router.py
+- [[ChatRequest]] - code - backend/models.py
+- [[ChatResponse]] - code - backend/models.py
+- [[CoachAdviceResponse]] - code - backend/main.py
+- [[CoachingAdviceItem]] - code - backend/main.py
+- [[Convert model output into up to 3 concise tactical steps.]] - rationale - backend/services/llm_policy.py
+- [[Count regular files under ``root`` without walking unbounded trees.]] - rationale - backend/main.py
+- [[Create a new analytics job by uploading a match video.      The heavy CV→Math→Ru]] - rationale - backend/main.py
+- [[CreateJobResponse]] - code - backend/models.py
+- [[DatasetInfo]] - code - backend/models.py
+- [[DatasetsListResponse]] - code - backend/models.py
+- [[EngineRoutingError]] - code - backend/services/errors.py
+- [[EngineSelection]] - code - backend/models.py
+- [[ErrorResponse]] - code - backend/models.py
+- [[Exception]] - code
+- [[Factory-style LLM routing for tactical advice generation.]] - rationale - backend/services/llm_router.py
+- [[Forking a local daemon is blocked on Cloud Run unless explicitly allowed.]] - rationale - backend/services/ollama_client.py
+- [[Frontend-ready payload after running the full pipeline.]] - rationale - backend/main.py
+- [[Generate coaching text using Gemini or OpenAI-compatible cloud APIs.]] - rationale - backend/services/llm_router.py
+- [[Generate coaching text using local Ollama daemon.]] - rationale - backend/services/llm_router.py
+- [[Generate follow-up coaching text.      If `job_id` is provided, include the job']] - rationale - backend/main.py
+- [[Generate tactical advice from local Ollama using a fixed analyst persona.]] - rationale - backend/services/ollama_client.py
+- [[If ``OLLAMA_MANAGED_LIFECYCLE=1``, ensure Ollama is up when the API boots.]] - rationale - backend/services/ollama_client.py
+- [[In-memory metrics registry for beta baselining and SLO gates.]] - rationale - backend/services/observability.py
+- [[Job tracking for asynchronous video processing.]] - rationale - backend/models.py
+- [[JobRecord]] - code - backend/main.py
+- [[JobStatus]] - code - backend/models.py
+- [[List available job reports produced by the pipeline.      Scans `backendoutput]] - rationale - backend/main.py
+- [[List dataset folders (optional; used by some frontends).      Scans ``DATASETS_R]] - rationale - backend/main.py
+- [[One dataset folder under DATASETS_ROOT (optional API for tooling UIs).]] - rationale - backend/models.py
+- [[PipelineMetricsRegistry]] - code - backend/services/observability.py
+- [[Poll apitags after spawning ``ollama serve``.]] - rationale - backend/services/ollama_client.py
+- [[Preflight-check that local Ollama daemon is reachable.      If connection fails]] - rationale - backend/services/ollama_client.py
+- [[Preserve backward-compatible string response while guaranteeing readability.]] - rationale - backend/services/llm_policy.py
+- [[Queue-backed beta job creation endpoint with optional idempotency key.]] - rationale - backend/main.py
+- [[Queue-backed execution model for beta job isolation.]] - rationale - backend/services/beta_queue.py
+- [[Re-run LLM for job report rows using Ollama when the pipeline skipped cloud keys]] - rationale - backend/main.py
+- [[Report whether local CV prerequisites are satisfied (weights + RAG library).]] - rationale - backend/main.py
+- [[ReportEntry]] - code - backend/models.py
+- [[ReportsResponse]] - code - backend/models.py
+- [[Return (api_key, model, base_url) for OpenAI-compatible APIs.]] - rationale - backend/main.py
+- [[Return (content, error_message) using Google Gemini.]] - rationale - backend/main.py
+- [[Return (content, error_message).]] - rationale - backend/main.py
+- [[Return beta pipeline metrics snapshot for baseline and promotion gates.]] - rationale - backend/main.py
+- [[Return path to ``ollama`` CLI if on PATH, else None.]] - rationale - backend/services/ollama_client.py
+- [[Run the tactical pipeline metrics → triggers → RAG prompts → optional LLM compl]] - rationale - backend/main.py
+- [[Single coaching recommendation for one flaw at one frame.]] - rationale - backend/main.py
+- [[Start ``ollama serve`` detached (request-time auto-start). Caller must verify th]] - rationale - backend/services/ollama_client.py
+- [[Start ``ollama serve`` on API startup and stop it on shutdown (this process only]] - rationale - backend/services/ollama_client.py
+- [[Stop Ollama only if this process started it via func`start_ollama_for_app_life]] - rationale - backend/services/ollama_client.py
+- [[Stream job progress updates over WebSockets.      Sends JSON messages shaped lik]] - rationale - backend/main.py
+- [[Structured service error to map into API error responses.]] - rationale - backend/services/errors.py
+- [[Thread-safe JSON-backed persistent store for beta jobs.]] - rationale - backend/services/beta_job_store.py
+- [[True when the card has a prompt but no successful coaching text yet.]] - rationale - backend/main.py
+- [[Understanding Image Retrieval Re-Ranking A Graph Neural Network Perspective]] - rationale - backend/references/sn-reid/torchreid/utils/GPU-Re-Ranking/main.py
+- [[_TimerSample]] - code - backend/services/observability.py
+- [[_agent_debug_ndjson()]] - code - backend/main.py
+- [[_base_url()]] - code - backend/services/ollama_client.py
+- [[_beta_job_artifact_paths()]] - code - backend/main.py
+- [[_card_needs_local_llm_refresh()]] - code - backend/main.py
+- [[_cleanup_managed_ollama()]] - code - backend/tests/test_ollama_client.py
+- [[_cloud_run_guard_allows_fork()]] - code - backend/services/ollama_client.py
+- [[_complete_coaching_instruction()]] - code - backend/main.py
+- [[_complete_coaching_instruction_gemini()]] - code - backend/main.py
+- [[_count_files_capped()]] - code - backend/main.py
+- [[_env_truthy()]] - code - backend/services/ollama_client.py
+- [[_generate_cloud()]] - code - backend/services/llm_router.py
+- [[_generate_local()]] - code - backend/services/llm_router.py
+- [[_job_artifact_paths()]] - code - backend/main.py
+- [[_metrics_middleware()]] - code - backend/main.py
+- [[_model_name()]] - code - backend/services/ollama_client.py
+- [[_not_installed_error()]] - code - backend/services/ollama_client.py
+- [[_offline_error()]] - code - backend/services/ollama_client.py
+- [[_ollama_executable()]] - code - backend/services/ollama_client.py
+- [[_popen_ollama_serve()]] - code - backend/services/ollama_client.py
+- [[_probe_tags()]] - code - backend/services/ollama_client.py
+- [[_refresh_job_report_cards_with_local_llm()]] - code - backend/main.py
+- [[_resolve_llm_credentials()]] - code - backend/main.py
+- [[_run_job()]] - code - backend/main.py
+- [[_should_attempt_auto_start()]] - code - backend/services/ollama_client.py
+- [[_should_manage_lifecycle()]] - code - backend/services/ollama_client.py
+- [[_shutdown_managed_ollama()]] - code - backend/main.py
+- [[_spawn_ollama_serve()]] - code - backend/services/ollama_client.py
+- [[_start_failed_error()]] - code - backend/services/ollama_client.py
+- [[_startup_beta_queue()]] - code - backend/main.py
+- [[_terminate_managed_ollama_process()]] - code - backend/services/ollama_client.py
+- [[_timeout_seconds()]] - code - backend/services/ollama_client.py
+- [[_wait_for_ollama_after_spawn()]] - code - backend/services/ollama_client.py
+- [[_write_json()]] - code - backend/tests/test_job_artifacts_api.py
+- [[beta_job_progress_ws()]] - code - backend/main.py
+- [[beta_job_store.py]] - code - backend/services/beta_job_store.py
+- [[beta_metrics()]] - code - backend/main.py
+- [[beta_queue.py]] - code - backend/services/beta_queue.py
+- [[build_structured_coaching_prompt()]] - code - backend/services/llm_policy.py
+- [[chat()]] - code - backend/main.py
+- [[create_beta_job()]] - code - backend/main.py
+- [[create_job()]] - code - backend/main.py
+- [[ensure_ollama_available()]] - code - backend/services/ollama_client.py
+- [[errors.py]] - code - backend/services/errors.py
+- [[format_numbered_steps()]] - code - backend/services/llm_policy.py
+- [[generate_coaching_text()]] - code - backend/services/llm_router.py
+- [[generate_local_advice()]] - code - backend/services/ollama_client.py
+- [[get_beta_job()]] - code - backend/main.py
+- [[get_beta_job_artifacts()]] - code - backend/main.py
+- [[get_coach_advice()]] - code - backend/main.py
+- [[get_job_artifacts()]] - code - backend/main.py
+- [[get_job_overlay_video()]] - code - backend/main.py
+- [[get_job_tracking()]] - code - backend/main.py
+- [[get_tactical_advice()]] - code - backend/services/llm_router.py
+- [[health()]] - code - backend/main.py
+- [[job_progress_ws()]] - code - backend/main.py
+- [[list_datasets()]] - code - backend/main.py
+- [[list_reports()]] - code - backend/main.py
+- [[llm_policy.py]] - code - backend/services/llm_policy.py
+- [[llm_router.py]] - code - backend/services/llm_router.py
+- [[main.py]] - code - backend/main.py
+- [[models.py]] - code - backend/models.py
+- [[normalize_instruction_steps()]] - code - backend/services/llm_policy.py
+- [[observability.py]] - code - backend/services/observability.py
+- [[ollama_client.py]] - code - backend/services/ollama_client.py
+- [[start_ollama_for_app_lifecycle()]] - code - backend/services/ollama_client.py
+- [[stop_ollama_for_app_lifecycle()]] - code - backend/services/ollama_client.py
+- [[test_beta_job_create_uses_idempotency_key()]] - code - backend/tests/test_beta_pipeline_api.py
+- [[test_beta_job_lookup_endpoint()]] - code - backend/tests/test_beta_pipeline_api.py
+- [[test_beta_metrics_endpoint_shape()]] - code - backend/tests/test_beta_pipeline_api.py
+- [[test_beta_pipeline_api.py]] - code - backend/tests/test_beta_pipeline_api.py
+- [[test_datasets_api.py]] - code - backend/tests/test_datasets_api.py
+- [[test_job_artifact_endpoints()]] - code - backend/tests/test_job_artifacts_api.py
+- [[test_job_artifacts_api.py]] - code - backend/tests/test_job_artifacts_api.py
+- [[test_lifecycle_stop_terminates_tracked_child()]] - code - backend/tests/test_ollama_client.py
+- [[test_list_datasets_empty_root()]] - code - backend/tests/test_datasets_api.py
+- [[test_list_datasets_scans_subdirs()]] - code - backend/tests/test_datasets_api.py
+- [[timed()]] - code - backend/services/observability.py
+
+## Live Query (requires Dataview plugin)
+
+```dataview
+TABLE source_file, type FROM #community/Community_3
+SORT file.name ASC
+```
+
+## Connections to other communities
+- 22 edges to [[_COMMUNITY_Community 1]]
+- 18 edges to [[_COMMUNITY_Community 11]]
+- 15 edges to [[_COMMUNITY_Community 5]]
+- 9 edges to [[_COMMUNITY_Community 4]]
+- 6 edges to [[_COMMUNITY_Community 7]]
+- 6 edges to [[_COMMUNITY_Community 27]]
+- 5 edges to [[_COMMUNITY_Community 17]]
+- 3 edges to [[_COMMUNITY_Community 9]]
+- 3 edges to [[_COMMUNITY_Community 14]]
+- 2 edges to [[_COMMUNITY_Community 6]]
+- 2 edges to [[_COMMUNITY_Community 15]]
+- 2 edges to [[_COMMUNITY_Community 12]]
+- 2 edges to [[_COMMUNITY_Community 8]]
+- 2 edges to [[_COMMUNITY_Community 21]]
+- 1 edge to [[_COMMUNITY_Community 0]]
+- 1 edge to [[_COMMUNITY_Community 34]]
+- 1 edge to [[_COMMUNITY_Community 22]]
+- 1 edge to [[_COMMUNITY_Community 32]]
+- 1 edge to [[_COMMUNITY_Community 28]]
+- 1 edge to [[_COMMUNITY_Community 13]]
+- 1 edge to [[_COMMUNITY_Community 23]]
+- 1 edge to [[_COMMUNITY_Community 33]]
+- 1 edge to [[_COMMUNITY_Community 18]]
+- 1 edge to [[_COMMUNITY_Community 26]]
+- 1 edge to [[_COMMUNITY_Community 30]]
+- 1 edge to [[_COMMUNITY_Community 29]]
+
+## Top bridge nodes
+- [[.update()_8]] - degree 28, connects to 17 communities
+- [[.get()]] - degree 63, connects to 10 communities
+- [[Exception]] - degree 13, connects to 5 communities
+- [[EngineRoutingError]] - degree 62, connects to 2 communities
+- [[create_beta_job()]] - degree 12, connects to 2 communities

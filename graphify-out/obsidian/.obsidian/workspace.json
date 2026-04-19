@@ -1,0 +1,204 @@
+{
+  "main": {
+    "id": "95302dde6e782e69",
+    "type": "split",
+    "children": [
+      {
+        "id": "978c2c17b4debb21",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9f4190096752106b",
+            "type": "leaf",
+            "state": {
+              "type": "canvas",
+              "state": {
+                "file": "graph.canvas",
+                "viewState": {
+                  "x": 13764.161951915064,
+                  "y": 2251.395044353971,
+                  "zoom": -2.414804910322034
+                }
+              },
+              "icon": "lucide-layout-dashboard",
+              "title": "graph"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "b7a4e4a20e19fa05",
+    "type": "split",
+    "children": [
+      {
+        "id": "99c04618ee0f75ec",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "35ab21faee100ecb",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "84ca98449b07875e",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "graph.canvas",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "376d2cc40ee28e80",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "a85fc2aacd4e46b9",
+    "type": "split",
+    "children": [
+      {
+        "id": "f1a1a7b3c7d72075",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "351b06cb42225331",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "graph.canvas",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for graph"
+            }
+          },
+          {
+            "id": "a7d0ad9031fa5c83",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "graph.canvas",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from graph"
+            }
+          },
+          {
+            "id": "328062972a20e11c",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "e5f5fffea8044b17",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "graph.canvas",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of graph"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "9f4190096752106b",
+  "lastOpenFiles": [
+    "_COMMUNITY_Community 70.md",
+    "_COMMUNITY_Community 69.md",
+    "_COMMUNITY_Community 68.md",
+    "_COMMUNITY_Community 67.md",
+    "_COMMUNITY_Community 66.md",
+    "_COMMUNITY_Community 65.md",
+    "_COMMUNITY_Community 64.md",
+    "_COMMUNITY_Community 63.md",
+    "_COMMUNITY_Community 62.md",
+    "_COMMUNITY_Community 61.md",
+    "_COMMUNITY_Community 60.md",
+    "_COMMUNITY_Community 59.md",
+    "_COMMUNITY_Community 58.md",
+    "_COMMUNITY_Community 57.md",
+    "_COMMUNITY_Community 56.md",
+    "_COMMUNITY_Community 55.md",
+    "_COMMUNITY_Community 54.md",
+    "_COMMUNITY_Community 53.md",
+    "_COMMUNITY_Community 52.md",
+    "_COMMUNITY_Community 51.md",
+    "_COMMUNITY_Community 50.md",
+    "_COMMUNITY_Community 49.md",
+    "_COMMUNITY_Community 48.md",
+    "_COMMUNITY_Community 47.md",
+    "_COMMUNITY_Community 46.md",
+    "_COMMUNITY_Community 45.md"
+  ]
+}

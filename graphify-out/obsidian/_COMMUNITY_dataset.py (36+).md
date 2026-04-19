@@ -1,0 +1,212 @@
+---
+type: community
+cohesion: 0.02
+members: 175
+---
+
+# dataset.py (36+)
+
+**Cohesion:** 0.02 - loosely connected
+**Members:** 175 nodes
+
+## Members
+- [[.__add__()]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.__getitem__()_11]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.__getitem__()_12]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.__init__()_203]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk01.py
+- [[.__init__()_193]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk02.py
+- [[.__init__()_191]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk03.py
+- [[.__init__()_197]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhksysu.py
+- [[.__init__()_184]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.__init__()_185]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.__init__()_186]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.__init__()_194]] - code - backend/references/sn-reid/torchreid/data/datasets/image/dukemtmcreid.py
+- [[.__init__()_188]] - code - backend/references/sn-reid/torchreid/data/datasets/video/dukemtmcvidreid.py
+- [[.__init__()_192]] - code - backend/references/sn-reid/torchreid/data/datasets/image/grid.py
+- [[.__init__()_198]] - code - backend/references/sn-reid/torchreid/data/datasets/image/ilids.py
+- [[.__init__()_189]] - code - backend/references/sn-reid/torchreid/data/datasets/video/ilidsvid.py
+- [[.__init__()_63]] - code - backend/references/sn-reid/torchreid/utils/loggers.py
+- [[.__init__()_196]] - code - backend/references/sn-reid/torchreid/data/datasets/image/market1501.py
+- [[.__init__()_187]] - code - backend/references/sn-reid/torchreid/data/datasets/video/mars.py
+- [[.__init__()_206]] - code - backend/references/sn-reid/torchreid/data/datasets/image/msmt17.py
+- [[.__init__()_190]] - code - backend/references/sn-reid/torchreid/data/datasets/video/prid2011.py
+- [[.__init__()_204]] - code - backend/references/sn-reid/torchreid/data/datasets/image/prid.py
+- [[.__init__()_195]] - code - backend/references/sn-reid/torchreid/data/datasets/image/sensereid.py
+- [[.__init__()_21]] - code - backend/references/tvcalib/tvcalib/sncalib_dataset.py
+- [[.__init__()_23]] - code - backend/references/tvcalib/tvcalib/sncalib_dataset.py
+- [[.__init__()_24]] - code - backend/references/tvcalib/tvcalib/sncalib_dataset.py
+- [[.__init__()_199]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[.__init__()_201]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[.__init__()_200]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[.__init__()_202]] - code - backend/references/sn-reid/torchreid/data/datasets/image/university1652.py
+- [[.__init__()_205]] - code - backend/references/sn-reid/torchreid/data/datasets/image/viper.py
+- [[.__len__()_15]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.__radd__()]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.__repr__()_2]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[._transform_image()]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.check_before_run()]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.combine_all()]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.combine_all()_1]] - code - backend/references/sn-reid/torchreid/data/datasets/video/mars.py
+- [[.download_dataset()]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.extract_file()]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk01.py
+- [[.get_data_list()]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk02.py
+- [[.get_names()]] - code - backend/references/sn-reid/torchreid/data/datasets/video/mars.py
+- [[.get_num_cams()]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.get_num_datasets()]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.get_num_pids()]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.get_pid2label()]] - code - backend/references/sn-reid/torchreid/data/datasets/image/ilids.py
+- [[.parse_img_names()]] - code - backend/references/sn-reid/torchreid/data/datasets/image/ilids.py
+- [[.prepare_split()_3]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk01.py
+- [[.prepare_split()_1]] - code - backend/references/sn-reid/torchreid/data/datasets/image/grid.py
+- [[.prepare_split()_2]] - code - backend/references/sn-reid/torchreid/data/datasets/image/ilids.py
+- [[.prepare_split()]] - code - backend/references/sn-reid/torchreid/data/datasets/video/ilidsvid.py
+- [[.prepare_split()_4]] - code - backend/references/sn-reid/torchreid/data/datasets/image/prid.py
+- [[.prepare_split()_5]] - code - backend/references/sn-reid/torchreid/data/datasets/image/viper.py
+- [[.preprocess_split()]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk03.py
+- [[.process_data()_1]] - code - backend/references/sn-reid/torchreid/data/datasets/video/ilidsvid.py
+- [[.process_data()]] - code - backend/references/sn-reid/torchreid/data/datasets/video/mars.py
+- [[.process_dir()_5]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhksysu.py
+- [[.process_dir()_2]] - code - backend/references/sn-reid/torchreid/data/datasets/image/dukemtmcreid.py
+- [[.process_dir()]] - code - backend/references/sn-reid/torchreid/data/datasets/video/dukemtmcvidreid.py
+- [[.process_dir()_4]] - code - backend/references/sn-reid/torchreid/data/datasets/image/market1501.py
+- [[.process_dir()_9]] - code - backend/references/sn-reid/torchreid/data/datasets/image/msmt17.py
+- [[.process_dir()_1]] - code - backend/references/sn-reid/torchreid/data/datasets/video/prid2011.py
+- [[.process_dir()_3]] - code - backend/references/sn-reid/torchreid/data/datasets/image/sensereid.py
+- [[.process_dir()_6]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[.process_dir()_7]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[.process_dir()_8]] - code - backend/references/sn-reid/torchreid/data/datasets/image/university1652.py
+- [[.process_split()]] - code - backend/references/sn-reid/torchreid/data/datasets/image/ilids.py
+- [[.process_split()_1]] - code - backend/references/sn-reid/torchreid/data/datasets/image/prid.py
+- [[.show_summary()_1]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.show_summary()_2]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[.show_summary()_3]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[A base class representing ImageDataset.      All other image datasets should sub]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[A base class representing VideoDataset.      All other video datasets should sub]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[Adds two datasets together (only the train set).]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[An abstract class representing a Dataset.      This is the base class for ``Imag]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[CUHK01]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk01.py
+- [[CUHK01.      Reference         Li et al. Human Reidentification with Transferre]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/cuhk01.py
+- [[CUHK02]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk02.py
+- [[CUHK02.      Reference         Li and Wang. Locally Aligned Feature Transforms]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/cuhk02.py
+- [[CUHK03]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk03.py
+- [[CUHK03.      Reference         Li et al. DeepReID Deep Filter Pairing Neural N]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/cuhk03.py
+- [[CUHKSYSU]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhksysu.py
+- [[CUHKSYSU.      This dataset can only be used for model training.      Reference]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/cuhksysu.py
+- [[Checks if required files exist before going deeper.          Args             r]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[Combines train, query and gallery in a dataset for training.]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[Creates dirname if it is missing.]] - rationale - backend/references/sn-reid/torchreid/utils/tools.py
+- [[Dataset_1]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[Downloads and extracts dataset.          Args             dataset_dir (str) da]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[DukeMTMC-reID.      Reference         - Ristani et al. Performance Measures and]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/dukemtmcreid.py
+- [[DukeMTMCVidReID]] - code - backend/references/sn-reid/torchreid/data/datasets/video/dukemtmcvidreid.py
+- [[DukeMTMCVidReID.      Reference         - Ristani et al. Performance Measures a]] - rationale - backend/references/sn-reid/torchreid/data/datasets/video/dukemtmcvidreid.py
+- [[DukeMTMCreID]] - code - backend/references/sn-reid/torchreid/data/datasets/image/dukemtmcreid.py
+- [[Extract sample annotations from its filename             File naming convention]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[GRID]] - code - backend/references/sn-reid/torchreid/data/datasets/image/grid.py
+- [[GRID.      Reference         Loy et al. Multi-camera activity correlation analy]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/grid.py
+- [[Image name format 0001001.png, where first four digits represent identity]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/cuhk01.py
+- [[ImageDataset]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[ImageDataset_1]] - code
+- [[Initializes a video dataset.]] - rationale - backend/references/sn-reid/torchreid/data/datasets/__init__.py
+- [[Initializes an image dataset.]] - rationale - backend/references/sn-reid/torchreid/data/datasets/__init__.py
+- [[MARS.      Reference         Zheng et al. MARS A Video Benchmark for Large-Sca]] - rationale - backend/references/sn-reid/torchreid/data/datasets/video/mars.py
+- [[MSMT17]] - code - backend/references/sn-reid/torchreid/data/datasets/image/msmt17.py
+- [[MSMT17.      Reference         Wei et al. Person Transfer GAN to Bridge Domain]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/msmt17.py
+- [[Market1501]] - code - backend/references/sn-reid/torchreid/data/datasets/image/market1501.py
+- [[Market1501.      Reference         Zheng et al. Scalable Person Re-identificati]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/market1501.py
+- [[Mars]] - code - backend/references/sn-reid/torchreid/data/datasets/video/mars.py
+- [[PRID]] - code - backend/references/sn-reid/torchreid/data/datasets/image/prid.py
+- [[PRID (single-shot version of prid-2011)      Reference         Hirzer et al. Pe]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/prid.py
+- [[PRID2011]] - code - backend/references/sn-reid/torchreid/data/datasets/video/prid2011.py
+- [[PRID2011.      Reference         Hirzer et al. Person Re-Identification by Desc]] - rationale - backend/references/sn-reid/torchreid/data/datasets/video/prid2011.py
+- [[QMUL-iLIDS.      Reference         Zheng et al. Associating Groups of People. B]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/ilids.py
+- [[Reads json file from a path.]] - rationale - backend/references/sn-reid/torchreid/utils/tools.py
+- [[Registers a new image dataset.      Args         name (str) key corresponding]] - rationale - backend/references/sn-reid/torchreid/data/datasets/__init__.py
+- [[Registers a new video dataset.      Args         name (str) key corresponding]] - rationale - backend/references/sn-reid/torchreid/data/datasets/__init__.py
+- [[Returns the number of datasets included.          Each tuple in data contains (i]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[Returns the number of training cameras.          Each tuple in data contains (im]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[Returns the number of training person identities.          Each tuple in data co]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[SenseReID]] - code - backend/references/sn-reid/torchreid/data/datasets/image/sensereid.py
+- [[SenseReID.      This dataset is used for test purpose only.      Reference]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/sensereid.py
+- [[Shows dataset statistics.]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[Soccernet-v3 challenge set. Can be used as target set in the run configs (cfg.]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[Soccernet-v3 test set. Can be used as target set in the run configs (cfg.data.]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[Soccernet-v3 train and valid sets. When set as source in the run configs (cfg.]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[Soccernetv3]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[Soccernetv3Challenge]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[Soccernetv3Test]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[Supports sum(dataset1, dataset2, dataset3).]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[Transforms a raw image (img0) k_tfm times with         the transform function tf]] - rationale - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[University-1652.      Reference         - Zheng et al. University-1652 A Multi]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/university1652.py
+- [[University1652]] - code - backend/references/sn-reid/torchreid/data/datasets/image/university1652.py
+- [[VIPeR]] - code - backend/references/sn-reid/torchreid/data/datasets/image/viper.py
+- [[VIPeR.      Reference         Gray et al. Evaluating appearance models for reco]] - rationale - backend/references/sn-reid/torchreid/data/datasets/image/viper.py
+- [[VideoDataset]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[VideoDataset_1]] - code
+- [[Writes to a json file.]] - rationale - backend/references/sn-reid/torchreid/utils/tools.py
+- [[__init__.py_13]] - code - backend/references/sn-reid/torchreid/data/datasets/image/__init__.py
+- [[__init__.py_11]] - code - backend/references/sn-reid/torchreid/data/datasets/__init__.py
+- [[__init__.py_12]] - code - backend/references/sn-reid/torchreid/data/datasets/video/__init__.py
+- [[_get_ax()]] - code - backend/references/tvcalib/tvcalib/utils/visualization_mpl.py
+- [[cuhk01.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk01.py
+- [[cuhk02.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk02.py
+- [[cuhk03.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhk03.py
+- [[cuhksysu.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/cuhksysu.py
+- [[dataset.py]] - code - backend/references/sn-reid/torchreid/data/datasets/dataset.py
+- [[download_soccernet_dataset()]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[dukemtmcreid.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/dukemtmcreid.py
+- [[dukemtmcvidreid.py]] - code - backend/references/sn-reid/torchreid/data/datasets/video/dukemtmcvidreid.py
+- [[extract_sample_info()]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[get_bbox_index()]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[grid.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/grid.py
+- [[iLIDS]] - code - backend/references/sn-reid/torchreid/data/datasets/image/ilids.py
+- [[iLIDS-VID.      Reference         Wang et al. Person Re-Identification by Video]] - rationale - backend/references/sn-reid/torchreid/data/datasets/video/ilidsvid.py
+- [[iLIDSVID]] - code - backend/references/sn-reid/torchreid/data/datasets/video/ilidsvid.py
+- [[ilids.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/ilids.py
+- [[ilidsvid.py]] - code - backend/references/sn-reid/torchreid/data/datasets/video/ilidsvid.py
+- [[init_image_dataset()]] - code - backend/references/sn-reid/torchreid/data/datasets/__init__.py
+- [[init_video_dataset()]] - code - backend/references/sn-reid/torchreid/data/datasets/__init__.py
+- [[market1501.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/market1501.py
+- [[mars.py]] - code - backend/references/sn-reid/torchreid/data/datasets/video/mars.py
+- [[mkdir_if_missing()]] - code - backend/references/sn-reid/torchreid/utils/tools.py
+- [[msmt17.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/msmt17.py
+- [[plot_loss_dataset()]] - code - backend/references/tvcalib/tvcalib/utils/visualization_mpl.py
+- [[plot_per_stadium_loss()]] - code - backend/references/tvcalib/tvcalib/utils/visualization_mpl.py
+- [[plot_per_step_loss()]] - code - backend/references/tvcalib/tvcalib/utils/visualization_mpl.py
+- [[plot_per_step_lr()]] - code - backend/references/tvcalib/tvcalib/utils/visualization_mpl.py
+- [[prid.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/prid.py
+- [[prid2011.py]] - code - backend/references/sn-reid/torchreid/data/datasets/video/prid2011.py
+- [[read_json()]] - code - backend/references/sn-reid/torchreid/utils/tools.py
+- [[register_image_dataset()]] - code - backend/references/sn-reid/torchreid/data/datasets/__init__.py
+- [[register_video_dataset()]] - code - backend/references/sn-reid/torchreid/data/datasets/__init__.py
+- [[sensereid.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/sensereid.py
+- [[soccernetv3.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/soccernetv3.py
+- [[university1652.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/university1652.py
+- [[viper.py]] - code - backend/references/sn-reid/torchreid/data/datasets/image/viper.py
+- [[visualization_mpl.py]] - code - backend/references/tvcalib/tvcalib/utils/visualization_mpl.py
+- [[write_json()_1]] - code - backend/references/sn-reid/torchreid/utils/tools.py
+
+## Live Query (requires Dataview plugin)
+
+```dataview
+TABLE source_file, type FROM #community/dataset.py_(36+)
+SORT file.name ASC
+```
+
+## Connections to other communities
+- 7 edges to [[_COMMUNITY_model_complexity.py (25+)]]
+- 4 edges to [[_COMMUNITY_sncalib_dataset.py (18+)]]
+- 3 edges to [[_COMMUNITY_pose.py (49+)]]
+- 3 edges to [[_COMMUNITY_extract_tactical_library_from_pdfs.py (10+)]]
+- 2 edges to [[_COMMUNITY_sampler.py (19+)]]
+- 1 edge to [[_COMMUNITY_run_e2e_legacy.py (66+)]]
+- 1 edge to [[_COMMUNITY_cloud_batch_processor.py (12+)]]
+- 1 edge to [[_COMMUNITY_engine.py (23+)]]
+- 1 edge to [[_COMMUNITY_pipeline_paths.py (23+)]]
+
+## Top bridge nodes
+- [[.download_dataset()]] - degree 19, connects to 2 communities
+- [[read_json()]] - degree 16, connects to 2 communities
+- [[mkdir_if_missing()]] - degree 9, connects to 2 communities
+- [[Dataset_1]] - degree 23, connects to 1 community
+- [[VideoDataset]] - degree 19, connects to 1 community

@@ -76,7 +76,7 @@ Auto-generation during a job requires:
 - Populate `backend/references/sn-calibration/resources/` per the upstream README (calibration weights).
 - Leave `GAFFERS_HOMOGRAPHY_JSON` unset for normal per-upload files; set it only to override with an existing file.
 
-Verify layout from `backend/`: `python scripts/verify_sn_calibration.py` (add `--try-import` to test `DynamicPitchCalibrator`).
+Verify layout from `backend/`: `python -m scripts.auxiliary_tools.verify_sn_calibration` (add `--try-import` to test `DynamicPitchCalibrator`).
 
 Docker / Cloud Run: the default image copies the repo root; if `references/sn-calibration` is not in the build context, mount it or bake it into the image, otherwise homography auto-generation will fail the same way as on a bare laptop.
 

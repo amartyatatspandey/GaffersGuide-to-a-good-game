@@ -54,8 +54,8 @@ from services.llm_router import (
     stop_ollama_for_app_lifecycle,
 )
 from services.observability import PipelineMetricsRegistry
-from scripts.rag_coach import run as run_rag_synthesizer
-from scripts.tactical_rule_engine import run_engine
+from services.rag_coach import run as run_rag_synthesizer
+from services.tactical_rule_engine import run_engine
 
 BACKEND_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = BACKEND_ROOT.parent

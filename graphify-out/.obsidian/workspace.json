@@ -1,0 +1,214 @@
+{
+  "main": {
+    "id": "89ff0fbb1a594782",
+    "type": "split",
+    "children": [
+      {
+        "id": "d1d74c155b482316",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a1dbba6cda3d6e7c",
+            "type": "leaf",
+            "state": {
+              "type": "canvas",
+              "state": {
+                "file": "obsidian/graph.canvas",
+                "viewState": {
+                  "x": 10298.454204031428,
+                  "y": -7833.927380826629,
+                  "zoom": -3.6037780843178426
+                }
+              },
+              "icon": "lucide-layout-dashboard",
+              "title": "graph"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "5e727fdfc3ad46ed",
+    "type": "split",
+    "children": [
+      {
+        "id": "174274b9d02eabe6",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4cc4298d166fafb4",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "e56bb30f7944f625",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "graph.",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "08a36e4efd79e930",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "a275b445b84381cf",
+    "type": "split",
+    "children": [
+      {
+        "id": "5ec85e8b4b167538",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "c83ed4f91c783cb3",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "obsidian/graph.canvas",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for graph"
+            }
+          },
+          {
+            "id": "9611df3d73fd264b",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "obsidian/graph.canvas",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from graph"
+            }
+          },
+          {
+            "id": "51d6ceefcf6521c6",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "b9f52eb3561a0637",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "obsidian/graph.canvas",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of graph"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "a1dbba6cda3d6e7c",
+  "lastOpenFiles": [
+    "obsidian/_COMMUNITY_Community 70.md",
+    "obsidian/_COMMUNITY_Community 69.md",
+    "obsidian/_COMMUNITY_Community 68.md",
+    "obsidian/_COMMUNITY_Community 67.md",
+    "obsidian/_COMMUNITY_Community 66.md",
+    "obsidian/_COMMUNITY_Community 65.md",
+    "obsidian/_COMMUNITY_Community 64.md",
+    "obsidian/_COMMUNITY_Community 63.md",
+    "obsidian/_COMMUNITY_Community 62.md",
+    "obsidian/_COMMUNITY_Community 61.md",
+    "obsidian/_COMMUNITY_Community 60.md",
+    "obsidian/_COMMUNITY_Community 59.md",
+    "obsidian/_COMMUNITY_Community 58.md",
+    "obsidian/_COMMUNITY_Community 57.md",
+    "obsidian/_COMMUNITY_Community 56.md",
+    "obsidian/_COMMUNITY_Community 55.md",
+    "obsidian/_COMMUNITY_Community 54.md",
+    "obsidian/_COMMUNITY_Community 53.md",
+    "obsidian/_COMMUNITY_Community 52.md",
+    "obsidian/_COMMUNITY_Community 51.md",
+    "obsidian/_COMMUNITY_Community 50.md",
+    "obsidian/_COMMUNITY_Community 49.md",
+    "obsidian/_COMMUNITY_Community 48.md",
+    "obsidian/_COMMUNITY_Community 47.md",
+    "obsidian/_COMMUNITY_Community 46.md",
+    "obsidian/_COMMUNITY_Community 45.md",
+    "cache/be217cc64fce5586e2f9ed093d817a1d8fbbbc3b1148dccd310c3e22ca288fe8.json",
+    "cache/e59bd7a8d53400aa8fffd22a7f5c6ef5b4a74a782ff5906429f9a8a1f29e7045.json",
+    "cache/ae9bbb34adcc70717a6a5c172d3707f7aa7ff54d88426c682e4e609e0314f393.json",
+    "cache/33a3959dad5361e6df47c98ab7d58dd8ebd734a7ec001b4cbe5b52d63bb297ee.json",
+    "cache/9a01c61eb42185f9667cad1e2046b4882888ad2e908ddd28a7116db2b4760cd1.json",
+    "cache/d7e3b72d66678ddaa8950ba126bab6f040da7cdbcf1872c1387fb6152234d575.json",
+    "cache/bb7ddc1c9c2cd2e7387152de644fd8cd1ab398fac290999719d5ec86058a15c8.json",
+    "cache/8dafc533859a1e65911f298ce7373d826178de5a3051ec9b338d195ad7e1797f.json",
+    "cache/788caccb39127e522fbe0a4ceb1697e05ede5cf0a45b915c4887ac7131be79e2.json",
+    "cache/2abeb867fe06b65e5d5f749692f84925543dbaa88ea67af57fffd89f23778701.json"
+  ]
+}

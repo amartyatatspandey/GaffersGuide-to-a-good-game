@@ -1,0 +1,270 @@
+---
+type: community
+cohesion: 0.02
+members: 230
+---
+
+# Community 0
+
+**Cohesion:** 0.02 - loosely connected
+**Members:** 230 nodes
+
+## Members
+- [[.__getitem__()]] - code - backend/references/soccersegcal/sncalib/dataloader.py
+- [[.__getitem__()_9]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.__getitem__()_1]] - code - backend/references/tvcalib/sn_segmentation/src/masks_gt2chen.py
+- [[.__getitem__()_2]] - code - backend/references/tvcalib/sn_segmentation/src/segmentation/soccerdata.py
+- [[.__init__()_1]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.__init__()_54]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.__init__()_55]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.__init__()_3]] - code - backend/references/soccersegcal/sncalib/dataloader.py
+- [[.__init__()_56]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.__init__()_4]] - code - backend/references/tvcalib/sn_segmentation/src/masks_gt2chen.py
+- [[.__init__()_51]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.__init__()_50]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.__init__()_46]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.__init__()_48]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.__init__()_52]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.__init__()_49]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.__init__()_47]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.__init__()_19]] - code - backend/references/tvcalib/sn_segmentation/src/segmentation/soccerdata.py
+- [[.__init__()_2]] - code - backend/references/soccersegcal/sncalib/soccerpitch.py
+- [[.__init__()_44]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[.__init__()_45]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[.__len__()]] - code - backend/references/soccersegcal/sncalib/dataloader.py
+- [[.__len__()_10]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.__len__()_1]] - code - backend/references/tvcalib/sn_segmentation/src/masks_gt2chen.py
+- [[.__len__()_2]] - code - backend/references/tvcalib/sn_segmentation/src/segmentation/soccerdata.py
+- [[.baseline_camera()]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.camera()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.camera()_1]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.compose()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.connect()]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.connect()_1]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.connect_to_image_border()]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.create_renderer()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.create_renderer()_1]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.direction()]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.direction_at()]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.distort()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.draw_colorful_pitch()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.draw_corners()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.draw_pitch()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.estimate_calibration_matrix_from_plane_homography()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.find_closest_image_border()]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.forward()_6]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.forward()_7]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.forward()_5]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.forward_meshes()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.from_homography()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.from_json_parameters()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.get_2d_homogeneous_line()_1]] - code - backend/references/soccersegcal/sncalib/soccerpitch.py
+- [[.get_2d_homogeneous_line()_4]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[.get_world_to_view_transform()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.lines()]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.match_direction()]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.points()]] - code - backend/references/soccersegcal/sncalib/soccerpitch.py
+- [[.points()_3]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[.project_point()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.project_point()_1]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[.rasterizer()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.refine_camera()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.render_args()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.render_args()_1]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.sample_field_points()]] - code - backend/references/soccersegcal/sncalib/soccerpitch.py
+- [[.sample_field_points()_3]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[.scale_resolution()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.show_lines()]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[.solve_pnp()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.step()_3]] - code - backend/references/sn-reid/torchreid/optim/radam.py
+- [[.to_json_parameters()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[.transform_points()_2]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.transform_points()_1]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[.transform_points()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[AdamW]] - code - backend/references/sn-reid/torchreid/optim/radam.py
+- [[Adapter around vendored sn-calibration SoccerPitch and helpers.]] - rationale - backend/calibration/soccer_pitch_adapter.py
+- [[Adapts the internal parameters for image resolution changes         param facto_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[Adapts the internal parameters for image resolution changes         param facto]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[Camera]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[Computes confusion matrices for a level of precision specified by the threshold.]] - rationale - backend/references/soccersegcal/sncalib/evaluate_camera.py
+- [[Computes euclidian distance between 2D points     param point1     param point]] - rationale - backend/references/soccersegcal/sncalib/evaluate_extremities.py
+- [[Computes euclidian distance between a point and a polyline.     param point 2D]] - rationale - backend/references/soccersegcal/sncalib/evaluate_camera.py
+- [[Computes the similarity transform such that the list of points is centered aroun]] - rationale - backend/references/soccersegcal/sncalib/baseline_cameras.py
+- [[Conversion from euler angles to orientation matrix.     param pan     param t]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[DataLoader used to train the segmentation network used for the prediction of ext]] - rationale - backend/references/soccersegcal/sncalib/dataloader.py
+- [[Dataset]] - code
+- [[Decomposes the rotation matrix into pan, tilt and roll angles. There are two sol]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[DistortedFoVPerspectiveCameras]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[DistortedTransform]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[Draw one-hot encoded segments according to the annotation.     Creates target th]] - rationale - backend/references/tvcalib/sn_segmentation/src/masks_gt2chen.py
+- [[Draw one-hot encoded segments according to the annotation.     Creates target th_1]] - rationale - backend/references/tvcalib/sn_segmentation/src/segmentation/soccerdata.py
+- [[Draw the corners of a standard soccer pitch in the image.         param image_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[Draw the corners of a standard soccer pitch in the image.         param image]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[Draws all the lines of the pitch on the image, each line color is specified by t_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[Draws all the lines of the pitch on the image, each line color is specified by t]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[Draws all the lines of the pitch on the image.         param image         par_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[Draws all the lines of the pitch on the image.         param image         par]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[Draws points along the soccer pitch markings elements in the image based on the]] - rationale - backend/references/soccersegcal/sncalib/baseline_cameras.py
+- [[DualTransform]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[Evaluates the prediction of extremities. The extremities associated to a class a]] - rationale - backend/references/soccersegcal/sncalib/evaluate_extremities.py
+- [[ExtremitiesDataset]] - code - backend/references/tvcalib/sn_segmentation/src/masks_gt2chen.py
+- [[ExtremitiesDataset_1]] - code - backend/references/tvcalib/sn_segmentation/src/segmentation/soccerdata.py
+- [[FoVPerspectiveCameras]] - code
+- [[For lines belonging to the pitch lawn plane returns its 2D homogenous equation c]] - rationale - backend/references/sn-calibration/src/soccerpitch.py
+- [[For lines belonging to the pitch lawn plane returns its 2D homogenous equation c_4]] - rationale - backend/references/soccersegcal/sncalib/soccerpitch.py
+- [[For lines belonging to the pitch lawn plane returns its 2D homogenous equation c_3]] - rationale - backend/references/tvcalib/evaluation/utils.py
+- [[Geometry helpers for line-based homography estimation.]] - rationale - backend/scripts/pipeline_core/calibration/geometry.py
+- [[Given a point in the normalized image plane, apply distortion         param poi_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[Given a point in the normalized image plane, apply distortion         param poi]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[Given a set of camera parameters, this function adapts the camera to the desired]] - rationale - backend/references/soccersegcal/sncalib/evaluate_camera.py
+- [[Given lines correspondences, computes the homography that maps best the two set]] - rationale - backend/references/soccersegcal/sncalib/baseline_cameras.py
+- [[Given the homography from the world plane of the pitch and the image and a point]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[HomographySN]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[Initialize 3D coordinates of all elements of the soccer pitch.         param pi]] - rationale - backend/references/sn-calibration/src/soccerpitch.py
+- [[Initialize 3D coordinates of all elements of the soccer pitch.         param pi_4]] - rationale - backend/references/soccersegcal/sncalib/soccerpitch.py
+- [[Initialize 3D coordinates of all elements of the soccer pitch.         param pi_3]] - rationale - backend/references/tvcalib/evaluation/utils.py
+- [[Line]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[Loads camera parameters from dictionary.         param calib_json_object the d_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[Loads camera parameters from dictionary.         param calib_json_object the d]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[MeshRasterizer]] - code
+- [[MisingLine]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[ModelPanTiltRoll]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[ModelPanTiltRollDistorted]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[ModelPanTiltRollModes]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[Modified version from SoccerNet.Evaluation.utils_calibration.get_polylines() to]] - rationale - backend/references/tvcalib/evaluation/utils.py
+- [[Once that there is a minimal set of initial camera parameters (calibration, rota_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[Once that there is a minimal set of initial camera parameters (calibration, rota]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[PanTiltCameras]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[Project flat points from a homography matrix.          Args             predict]] - rationale - backend/references/tvcalib/evaluation/utils.py
+- [[Replace each line class key of the dictionary with its opposite element accordin]] - rationale - backend/references/soccersegcal/sncalib/evaluate_extremities.py
+- [[SN SoccerPitch that contains only segments that lie on one plane.     Note Used]] - rationale - backend/references/tvcalib/evaluation/utils.py
+- [[Samples each pitch element every dist meters, returns a dictionary associating t]] - rationale - backend/references/sn-calibration/src/soccerpitch.py
+- [[Samples each pitch element every dist meters, returns a dictionary associating t_4]] - rationale - backend/references/soccersegcal/sncalib/soccerpitch.py
+- [[Samples each pitch element every dist meters, returns a dictionary associating t_3]] - rationale - backend/references/tvcalib/evaluation/utils.py
+- [[Saves camera to a JSON serializable dictionary.         return The dictionary_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[Saves camera to a JSON serializable dictionary.         return The dictionary]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[Scale points by s_width and s_height factors     param points_dict dictionary]] - rationale - backend/references/soccersegcal/sncalib/evaluate_extremities.py
+- [[SoccerNetDataset]] - code - backend/references/soccersegcal/sncalib/dataloader.py
+- [[SoccerNetFieldSegmentationDataset]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[SoccerPitch]] - code - backend/references/soccersegcal/sncalib/soccerpitch.py
+- [[SoccerPitch2D]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[Static class variables that are specified by the rules of the game]] - rationale - backend/references/soccersegcal/sncalib/soccerpitch.py
+- [[This method initializes the calibration matrix from the homography between the w_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[This method initializes the calibration matrix from the homography between the w]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[This method initializes the essential camera parameters from the homography betw_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[This method initializes the essential camera parameters from the homography betw]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[Uses current camera parameters to predict where a 3D point is seen by the camera_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[Uses current camera parameters to predict where a 3D point is seen by the camera]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[With a known calibration matrix, this method can be used in order to retrieve ro_1]] - rationale - backend/references/soccersegcal/sncalib/camera.py
+- [[With a known calibration matrix, this method can be used in order to retrieve ro]] - rationale - backend/references/sn-calibration/src/camera.py
+- [[ZScaledMeshRasterizer]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[_get_cam_from_decomp()]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[baseline_cameras.py]] - code - backend/calibration/sn_calibration_vendor/src/baseline_cameras.py
+- [[baseline_cameras.py_1]] - code - backend/references/sn-calibration/src/baseline_cameras.py
+- [[baseline_cameras.py_2]] - code - backend/references/soccersegcal/sncalib/baseline_cameras.py
+- [[build_line_matches()]] - code - backend/scripts/pipeline_core/calibration/geometry.py
+- [[calibration()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[camera.py]] - code - backend/calibration/sn_calibration_vendor/src/camera.py
+- [[camera.py_1]] - code - backend/references/sn-calibration/src/camera.py
+- [[camera.py_2]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[compare_overlap_check()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[compound_score()]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[count_x_in_order()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[create_pitch_meshes()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[create_pitch_model()]] - code - backend/calibration/soccer_pitch_adapter.py
+- [[create_target_from_annotation()]] - code - backend/references/tvcalib/sn_segmentation/src/masks_gt2chen.py
+- [[create_target_from_annotation()_1]] - code - backend/references/tvcalib/sn_segmentation/src/segmentation/soccerdata.py
+- [[dataloader.py]] - code - backend/calibration/sn_calibration_vendor/src/dataloader.py
+- [[dataloader.py_1]] - code - backend/references/sn-calibration/src/dataloader.py
+- [[dataloader.py_3]] - code - backend/references/soccersegcal/sncalib/dataloader.py
+- [[dataloader.py_4]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[dataloader.py_2]] - code - backend/references/tvcalib/sn_segmentation/src/dataloader.py
+- [[distance()]] - code - backend/references/soccersegcal/sncalib/evaluate_extremities.py
+- [[distance_to_polyline()]] - code - backend/references/soccersegcal/sncalib/evaluate_camera.py
+- [[draw_pitch_homography()]] - code - backend/references/soccersegcal/sncalib/baseline_cameras.py
+- [[estimate_cameras.py]] - code - backend/references/soccersegcal/soccersegcal/estimate_cameras.py
+- [[estimate_extremities_homography()]] - code - backend/scripts/pipeline_core/calibration/geometry.py
+- [[estimate_homography_from_line_correspondences()]] - code - backend/references/soccersegcal/sncalib/baseline_cameras.py
+- [[eval_projection.py]] - code - backend/references/tvcalib/evaluation/eval_projection.py
+- [[evalai_camera.py]] - code - backend/calibration/sn_calibration_vendor/src/evalai_camera.py
+- [[evalai_camera.py_1]] - code - backend/references/sn-calibration/src/evalai_camera.py
+- [[evalai_camera.py_2]] - code - backend/references/soccersegcal/sncalib/evalai_camera.py
+- [[evaluate()_2]] - code - backend/references/tvcalib/evaluation/eval_projection.py
+- [[evaluate()]] - code - backend/references/soccersegcal/sncalib/evalai_camera.py
+- [[evaluate_camera.py]] - code - backend/calibration/sn_calibration_vendor/src/evaluate_camera.py
+- [[evaluate_camera.py_1]] - code - backend/references/sn-calibration/src/evaluate_camera.py
+- [[evaluate_camera.py_2]] - code - backend/references/soccersegcal/sncalib/evaluate_camera.py
+- [[evaluate_camera_prediction()]] - code - backend/references/soccersegcal/sncalib/evaluate_camera.py
+- [[evaluate_detection_prediction()]] - code - backend/references/soccersegcal/sncalib/evaluate_extremities.py
+- [[evaluate_extremities.py]] - code - backend/calibration/sn_calibration_vendor/src/evaluate_extremities.py
+- [[evaluate_extremities.py_1]] - code - backend/references/sn-calibration/src/evaluate_extremities.py
+- [[evaluate_extremities.py_3]] - code - backend/references/soccersegcal/sncalib/evaluate_extremities.py
+- [[evaluate_extremities.py_2]] - code - backend/references/tvcalib/sn_segmentation/src/evaluate_extremities.py
+- [[find_bad_cont()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[find_bad_init()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[geometry.py]] - code - backend/scripts/pipeline_core/calibration/geometry.py
+- [[get_pan_tilt_from_direction()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[get_polylines()]] - code - backend/references/soccersegcal/sncalib/evaluate_camera.py
+- [[get_polylines()_1]] - code - backend/references/tvcalib/evaluation/utils.py
+- [[get_sn_homography()]] - code - backend/references/tvcalib/evaluation/iou/iou_eval.py
+- [[get_wc14_homography()]] - code - backend/references/tvcalib/evaluation/iou/iou_eval.py
+- [[guess_initial_camera()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[iou_eval.py]] - code - backend/references/tvcalib/evaluation/iou/iou_eval.py
+- [[iou_part()]] - code - backend/references/tvcalib/evaluation/iou/iou_eval.py
+- [[iou_whole()]] - code - backend/references/tvcalib/evaluation/iou/iou_eval.py
+- [[load_start_positions()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[main()_4]] - code - backend/references/soccersegcal/soccersegcal/estimate_cameras.py
+- [[main()_3]] - code - backend/references/tvcalib/evaluation/eval_projection.py
+- [[masks_gt2chen.py]] - code - backend/references/tvcalib/sn_segmentation/src/masks_gt2chen.py
+- [[mirror_labels()]] - code - backend/references/soccersegcal/sncalib/evaluate_extremities.py
+- [[move_camera()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[normalization_transform()]] - code - backend/references/soccersegcal/sncalib/baseline_cameras.py
+- [[optimize_camera()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[pan_tilt_roll_to_orientation()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[pose.py]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[pview()]] - code - backend/references/soccersegcal/soccersegcal/dataloader.py
+- [[rotation_matrix_to_pan_tilt_roll()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[sample_line()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[scale_points()]] - code - backend/references/soccersegcal/sncalib/evaluate_extremities.py
+- [[segs2cam()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[show_camera_view()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[soccer_pitch_adapter.py]] - code - backend/calibration/soccer_pitch_adapter.py
+- [[soccerdata.py]] - code - backend/references/tvcalib/sn_segmentation/src/segmentation/soccerdata.py
+- [[soccerpitch.py]] - code - backend/calibration/sn_calibration_vendor/src/soccerpitch.py
+- [[soccerpitch.py_1]] - code - backend/references/sn-calibration/src/soccerpitch.py
+- [[soccerpitch.py_2]] - code - backend/references/soccersegcal/sncalib/soccerpitch.py
+- [[torch_pan_tilt_roll_to_orientation()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[torch_pan_tilt_to_orientation()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[torch_pan_tilt_to_orientations()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[triangulate_border()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[uni()]] - code - backend/references/soccersegcal/soccersegcal/pose.py
+- [[unproject_image_point()]] - code - backend/references/soccersegcal/sncalib/camera.py
+- [[utils.py_1]] - code - backend/references/tvcalib/evaluation/utils.py
+
+## Live Query (requires Dataview plugin)
+
+```dataview
+TABLE source_file, type FROM #community/Community_0
+SORT file.name ASC
+```
+
+## Connections to other communities
+- 12 edges to [[_COMMUNITY_Community 8]]
+- 12 edges to [[_COMMUNITY_Community 5]]
+- 11 edges to [[_COMMUNITY_Community 14]]
+- 7 edges to [[_COMMUNITY_Community 9]]
+- 5 edges to [[_COMMUNITY_Community 6]]
+- 4 edges to [[_COMMUNITY_Community 16]]
+- 4 edges to [[_COMMUNITY_Community 4]]
+- 3 edges to [[_COMMUNITY_Community 10]]
+- 2 edges to [[_COMMUNITY_Community 2]]
+- 2 edges to [[_COMMUNITY_Community 15]]
+- 1 edge to [[_COMMUNITY_Community 1]]
+- 1 edge to [[_COMMUNITY_Community 3]]
+
+## Top bridge nodes
+- [[SoccerPitch]] - degree 81, connects to 4 communities
+- [[.compose()]] - degree 12, connects to 3 communities
+- [[AdamW]] - degree 9, connects to 3 communities
+- [[.step()_3]] - degree 8, connects to 3 communities
+- [[SoccerNetFieldSegmentationDataset]] - degree 26, connects to 2 communities

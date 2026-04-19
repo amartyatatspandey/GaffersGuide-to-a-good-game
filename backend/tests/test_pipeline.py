@@ -2,27 +2,45 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 BACKEND_DIR = ROOT_DIR / "backend"
+FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
+TACTICAL_METRICS_FIXTURE = FIXTURES_DIR / "tactical_metrics.json"
+TACTICAL_METRICS_OUTPUT = BACKEND_DIR / "output" / "tactical_metrics.json"
 
 # Allow `from main import app` and `from scripts.* import ...` imports.
 sys.path.insert(0, str(BACKEND_DIR))
 
 from main import app as fastapi_app  # noqa: E402
-from scripts.rag_coach import run as run_rag_synthesizer  # noqa: E402
-from scripts.tactical_rule_engine import RuleEngine, run_engine  # noqa: E402
+from services.rag_coach import run as run_rag_synthesizer  # noqa: E402
+from services.tactical_rule_engine import RuleEngine, run_engine  # noqa: E402
 
 
 def _load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _ensure_tactical_metrics_fixture() -> None:
+    """Make pipeline tests deterministic by staging a known metrics artifact."""
+    if not TACTICAL_METRICS_FIXTURE.is_file():
+        raise FileNotFoundError(f"Missing fixture file: {TACTICAL_METRICS_FIXTURE}")
+    TACTICAL_METRICS_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(TACTICAL_METRICS_FIXTURE, TACTICAL_METRICS_OUTPUT)
+
+
+@pytest.fixture(autouse=True)
+def _stage_tactical_metrics_fixture() -> None:
+    _ensure_tactical_metrics_fixture()
 
 
 def _parse_massive_gap_meters(evidence: str) -> float | None:
@@ -39,7 +57,7 @@ def _parse_massive_gap_meters(evidence: str) -> float | None:
 
 
 def test_analytics_math() -> None:
-    tactical_metrics_path = BACKEND_DIR / "output" / "tactical_metrics.json"
+    tactical_metrics_path = TACTICAL_METRICS_OUTPUT
     assert tactical_metrics_path.is_file(), f"Missing {tactical_metrics_path}"
 
     timeline = _load_json(tactical_metrics_path)

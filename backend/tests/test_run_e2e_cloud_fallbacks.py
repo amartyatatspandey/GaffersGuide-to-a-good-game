@@ -7,8 +7,10 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 BACKEND_DIR = ROOT_DIR / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
-from scripts import run_e2e as run_e2e_wrapper  # noqa: E402
-from scripts import run_e2e_cloud  # noqa: E402
+import importlib
+
+run_e2e_cloud = importlib.import_module("scripts.pipeline_core.run_e2e_cloud")  # noqa: E402
+run_e2e_wrapper = importlib.import_module("scripts.pipeline_core.run_e2e")  # noqa: E402
 
 
 class _DummyCuda:

@@ -11,9 +11,12 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 BACKEND_DIR = ROOT_DIR / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
-from scripts.rag_coach import GeneratedPromptRecord  # noqa: E402
-from scripts import e2e_llm_local  # noqa: E402
+import importlib
+
+from services.rag_coach import GeneratedPromptRecord  # noqa: E402
 from services.errors import EngineRoutingError  # noqa: E402
+
+e2e_llm_local = importlib.import_module("scripts.auxiliary_tools.e2e_llm_local")  # noqa: E402
 
 
 def _sample_record(*, llm_prompt: str) -> GeneratedPromptRecord:

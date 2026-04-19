@@ -1,0 +1,223 @@
+---
+type: community
+cohesion: 0.04
+members: 179
+---
+
+# Community 1
+
+**Cohesion:** 0.04 - loosely connected
+**Members:** 179 nodes
+
+## Members
+- [[.__init__()_231]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[.__init__()_217]] - code - backend/scripts/pipeline_core/generate_analytics.py
+- [[.__init__()_232]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[._build_feature_mask()_1]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[._build_feature_mask()_2]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[._cap_velocity()]] - code - backend/scripts/pipeline_core/global_refiner.py
+- [[._detect_features()_1]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[._detect_features()_2]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[._interpolate_short_gaps()]] - code - backend/scripts/pipeline_core/global_refiner.py
+- [[._nullify_outliers()]] - code - backend/scripts/pipeline_core/global_refiner.py
+- [[._smooth_track()]] - code - backend/scripts/pipeline_core/global_refiner.py
+- [[.analyze_team_spatial()]] - code - backend/scripts/pipeline_core/generate_analytics.py
+- [[.calc_speed()]] - code - backend/scripts/pipeline_core/generate_analytics.py
+- [[.calculate_line_gaps()]] - code - backend/scripts/pipeline_core/generate_analytics.py
+- [[.calculate_pitch_control()]] - code - backend/scripts/pipeline_core/generate_analytics.py
+- [[.calculate_pressure_index()]] - code - backend/scripts/pipeline_core/generate_analytics.py
+- [[.refine()]] - code - backend/scripts/pipeline_core/global_refiner.py
+- [[.update()_6]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[.update()_7]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Aggregated tactical flaw over an entire video chunk (macro-trend).      frequenc]] - rationale - backend/models.py
+- [[Approximate radar point by compensating previous radar point with camera shift.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Approximate radar point by compensating previous radar point with camera shift._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Assemble the instruction prompt to send to the downstream LLM.]] - rationale - backend/services/rag_coach.py
+- [[Build RAG prompt payloads from trigger timeline and tactical library.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Build RAG prompt payloads from trigger timeline and tactical library._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Build report rows without calling the LLM (Data Guard abort).]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Build report rows without calling the LLM (Data Guard abort)._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[CVTelemetry]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[CVTelemetry_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Check whether ball is in a team's defensive third on 1050x680 radar._1]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Check whether ball is in a team's defensive third on 1050x680 radar._2]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[ChunkTacticalInsight]] - code - backend/models.py
+- [[Compute advanced ball-dependent tactical metrics from refined frame stream._1]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Compute advanced ball-dependent tactical metrics from refined frame stream._2]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Compute tactical metrics from in-memory TacticalFrame data.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Compute tactical metrics from in-memory TacticalFrame data._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Create layout dirs so weights can be dropped in and artifacts can be written.]] - rationale - backend/services/paths/models.py
+- [[Draw 2D annotations and side-by-side tactical radar overlay.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Draw 2D annotations and side-by-side tactical radar overlay._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Estimate frame-to-frame camera translation using sparse optical flow.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Estimate frame-to-frame camera translation using sparse optical flow._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Euclidean distance from ball to nearest player on a team for one frame._1]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Euclidean distance from ball to nearest player on a team for one frame._2]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Execute the full CV→Math→Rules→RAG→LLM pipeline and write job outputs.      Retu]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Execute the full CV→Math→Rules→RAG→LLM pipeline and write job outputs.      Retu_1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Fill short missing ball tracks via linear interpolation, then backfill possessio_1]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Fill short missing ball tracks via linear interpolation, then backfill possessio_2]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[For every chunk insight, attach the first matching philosophy and build a prompt]] - rationale - backend/services/rag_coach.py
+- [[Gate ball-dependent metrics based on visibility confidence.]] - rationale - backend/calculators/ball_visibility.py
+- [[Gate ball-dependent metrics based on visibility confidence._1]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Gate ball-dependent metrics based on visibility confidence._2]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[GeneratedPromptRecord]] - code - backend/services/rag_coach.py
+- [[Global offline trajectory refinement for chunk-level TacticalFrame timelines.]] - rationale - backend/scripts/pipeline_core/global_refiner.py
+- [[GlobalRefiner]] - code - backend/scripts/pipeline_core/global_refiner.py
+- [[Heuristic confidence score for frame-wise homography projection.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Heuristic confidence score for frame-wise homography projection._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[One coaching philosophy row from `tactical_library.json`.]] - rationale - backend/services/rag_coach.py
+- [[One synthesized master prompt for a single flaw instance.]] - rationale - backend/services/rag_coach.py
+- [[OpticalFlowCameraShiftEstimator]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[OpticalFlowCameraShiftEstimator_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[PhilosophyEntry]] - code - backend/services/rag_coach.py
+- [[RAG-style synthesizer map chunk-level tactical insights to philosophy and build]] - rationale - backend/services/rag_coach.py
+- [[Refine player trajectories across a full chunk before analytics.]] - rationale - backend/scripts/pipeline_core/global_refiner.py
+- [[Report how many CV frames produced valid dual-team metric rows (Data Guard pass]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Report how many CV frames produced valid dual-team metric rows (Data Guard pass_1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Resolve likely ball class IDs for the primary tracking model.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Resolve likely ball class IDs for the primary tracking model._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Return True when ``GEMINI_API_KEY`` is present in the environment.]] - rationale - backend/llm_service.py
+- [[Return Zone 14 bounds as (x_min, x_max, y_min, y_max) for attacking direction.]] - rationale - backend/calculators/advanced_ball_metrics.py
+- [[Return a refined list of frames with healedinterpolatedsmoothed player tracks.]] - rationale - backend/scripts/pipeline_core/global_refiner.py
+- [[Return camera shift (dx, dy) in image pixels for the current frame.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Return camera shift (dx, dy) in image pixels for the current frame._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Return class IDs that correspond to the football class.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Return class IDs that correspond to the football class._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Return percentage of CV frames that produced valid metric frames.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Return percentage of CV frames that produced valid metric frames._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Return positive forward progression for a team along radar X._1]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Return positive forward progression for a team along radar X._2]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Return the first philosophy whose `tags` contain the given flaw name.]] - rationale - backend/services/rag_coach.py
+- [[Run CV tracking in-memory and return TacticalFrame timeline.]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Run CV tracking in-memory and return TacticalFrame timeline._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Run Gemini in a worker thread (SDK is synchronous).]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Run Gemini in a worker thread (SDK is synchronous)._1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Run cloud LLM completions for each generated prompt record.      Prefers ``GEMIN]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Run cloud LLM completions for each generated prompt record.      Prefers ``GEMIN_1]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[Share of frames with valid ball coordinates (including interpolated points).]] - rationale - backend/calculators/ball_visibility.py
+- [[Share of frames with valid ball coordinates (including interpolated points)._1]] - rationale - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[Share of frames with valid ball coordinates (including interpolated points)._2]] - rationale - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[TacticalAnalyzer]] - code - backend/scripts/pipeline_core/generate_analytics.py
+- [[TacticalFrame]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[TacticalFrame_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[TacticalLibrary]] - code - backend/services/rag_coach.py
+- [[TacticalPlayer]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[TacticalPlayer_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[TrackingFrameArtifact]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[TrackingFrameArtifact_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_apply_ball_metrics_gate()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_apply_ball_metrics_gate()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_calc_reliability_pct()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_calc_reliability_pct()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_complete_gemini_prompt()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_complete_gemini_prompt()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_complete_prompt()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_complete_prompt()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_compute_advanced_ball_metrics()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_compute_advanced_ball_metrics()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_compute_ball_visibility_ratio()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_compute_ball_visibility_ratio()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_compute_possession_team_id()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_compute_possession_team_id()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_final_cards_llm_skipped_low_reliability()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_final_cards_llm_skipped_low_reliability()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_in_zone14()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_in_zone14()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_interpolate_ball_positions()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_interpolate_ball_positions()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_is_defensive_third()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_is_defensive_third()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_nearest_player_distance()_1]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_nearest_player_distance()_2]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_prediction_to_team()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_prediction_to_team()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_print_data_guard_reliability()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_print_data_guard_reliability()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_print_step()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_print_step()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_resolve_ball_classes()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_resolve_ball_classes()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_resolve_llm_credentials()_1]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_resolve_llm_credentials()_2]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_resolve_primary_ball_class_ids()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_resolve_primary_ball_class_ids()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_resolve_video_path()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_resolve_video_path()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_team_forward_progress()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_team_forward_progress()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_team_to_id()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_team_to_id()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_write_tracking_artifact()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_write_tracking_artifact()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[_zone14_bounds_for_team()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[_zone14_bounds_for_team()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[apply_ball_metrics_gate()]] - code - backend/calculators/ball_visibility.py
+- [[build_master_llm_prompt()]] - code - backend/services/rag_coach.py
+- [[build_metrics_timeline()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[build_metrics_timeline()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[compute_ball_visibility_ratio()]] - code - backend/calculators/ball_visibility.py
+- [[e2e_shared_impl.py]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[ensure_core_pipeline_directories()]] - code - backend/services/paths/models.py
+- [[find_philosophy()]] - code - backend/services/rag_coach.py
+- [[format_fc25_roles()]] - code - backend/services/rag_coach.py
+- [[gemini_is_configured()]] - code - backend/llm_service.py
+- [[generate_analytics.py]] - code - backend/scripts/pipeline_core/generate_analytics.py
+- [[global_refiner.py]] - code - backend/scripts/pipeline_core/global_refiner.py
+- [[in_zone14()]] - code - backend/calculators/advanced_ball_metrics.py
+- [[load_json()]] - code - backend/services/rag_coach.py
+- [[main()_12]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[main()_26]] - code - backend/services/rag_coach.py
+- [[main()_13]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[main()_9]] - code - backend/scripts/pipeline_core/run_e2e.py
+- [[mkdir()]] - code - backend/references/tvcalib/sn_segmentation/src/segmentation/utils.py
+- [[parse_args()_2]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[parse_args()_3]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[parse_args()]] - code - backend/scripts/pipeline_core/run_e2e.py
+- [[process_insights()]] - code - backend/services/rag_coach.py
+- [[rag_coach.py]] - code - backend/services/rag_coach.py
+- [[run()_1]] - code - backend/services/rag_coach.py
+- [[run_analytics()]] - code - backend/scripts/pipeline_core/generate_analytics.py
+- [[run_e2e()_1]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[run_e2e()_2]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[run_e2e()]] - code - backend/scripts/pipeline_core/run_e2e.py
+- [[run_e2e.py]] - code - backend/scripts/pipeline_core/run_e2e.py
+- [[run_e2e_cloud()]] - code - backend/scripts/pipeline_core/run_e2e_cloud.py
+- [[run_e2e_legacy.py]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[run_llm()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[run_llm()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[synthesize()]] - code - backend/scripts/pipeline_core/e2e_shared_impl.py
+- [[synthesize()_1]] - code - backend/scripts/pipeline_core/legacy/run_e2e_legacy.py
+- [[zone14_bounds_for_team()]] - code - backend/calculators/advanced_ball_metrics.py
+
+## Live Query (requires Dataview plugin)
+
+```dataview
+TABLE source_file, type FROM #community/Community_1
+SORT file.name ASC
+```
+
+## Connections to other communities
+- 60 edges to [[_COMMUNITY_Community 5]]
+- 22 edges to [[_COMMUNITY_Community 3]]
+- 12 edges to [[_COMMUNITY_Community 11]]
+- 8 edges to [[_COMMUNITY_Community 29]]
+- 4 edges to [[_COMMUNITY_Community 14]]
+- 3 edges to [[_COMMUNITY_Community 17]]
+- 2 edges to [[_COMMUNITY_Community 15]]
+- 2 edges to [[_COMMUNITY_Community 9]]
+- 2 edges to [[_COMMUNITY_Community 27]]
+- 2 edges to [[_COMMUNITY_Community 21]]
+- 1 edge to [[_COMMUNITY_Community 37]]
+- 1 edge to [[_COMMUNITY_Community 0]]
+- 1 edge to [[_COMMUNITY_Community 2]]
+- 1 edge to [[_COMMUNITY_Community 8]]
+- 1 edge to [[_COMMUNITY_Community 4]]
+- 1 edge to [[_COMMUNITY_Community 6]]
+
+## Top bridge nodes
+- [[mkdir()]] - degree 38, connects to 12 communities
+- [[run_e2e_cloud()]] - degree 25, connects to 4 communities
+- [[run_e2e()_2]] - degree 23, connects to 4 communities
+- [[run_e2e()_1]] - degree 22, connects to 3 communities
+- [[GeneratedPromptRecord]] - degree 66, connects to 2 communities

@@ -1,0 +1,115 @@
+{
+  "generated_at": "2026-04-19",
+  "git_branch": "Pheonix",
+  "preflight": {
+    "production_path_grep": {
+      "backend/scripts/pipeline_core": "Only docstring mention in run_calibrator_on_video.py (fallback text for missing weights), not a Python import from references/sn-calibration.",
+      "backend/services": "No matches for references/sn-calibration",
+      "backend/main.py": "No matches"
+    },
+    "weights_default_dir": "backend/models/calibration/sn-calibration/resources",
+    "weights_present": {
+      "soccer_pitch_segmentation.pth": true,
+      "mean.npy": true,
+      "std.npy": true
+    },
+    "env_vars_from_pipeline_paths": [
+      "SN_CALIBRATION_RESOURCES_DIR",
+      "GAFFERS_HOMOGRAPHY_JSON",
+      "TRACKING_MODEL_PATH"
+    ]
+  },
+  "verification": {
+    "python": "/opt/anaconda3/bin/python3.13",
+    "pytest_files": [
+      "tests/test_run_e2e_cloud_fallbacks.py",
+      "tests/test_pipeline.py",
+      "tests/test_coach_advice_job_local.py"
+    ],
+    "deps_installed_for_run": [
+      "google-generativeai",
+      "python-multipart"
+    ],
+    "result": "partial",
+    "passed": 6,
+    "failed": 4,
+    "failures": [
+      "test_pipeline.py::test_analytics_math \u2014 missing backend/output/tactical_metrics.json",
+      "test_pipeline.py::test_rule_engine_logic \u2014 tactical metrics fixture missing",
+      "test_pipeline.py::test_rag_synthesis \u2014 tactical metrics fixture missing",
+      "test_pipeline.py::test_fastapi_dry_run \u2014 GET /health returned 503 (service dependency)"
+    ],
+    "smoke_import": "Optional full LocalCV smoke skipped; pytest collection succeeded after deps install."
+  },
+  "graphify_baseline": {
+    "detect_backend": {
+      "total_files": 265,
+      "total_words": 165485,
+      "written": "graphify-out/.graphify_detect.json"
+    },
+    "graph_json_snapshot": {
+      "path": "graphify-out/graph.json",
+      "nodes": 2395,
+      "edges": 4906,
+      "undirected_script_to_references_edges": 124,
+      "note": "Baseline metric per ARCHITECTURE_RESTRUCTURING_PLAN; re-run graphify full pipeline after large refactors to compare."
+    }
+  },
+  "backlog_execution_order": [
+    "1. P2: keep auxiliary calibration tools out of production imports (generate_calibration.py documented; port soccersegcal only if it must join E2E).",
+    "2. Rule 4: narrow pitch/homography ports before large track_teams.py splits; split pipeline_paths only with tests for weights + homography resolution.",
+    "3. Rule 2 vendor shrink: separate milestone with full pytest + graphify diff."
+  ],
+  "backlog_note": "Rules 1\u20134 implementation pass (2026): see rules_implementation.",
+  "rules_implementation": {
+    "rule1_p2": "generate_calibration: no import-time sys.path; SPIIDEO_SEGCAL_ROOT + calibration/soccersegcal_vendor preferred; verify_architecture_invariants.py",
+    "rule3": "Production imports use scripts.pipeline_core / scripts.auxiliary_tools; prepare_viz_data uses track_teams_constants",
+    "rule4_paths": "services/paths/* split + pipeline_paths shim",
+    "rule4_homography": "services/homography_resolution.py; homography_provider uses services only",
+    "rule4_track_teams": "track_teams_constants.py + track_teams_reid_hybrid.py extracted",
+    "rule4_calib": "sn_calib_weights.require_sn_calibration_weight_files; calibration/ports.py PitchLineModel protocol (TYPE_CHECKING in dynamic_homography)",
+    "rule2_vendor_shrink": "Removed stray graphify-out under sn_calibration_vendor/src; full upstream prune still manual/coverage-driven",
+    "pytest": "tests/test_run_e2e_cloud_fallbacks.py passed after changes"
+  },
+  "full_decoupling": {
+    "legacy_bridge_removed": true,
+    "e2e_shared_impl": "backend/scripts/pipeline_core/e2e_shared_impl.py",
+    "track_split": {
+      "team_classifier": "backend/scripts/pipeline_core/team_classifier.py",
+      "tactical_radar": "backend/scripts/pipeline_core/tactical_radar.py"
+    },
+    "calibration_split": {
+      "helpers": [
+        "backend/scripts/pipeline_core/calibration/inference.py",
+        "backend/scripts/pipeline_core/calibration/geometry.py"
+      ],
+      "adapter": "backend/calibration/soccer_pitch_adapter.py"
+    },
+    "invariant_check": "OK: no direct legacy bridge import from modern pipeline",
+    "tests": {
+      "test_run_e2e_cloud_fallbacks": "pass",
+      "test_pipeline": "fails_existing_fixtures_and_health"
+    },
+    "detect_backend": {
+      "total_files": 285,
+      "total_words": 171107
+    }
+  },
+  "production_decoupling_closure": {
+    "status": "green",
+    "tests": {
+      "invariants_script": "pass",
+      "test_run_e2e_cloud_fallbacks.py": "pass",
+      "test_pipeline.py": "pass",
+      "test_architecture_invariants.py": "pass"
+    },
+    "notes": [
+      "test_pipeline now deterministic via backend/tests/fixtures/tactical_metrics.json staging fixture",
+      "dry-run API path validated under test_fastapi_dry_run"
+    ],
+    "graphify_detect": {
+      "total_files": 286,
+      "total_words": 171199
+    }
+  }
+}

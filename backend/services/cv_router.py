@@ -35,7 +35,7 @@ class LocalCVRunner:
         llm_engine: LLMEngine | None = None,
     ) -> Path:
         # Lazy import keeps cold-start light for API-only flows.
-        from scripts.run_e2e_cloud import run_e2e_cloud
+        from scripts.pipeline_core.run_e2e_cloud import run_e2e_cloud
 
         engine: LLMEngine = llm_engine if llm_engine is not None else "cloud"
 
