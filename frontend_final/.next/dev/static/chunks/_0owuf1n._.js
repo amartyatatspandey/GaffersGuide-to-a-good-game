@@ -955,31 +955,57 @@ __turbopack_context__.s([
     "getApiBaseUrl",
     ()=>getApiBaseUrl,
     "getWsBaseUrl",
-    ()=>getWsBaseUrl
+    ()=>getWsBaseUrl,
+    "resolveApiEndpoints",
+    ()=>resolveApiEndpoints
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = /*#__PURE__*/ __turbopack_context__.i("[project]/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
+function sanitizeBaseUrl(raw) {
+    const trimmed = raw.trim().replace(/\/+$/, '');
+    if (!trimmed) {
+        throw new Error('API base URL is empty.');
+    }
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error(`Unsupported API protocol "${parsed.protocol}". Use http:// or https://.`);
+    }
+    return parsed.toString().replace(/\/+$/, '');
+}
 function getApiBaseUrl() {
+    return resolveApiEndpoints().httpBase;
+}
+function getWsBaseUrl() {
+    return resolveApiEndpoints().wsBase;
+}
+function resolveApiEndpoints() {
+    let candidate = 'http://127.0.0.1:8000';
+    let source = 'default';
     if ("TURBOPACK compile-time truthy", 1) {
         const bridge = window.gaffersGuide?.getApiBase;
         if (typeof bridge === 'function') {
             const fromElectron = bridge();
             if (typeof fromElectron === 'string' && fromElectron.trim().length > 0) {
-                return fromElectron.trim().replace(/\/$/, '');
+                candidate = fromElectron;
+                source = 'electron';
             }
         }
     }
-    const env = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_API_BASE;
-    if (typeof env === 'string' && env.trim().length > 0) {
-        return env.trim().replace(/\/$/, '');
+    if (source === 'default') {
+        const env = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_API_BASE;
+        if (typeof env === 'string' && env.trim().length > 0) {
+            candidate = env;
+            source = 'env';
+        }
     }
-    return 'http://127.0.0.1:8000';
-}
-function getWsBaseUrl() {
-    const httpUrl = getApiBaseUrl();
-    if (httpUrl.startsWith('https://')) {
-        return httpUrl.replace('https://', 'wss://');
-    }
-    return httpUrl.replace('http://', 'ws://');
+    const httpBase = sanitizeBaseUrl(candidate);
+    const parsed = new URL(httpBase);
+    const wsProtocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+    return {
+        httpBase,
+        wsBase: `${wsProtocol}//${parsed.host}`,
+        host: parsed.host,
+        source
+    };
 }
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
@@ -988,21 +1014,45 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 "[project]/lib/debugSessionLog.ts [app-client] (ecmascript)", ((__turbopack_context__) => {
 "use strict";
 
-/**
- * NDJSON append via same-origin `/api/debug-log` (writes in dev; route no-ops in production).
- */ __turbopack_context__.s([
+__turbopack_context__.s([
     "debugSessionLog",
     ()=>debugSessionLog
 ]);
+/**
+ * NDJSON append via same-origin `/api/debug-log` (writes in dev; route no-ops in production).
+ */ const RECENT_EVENT_MS = 2000;
+const recentEvents = new Map();
+function buildEventKey(entry) {
+    const location = typeof entry.location === 'string' ? entry.location : 'unknown';
+    const message = typeof entry.message === 'string' ? entry.message : 'unknown';
+    const data = entry.data;
+    let dataKey = '';
+    if (data && typeof data === 'object') {
+        const maybeData = data;
+        const status = typeof maybeData.status === 'string' ? maybeData.status : '';
+        const currentStep = typeof maybeData.current_step === 'string' ? maybeData.current_step : '';
+        const host = typeof maybeData.wsHost === 'string' ? maybeData.wsHost : '';
+        const apiHost = typeof maybeData.apiBaseHost === 'string' ? maybeData.apiBaseHost : '';
+        dataKey = `${status}|${currentStep}|${host}|${apiHost}`;
+    }
+    return `${location}|${message}|${dataKey}`;
+}
 function debugSessionLog(entry) {
+    const key = buildEventKey(entry);
+    const now = Date.now();
+    const last = recentEvents.get(key) ?? 0;
+    if (now - last < RECENT_EVENT_MS) {
+        return;
+    }
+    recentEvents.set(key, now);
     const payload = JSON.stringify({
         ...entry,
         timestamp: Date.now()
     });
-    fetch("/api/debug-log", {
-        method: "POST",
+    fetch('/api/debug-log', {
+        method: 'POST',
         headers: {
-            "Content-Type": "application/json"
+            'Content-Type': 'application/json'
         },
         body: payload
     }).catch(()=>{});
@@ -1038,13 +1088,49 @@ function useWebSocketProgress() {
     const [currentStep, setCurrentStep] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('Pending');
     const [isProcessing, setIsProcessing] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [connectionState, setConnectionState] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('idle');
+    const [elapsedSeconds, setElapsedSeconds] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(0);
     const wsRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const stepStartedAtRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const terminalStatusSeenRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(false);
+    const isProcessingRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(false);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "useWebSocketProgress.useEffect": ()=>{
+            isProcessingRef.current = isProcessing;
+        }
+    }["useWebSocketProgress.useEffect"], [
+        isProcessing
+    ]);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "useWebSocketProgress.useEffect": ()=>{
+            if (!isProcessing) return;
+            const tick = window.setInterval({
+                "useWebSocketProgress.useEffect.tick": ()=>{
+                    if (stepStartedAtRef.current == null) {
+                        return;
+                    }
+                    const ms = Date.now() - stepStartedAtRef.current;
+                    setElapsedSeconds(Math.max(0, Math.floor(ms / 1000)));
+                }
+            }["useWebSocketProgress.useEffect.tick"], 1000);
+            return ({
+                "useWebSocketProgress.useEffect": ()=>window.clearInterval(tick)
+            })["useWebSocketProgress.useEffect"];
+        }
+    }["useWebSocketProgress.useEffect"], [
+        isProcessing
+    ]);
     const startTracking = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
         "useWebSocketProgress.useCallback[startTracking]": (jobId)=>{
             setIsProcessing(true);
+            setConnectionState('connecting');
             setError(null);
             setCurrentStep('Pending');
-            const wsUrl = `${(0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getWsBaseUrl"])()}/ws/jobs/${jobId}`;
+            setElapsedSeconds(0);
+            stepStartedAtRef.current = Date.now();
+            terminalStatusSeenRef.current = false;
+            const { wsBase, host, source } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["resolveApiEndpoints"])();
+            const wsUrl = `${wsBase}/ws/jobs/${jobId}`;
             const ws = new WebSocket(wsUrl);
             wsRef.current = ws;
             // #region agent log
@@ -1054,19 +1140,27 @@ function useWebSocketProgress() {
                 location: 'useWebSocketProgress.ts:startTracking',
                 message: 'WS open url',
                 data: {
-                    wsHost: ({
-                        "useWebSocketProgress.useCallback[startTracking]": ()=>{
-                            try {
-                                return new URL(wsUrl).host;
-                            } catch  {
-                                return 'bad-ws-url';
-                            }
-                        }
-                    })["useWebSocketProgress.useCallback[startTracking]"](),
+                    wsHost: host,
+                    apiBaseSource: source,
                     jobIdPrefix: jobId.slice(0, 8)
                 }
             });
             // #endregion
+            ws.onopen = ({
+                "useWebSocketProgress.useCallback[startTracking]": ()=>{
+                    setConnectionState('open');
+                    (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["debugSessionLog"])({
+                        sessionId: 'bb63ae',
+                        hypothesisId: 'H2-H3',
+                        location: 'useWebSocketProgress.ts:onopen',
+                        message: 'WS connected',
+                        data: {
+                            wsHost: host,
+                            jobIdPrefix: jobId.slice(0, 8)
+                        }
+                    });
+                }
+            })["useWebSocketProgress.useCallback[startTracking]"];
             ws.onmessage = ({
                 "useWebSocketProgress.useCallback[startTracking]": (event)=>{
                     try {
@@ -1080,24 +1174,38 @@ function useWebSocketProgress() {
                             data: {
                                 status: data.status,
                                 current_step: data.current_step,
-                                hasError: !!data.error
+                                hasError: !!data.error,
+                                error_code: data.error_code ?? null
                             }
                         });
                         // #endregion
                         if (data.current_step != null && data.current_step !== '') {
-                            setCurrentStep(data.current_step);
+                            setCurrentStep({
+                                "useWebSocketProgress.useCallback[startTracking]": (prev)=>{
+                                    if (prev !== data.current_step) {
+                                        stepStartedAtRef.current = Date.now();
+                                        setElapsedSeconds(0);
+                                    }
+                                    return data.current_step;
+                                }
+                            }["useWebSocketProgress.useCallback[startTracking]"]);
                         }
                         const status = data.status;
                         if (status === 'done') {
+                            terminalStatusSeenRef.current = true;
                             setCurrentStep('Completed');
                             setIsProcessing(false);
+                            setConnectionState('closed');
                             ws.close();
                             return;
                         }
                         if (status === 'error') {
+                            terminalStatusSeenRef.current = true;
                             const detail = typeof data.error === 'string' && data.error.length > 0 ? data.error : 'Job failed';
-                            setError(detail);
+                            const codePrefix = data.error_code ? `[${data.error_code}] ` : '';
+                            setError(`${codePrefix}${detail}`);
                             setIsProcessing(false);
+                            setConnectionState('error');
                             ws.close();
                         }
                     } catch (e) {
@@ -1115,17 +1223,25 @@ function useWebSocketProgress() {
                         location: 'useWebSocketProgress.ts:onerror',
                         message: 'WS error',
                         data: {
-                            jobIdPrefix: jobId.slice(0, 8)
+                            jobIdPrefix: jobId.slice(0, 8),
+                            wsHost: host
                         }
                     });
                     // #endregion
-                    setError('Connection Error');
+                    setError(`Connection error while streaming job progress (host: ${host}). Check API base URL and backend server.`);
                     setIsProcessing(false);
+                    setConnectionState('error');
                 }
             })["useWebSocketProgress.useCallback[startTracking]"];
             ws.onclose = ({
                 "useWebSocketProgress.useCallback[startTracking]": ()=>{
+                    if (isProcessingRef.current && !terminalStatusSeenRef.current) {
+                        setError('Progress stream closed before completion. Check backend logs and API URL wiring.');
+                    }
                     setIsProcessing(false);
+                    setConnectionState({
+                        "useWebSocketProgress.useCallback[startTracking]": (prev)=>prev === 'error' ? prev : 'closed'
+                    }["useWebSocketProgress.useCallback[startTracking]"]);
                 }
             })["useWebSocketProgress.useCallback[startTracking]"];
         }
@@ -1136,17 +1252,20 @@ function useWebSocketProgress() {
                 wsRef.current.close();
             }
             setIsProcessing(false);
+            setConnectionState('closed');
         }
     }["useWebSocketProgress.useCallback[disconnect]"], []);
     return {
         currentStep,
         isProcessing,
         error,
+        connectionState,
+        elapsedSeconds,
         startTracking,
         disconnect
     };
 }
-_s(useWebSocketProgress, "LrWWGqn+DPyk2wtFS6k3A+SY2mU=");
+_s(useWebSocketProgress, "0HZlrzbl1eTFhPb1a4AwAUgqVFc=");
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
 }
@@ -1165,14 +1284,50 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$ap
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/debugSessionLog.ts [app-client] (ecmascript)");
 ;
 ;
+async function readFetchErrorMessage(res) {
+    const text = await res.text();
+    if (!text.trim()) {
+        return {
+            message: res.statusText || `HTTP ${res.status}`,
+            code: null
+        };
+    }
+    try {
+        const parsed = JSON.parse(text);
+        const d = parsed.detail;
+        const topLevelCode = typeof parsed.code === 'string' ? parsed.code : null;
+        const detailCode = d && typeof d === 'object' && 'code' in d && typeof d.code === 'string' ? d.code ?? null : null;
+        const code = detailCode ?? topLevelCode;
+        if (typeof d === 'string') {
+            return {
+                message: d,
+                code
+            };
+        }
+        if (d && typeof d === 'object' && 'message' in d) {
+            const m = d.message;
+            if (typeof m === 'string' && m.length > 0) {
+                return {
+                    message: m,
+                    code
+                };
+            }
+        }
+    } catch  {
+    /* not JSON */ }
+    return {
+        message: text.length > 600 ? `${text.slice(0, 600)}…` : text,
+        code: null
+    };
+}
 /** Local Modal-less dev: default `local` unless `NEXT_PUBLIC_CV_ENGINE=cloud`. */ const defaultCvEngine = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_CV_ENGINE === 'cloud' ? 'cloud' : 'local';
 async function createJob(file, llmEngine = 'local') {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('cv_engine', defaultCvEngine);
     formData.append('llm_engine', llmEngine);
-    const base = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getApiBaseUrl"])();
-    const res = await fetch(`${base}/api/v1/jobs`, {
+    const { httpBase, host, source } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["resolveApiEndpoints"])();
+    const res = await fetch(`${httpBase}/api/v1/jobs`, {
         method: 'POST',
         body: formData
     });
@@ -1183,13 +1338,8 @@ async function createJob(file, llmEngine = 'local') {
         location: 'jobs.ts:createJob',
         message: 'createJob response',
         data: {
-            apiBaseHost: (()=>{
-                try {
-                    return new URL(base).host;
-                } catch  {
-                    return 'invalid-url';
-                }
-            })(),
+            apiBaseHost: host,
+            apiBaseSource: source,
             ok: res.ok,
             status: res.status,
             cv_engine: defaultCvEngine
@@ -1197,14 +1347,27 @@ async function createJob(file, llmEngine = 'local') {
     });
     // #endregion
     if (!res.ok) {
-        throw new Error(`Failed to create job: ${res.statusText}`);
+        const detail = await readFetchErrorMessage(res);
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["debugSessionLog"])({
+            sessionId: 'bb63ae',
+            hypothesisId: 'H3-H4',
+            location: 'jobs.ts:createJob',
+            message: 'createJob error',
+            data: {
+                status: res.status,
+                code: detail.code,
+                apiBaseHost: host
+            }
+        });
+        const codeSuffix = detail.code ? ` [${detail.code}]` : '';
+        throw new Error(`Failed to create job (${res.status}${codeSuffix}): ${detail.message}`);
     }
     return res.json();
 }
 const _sleep = (ms)=>new Promise((r)=>setTimeout(r, ms));
 async function getTracking(jobId) {
-    const base = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getApiBaseUrl"])();
-    const url = `${base}/api/v1/jobs/${jobId}/tracking`;
+    const { httpBase, host } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["resolveApiEndpoints"])();
+    const url = `${httpBase}/api/v1/jobs/${jobId}/tracking`;
     const maxAttempts = 48;
     for(let attempt = 0; attempt < maxAttempts; attempt++){
         const res = await fetch(url);
@@ -1217,6 +1380,7 @@ async function getTracking(jobId) {
             message: 'getTracking response',
             data: {
                 jobIdPrefix: jobId.slice(0, 8),
+                apiBaseHost: host,
                 attempt,
                 ok: res.ok,
                 status: res.status
@@ -1230,7 +1394,8 @@ async function getTracking(jobId) {
             await _sleep(Math.min(2000, 350 + attempt * 120));
             continue;
         }
-        throw new Error(res.status === 425 ? 'Tracking file was not ready after waiting for the pipeline (HTTP 425).' : `Tracking not ready or not found (HTTP ${res.status})`);
+        const detail = await readFetchErrorMessage(res);
+        throw new Error(res.status === 425 ? 'Tracking file was not ready after waiting for the pipeline (HTTP 425).' : `Tracking not ready or not found (HTTP ${res.status}${detail.code ? ` [${detail.code}]` : ''}): ${detail.message}`);
     }
     throw new Error('Tracking not ready or not found');
 }
@@ -1262,7 +1427,7 @@ var _s = __turbopack_context__.k.signature();
 ;
 function Hopper({ onComplete }) {
     _s();
-    const { currentStep, isProcessing, error, startTracking } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useWebSocketProgress$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useWebSocketProgress"])();
+    const { currentStep, isProcessing, error, connectionState, elapsedSeconds, startTracking } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useWebSocketProgress$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useWebSocketProgress"])();
     const [file, setFile] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [isUploading, setIsUploading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [activeJobId, setActiveJobId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
@@ -1280,6 +1445,8 @@ function Hopper({ onComplete }) {
         onComplete
     ]);
     const stepIndexInMilestones = __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useWebSocketProgress$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["STEPS"].indexOf(currentStep);
+    const isSlowStep = elapsedSeconds >= 30;
+    const isLocalLlmStep = currentStep.toLowerCase().includes('llm (local)');
     const currentIndex = isProcessing || currentStep === 'Completed' ? stepIndexInMilestones >= 0 ? stepIndexInMilestones : -1 : -1;
     if (currentStep === 'Completed') {
         return null;
@@ -1296,7 +1463,8 @@ function Hopper({ onComplete }) {
             startTracking(job.job_id);
         } catch (err) {
             console.error(err);
-            alert('Failed to upload video: ' + err.message);
+            const message = err instanceof Error ? err.message : String(err);
+            alert('Failed to upload video: ' + message);
         } finally{
             setIsUploading(false);
         }
@@ -1312,7 +1480,7 @@ function Hopper({ onComplete }) {
                         children: "Initialize Analysis Engine"
                     }, void 0, false, {
                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                        lineNumber: 59,
+                        lineNumber: 69,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1320,13 +1488,13 @@ function Hopper({ onComplete }) {
                         children: "Local-first telemetry. Connect high-fidelity match footage to generate insights."
                     }, void 0, false, {
                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                        lineNumber: 60,
+                        lineNumber: 70,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                lineNumber: 58,
+                lineNumber: 68,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1337,13 +1505,13 @@ function Hopper({ onComplete }) {
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                         type: "file",
-                        accept: "video/mp4,video/quicktime,video/x-msvideo",
+                        accept: "video/mp4,.mp4",
                         className: "hidden",
                         ref: fileInputRef,
                         onChange: handleFileChange
                     }, void 0, false, {
                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                        lineNumber: 72,
+                        lineNumber: 82,
                         columnNumber: 9
                     }, this),
                     !isProcessing && !isUploading ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
@@ -1353,7 +1521,7 @@ function Hopper({ onComplete }) {
                                 className: "text-gray-600 mb-3"
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 82,
+                                lineNumber: 92,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
@@ -1361,15 +1529,15 @@ function Hopper({ onComplete }) {
                                 children: "System Ready"
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 83,
+                                lineNumber: 93,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                 className: "text-xs text-gray-500 mt-1 font-mono",
-                                children: "Click here to upload match footage"
+                                children: "MP4 only — click to upload match footage"
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 84,
+                                lineNumber: 94,
                                 columnNumber: 13
                             }, this)
                         ]
@@ -1382,12 +1550,12 @@ function Hopper({ onComplete }) {
                                     className: "animate-spin"
                                 }, void 0, false, {
                                     fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                    lineNumber: 89,
+                                    lineNumber: 99,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 88,
+                                lineNumber: 98,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
@@ -1395,15 +1563,26 @@ function Hopper({ onComplete }) {
                                 children: isUploading ? 'Uploading Video...' : 'Processing Pipeline...'
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 91,
+                                lineNumber: 101,
                                 columnNumber: 13
-                            }, this)
+                            }, this),
+                            !isUploading ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                className: "text-xs text-emerald-300/80 mt-1 font-mono",
+                                children: [
+                                    "Connection: ",
+                                    connectionState
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/app/workspace/components/Hopper.tsx",
+                                lineNumber: 105,
+                                columnNumber: 15
+                            }, this) : null
                         ]
                     }, void 0, true)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                lineNumber: 64,
+                lineNumber: 74,
                 columnNumber: 7
             }, this),
             error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1413,7 +1592,7 @@ function Hopper({ onComplete }) {
                         size: 16
                     }, void 0, false, {
                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                        lineNumber: 100,
+                        lineNumber: 115,
                         columnNumber: 12
                     }, this),
                     " ",
@@ -1421,7 +1600,7 @@ function Hopper({ onComplete }) {
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                lineNumber: 99,
+                lineNumber: 114,
                 columnNumber: 9
             }, this),
             !isProcessing && !isUploading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1432,7 +1611,7 @@ function Hopper({ onComplete }) {
                         children: "Chunking Interval"
                     }, void 0, false, {
                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                        lineNumber: 107,
+                        lineNumber: 122,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -1442,33 +1621,33 @@ function Hopper({ onComplete }) {
                                 children: "15-minute intervals"
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 109,
+                                lineNumber: 124,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
                                 children: "30-minute intervals"
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 110,
+                                lineNumber: 125,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
                                 children: "Full Halves (45 mins)"
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 111,
+                                lineNumber: 126,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                        lineNumber: 108,
+                        lineNumber: 123,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                lineNumber: 106,
+                lineNumber: 121,
                 columnNumber: 9
             }, this),
             isProcessing && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1479,7 +1658,7 @@ function Hopper({ onComplete }) {
                         children: "Telemetry Pipeline Tracker"
                     }, void 0, false, {
                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                        lineNumber: 119,
+                        lineNumber: 134,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1491,23 +1670,43 @@ function Hopper({ onComplete }) {
                                 children: currentStep
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 121,
+                                lineNumber: 136,
                                 columnNumber: 27
                             }, this),
+                            isProcessing ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                className: "ml-2 text-gray-500",
+                                children: [
+                                    "(running ",
+                                    elapsedSeconds,
+                                    "s)"
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/app/workspace/components/Hopper.tsx",
+                                lineNumber: 138,
+                                columnNumber: 15
+                            }, this) : null,
                             stepIndexInMilestones === -1 && currentStep !== 'Pending' && currentStep !== 'Completed' ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 className: "ml-2 text-gray-500",
                                 children: "(not in milestone list)"
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 123,
+                                lineNumber: 141,
                                 columnNumber: 15
                             }, this) : null
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                        lineNumber: 120,
+                        lineNumber: 135,
                         columnNumber: 11
                     }, this),
+                    isSlowStep ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                        className: "text-[11px] font-mono text-amber-300/90 mb-4",
+                        children: isLocalLlmStep ? 'Local LLM generation can take a while on large clips. Pipeline is still active.' : 'This step is taking longer than usual. If it keeps growing, check backend logs.'
+                    }, void 0, false, {
+                        fileName: "[project]/app/workspace/components/Hopper.tsx",
+                        lineNumber: 145,
+                        columnNumber: 13
+                    }, this) : null,
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "flex flex-col gap-5",
                         children: __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useWebSocketProgress$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["STEPS"].map((step, idx)=>{
@@ -1523,26 +1722,26 @@ function Hopper({ onComplete }) {
                                             className: "text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)] rounded-full"
                                         }, void 0, false, {
                                             fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                            lineNumber: 137,
+                                            lineNumber: 162,
                                             columnNumber: 23
                                         }, this) : matchesCurrent ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$loader$2d$circle$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Loader2$3e$__["Loader2"], {
                                             size: 18,
                                             className: "text-emerald-400 animate-spin"
                                         }, void 0, false, {
                                             fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                            lineNumber: 139,
+                                            lineNumber: 164,
                                             columnNumber: 23
                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$circle$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Circle$3e$__["Circle"], {
                                             size: 18,
                                             className: "text-gray-700"
                                         }, void 0, false, {
                                             fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                            lineNumber: 141,
+                                            lineNumber: 166,
                                             columnNumber: 23
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                        lineNumber: 135,
+                                        lineNumber: 160,
                                         columnNumber: 19
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1550,35 +1749,35 @@ function Hopper({ onComplete }) {
                                         children: step
                                     }, void 0, false, {
                                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                        lineNumber: 144,
+                                        lineNumber: 169,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, step, true, {
                                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                                lineNumber: 134,
+                                lineNumber: 159,
                                 columnNumber: 17
                             }, this);
                         })
                     }, void 0, false, {
                         fileName: "[project]/app/workspace/components/Hopper.tsx",
-                        lineNumber: 126,
+                        lineNumber: 151,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/workspace/components/Hopper.tsx",
-                lineNumber: 118,
+                lineNumber: 133,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/workspace/components/Hopper.tsx",
-        lineNumber: 55,
+        lineNumber: 65,
         columnNumber: 5
     }, this);
 }
-_s(Hopper, "6Dn1R/mr2zYCRWrMHFDJa/8JLx0=", false, function() {
+_s(Hopper, "FKcpS8E6MB6MxfktbYrYenYQ/kY=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useWebSocketProgress$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useWebSocketProgress"]
     ];
@@ -2807,9 +3006,11 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useVideoFrameSync$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/hooks/useVideoFrameSync.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$trackingAdapter$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/trackingAdapter.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/debugSessionLog.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$workspace$2f$components$2f$radar$2f$RadarCanvas$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/app/workspace/components/radar/RadarCanvas.tsx [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
+;
 ;
 ;
 ;
@@ -2844,7 +3045,14 @@ function RadarWidget({ videoRef, trackingData, onFrameChange }) {
     const [syncFps, setSyncFps] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(30);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "RadarWidget.useEffect": ()=>{
-            setCurrentFrame(0);
+            const raf = window.requestAnimationFrame({
+                "RadarWidget.useEffect.raf": ()=>{
+                    setCurrentFrame(0);
+                }
+            }["RadarWidget.useEffect.raf"]);
+            return ({
+                "RadarWidget.useEffect": ()=>window.cancelAnimationFrame(raf)
+            })["RadarWidget.useEffect"];
         }
     }["RadarWidget.useEffect"], [
         adaptedTracking
@@ -2896,27 +3104,17 @@ function RadarWidget({ videoRef, trackingData, onFrameChange }) {
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "RadarWidget.useEffect": ()=>{
             // #region agent log
-            fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-Debug-Session-Id": "bb63ae"
-                },
-                body: JSON.stringify({
-                    sessionId: "bb63ae",
-                    hypothesisId: "H1",
-                    location: "RadarWidget.tsx:mount",
-                    message: "RadarWidget mounted",
-                    data: {
-                        hasTrackingPayload: Boolean(trackingData),
-                        adaptedOk: Boolean(adaptedTracking),
-                        totalFrames: lookup?.totalFrames ?? 0
-                    },
-                    timestamp: Date.now()
-                })
-            }).catch({
-                "RadarWidget.useEffect": ()=>{}
-            }["RadarWidget.useEffect"]);
+            (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["debugSessionLog"])({
+                sessionId: "bb63ae",
+                hypothesisId: "H1",
+                location: "RadarWidget.tsx:mount",
+                message: "RadarWidget mounted",
+                data: {
+                    hasTrackingPayload: Boolean(trackingData),
+                    adaptedOk: Boolean(adaptedTracking),
+                    totalFrames: lookup?.totalFrames ?? 0
+                }
+            });
         // #endregion
         }
     }["RadarWidget.useEffect"], [
@@ -2933,14 +3131,14 @@ function RadarWidget({ videoRef, trackingData, onFrameChange }) {
                 children: "Tactical Radar"
             }, void 0, false, {
                 fileName: "[project]/app/workspace/components/radar/RadarWidget.tsx",
-                lineNumber: 103,
+                lineNumber: 99,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$workspace$2f$components$2f$radar$2f$RadarCanvas$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
                 frame: frame
             }, void 0, false, {
                 fileName: "[project]/app/workspace/components/radar/RadarWidget.tsx",
-                lineNumber: 104,
+                lineNumber: 100,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2953,7 +3151,7 @@ function RadarWidget({ videoRef, trackingData, onFrameChange }) {
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/workspace/components/radar/RadarWidget.tsx",
-                        lineNumber: 106,
+                        lineNumber: 102,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2963,19 +3161,19 @@ function RadarWidget({ videoRef, trackingData, onFrameChange }) {
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/workspace/components/radar/RadarWidget.tsx",
-                        lineNumber: 107,
+                        lineNumber: 103,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/workspace/components/radar/RadarWidget.tsx",
-                lineNumber: 105,
+                lineNumber: 101,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/workspace/components/radar/RadarWidget.tsx",
-        lineNumber: 102,
+        lineNumber: 98,
         columnNumber: 5
     }, this);
 }
@@ -3001,27 +3199,21 @@ __turbopack_context__.s([
     ()=>postCoachChat
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$apiBase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/apiBase.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/debugSessionLog.ts [app-client] (ecmascript)");
+;
 ;
 const _sleep = (ms)=>new Promise((r)=>{
         setTimeout(r, ms);
     });
 // #region agent log
 function _coachDebug(hypothesisId, location, message, data) {
-    fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "bb63ae"
-        },
-        body: JSON.stringify({
-            sessionId: "bb63ae",
-            hypothesisId,
-            location,
-            message,
-            data,
-            timestamp: Date.now()
-        })
-    }).catch(()=>{});
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["debugSessionLog"])({
+        sessionId: "bb63ae",
+        hypothesisId,
+        location,
+        message,
+        data
+    });
 }
 // #endregion
 function coachAdviceUrl(jobId, llmEngine, skipLlm) {
@@ -3199,9 +3391,11 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chevron$2d$left$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ChevronLeft$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/chevron-left.js [app-client] (ecmascript) <export default as ChevronLeft>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useStreamingText$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/hooks/useStreamingText.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$api$2f$coach$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/api/coach.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/debugSessionLog.ts [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.signature();
 "use client";
+;
 ;
 ;
 ;
@@ -3260,7 +3454,7 @@ function StreamingBubble({ text }) {
                     children: part.slice(2, -2)
                 }, i, false, {
                     fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                    lineNumber: 82,
+                    lineNumber: 84,
                     columnNumber: 11
                 }, this);
             }
@@ -3268,7 +3462,7 @@ function StreamingBubble({ text }) {
                 children: part
             }, i, false, {
                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                lineNumber: 87,
+                lineNumber: 89,
                 columnNumber: 14
             }, this);
         });
@@ -3283,12 +3477,12 @@ function StreamingBubble({ text }) {
                     className: "text-emerald-400"
                 }, void 0, false, {
                     fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                    lineNumber: 94,
+                    lineNumber: 96,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                lineNumber: 93,
+                lineNumber: 95,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3301,24 +3495,24 @@ function StreamingBubble({ text }) {
                             className: "ml-1 inline-block h-4 w-2 animate-pulse bg-emerald-500 align-middle shadow-[0_0_5px_rgba(16,185,129,0.8)]"
                         }, void 0, false, {
                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                            lineNumber: 99,
+                            lineNumber: 101,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                    lineNumber: 97,
+                    lineNumber: 99,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                lineNumber: 96,
+                lineNumber: 98,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-        lineNumber: 92,
+        lineNumber: 94,
         columnNumber: 5
     }, this);
 }
@@ -3369,30 +3563,20 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
         "TacticalDashboard.useEffect": ()=>{
             // #region agent log
             const frameLen = Array.isArray(job?.tracking?.frames) ? job.tracking.frames.length : -1;
-            fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-Debug-Session-Id": "bb63ae"
-                },
-                body: JSON.stringify({
-                    sessionId: "bb63ae",
-                    hypothesisId: "H5",
-                    location: "TacticalDashboard.tsx:job-tracking",
-                    message: "Job / tracking snapshot for radar wiring",
-                    data: {
-                        hasJob: Boolean(job),
-                        jobIdPrefix: job?.jobId?.slice(0, 8) ?? null,
-                        hasTracking: Boolean(job?.tracking),
-                        frameLen,
-                        coachItems: coachAdvice?.advice_items?.length ?? -1,
-                        radarWidgetRenderedInLayout: true
-                    },
-                    timestamp: Date.now()
-                })
-            }).catch({
-                "TacticalDashboard.useEffect": ()=>{}
-            }["TacticalDashboard.useEffect"]);
+            (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["debugSessionLog"])({
+                sessionId: "bb63ae",
+                hypothesisId: "H5",
+                location: "TacticalDashboard.tsx:job-tracking",
+                message: "Job / tracking snapshot for radar wiring",
+                data: {
+                    hasJob: Boolean(job),
+                    jobIdPrefix: job?.jobId?.slice(0, 8) ?? null,
+                    hasTracking: Boolean(job?.tracking),
+                    frameLen,
+                    coachItems: coachAdvice?.advice_items?.length ?? -1,
+                    radarWidgetRenderedInLayout: true
+                }
+            });
         // #endregion
         }
     }["TacticalDashboard.useEffect"], [
@@ -3469,24 +3653,16 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
         setIsTyping(true);
         const llmEngine = ("TURBOPACK compile-time value", "object") !== "undefined" && localStorage.getItem("gaffer-engine-type") === "cloud" ? "cloud" : "local";
         // #region agent log
-        fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Debug-Session-Id": "bb63ae"
-            },
-            body: JSON.stringify({
-                sessionId: "bb63ae",
-                hypothesisId: "H2",
-                location: "TacticalDashboard.tsx:handleSendPrompt",
-                message: "Chat submit → FastAPI /api/v1/chat",
-                data: {
-                    llmEngine,
-                    hasJobId: Boolean(job?.jobId)
-                },
-                timestamp: Date.now()
-            })
-        }).catch(()=>{});
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["debugSessionLog"])({
+            sessionId: "bb63ae",
+            hypothesisId: "H2",
+            location: "TacticalDashboard.tsx:handleSendPrompt",
+            message: "Chat submit → FastAPI /api/v1/chat",
+            data: {
+                llmEngine,
+                hasJobId: Boolean(job?.jobId)
+            }
+        });
         // #endregion
         try {
             const { reply } = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$api$2f$coach$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["postCoachChat"])({
@@ -3495,23 +3671,15 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                 llmEngine
             });
             // #region agent log
-            fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-Debug-Session-Id": "bb63ae"
-                },
-                body: JSON.stringify({
-                    sessionId: "bb63ae",
-                    hypothesisId: "H4",
-                    location: "TacticalDashboard.tsx:chat-reply",
-                    message: "FastAPI chat ok",
-                    data: {
-                        replyLen: reply.length
-                    },
-                    timestamp: Date.now()
-                })
-            }).catch(()=>{});
+            (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["debugSessionLog"])({
+                sessionId: "bb63ae",
+                hypothesisId: "H4",
+                location: "TacticalDashboard.tsx:chat-reply",
+                message: "FastAPI chat ok",
+                data: {
+                    replyLen: reply.length
+                }
+            });
             // #endregion
             setChatHistory((prev)=>[
                     ...prev,
@@ -3549,7 +3717,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                 children: "Match timeline"
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                lineNumber: 298,
+                                lineNumber: 276,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3560,7 +3728,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                         className: "text-gray-600"
                                     }, void 0, false, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 302,
+                                        lineNumber: 280,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3571,24 +3739,24 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                             size: 16
                                         }, void 0, false, {
                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                            lineNumber: 308,
+                                            lineNumber: 286,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 303,
+                                        lineNumber: 281,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                lineNumber: 301,
+                                lineNumber: 279,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                        lineNumber: 297,
+                        lineNumber: 275,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3602,7 +3770,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                lineNumber: 315,
+                                lineNumber: 293,
                                 columnNumber: 13
                             }, this),
                             timeline.length === 0 && !coachError && coachAdvice && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3612,7 +3780,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                         children: "No coaching rows in this job report (empty advice list)."
                                     }, void 0, false, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 321,
+                                        lineNumber: 299,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3623,7 +3791,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 322,
+                                        lineNumber: 300,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3631,13 +3799,13 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                         children: "If the rule engine produced no chunk insights, the report can be empty. Otherwise check backend logs and Ollama / cloud LLM configuration."
                                     }, void 0, false, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 325,
+                                        lineNumber: 303,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                lineNumber: 320,
+                                lineNumber: 298,
                                 columnNumber: 13
                             }, this),
                             timeline.length === 0 && !coachError && !coachAdvice && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3645,7 +3813,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                 children: "Coaching insights load after the job report is fetched. If the pipeline just finished, wait a moment or refresh the page."
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                lineNumber: 332,
+                                lineNumber: 310,
                                 columnNumber: 13
                             }, this),
                             timeline.map((data, i)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3658,7 +3826,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                             children: data.time
                                         }, void 0, false, {
                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                            lineNumber: 348,
+                                            lineNumber: 326,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3666,7 +3834,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                             children: data.title
                                         }, void 0, false, {
                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                            lineNumber: 353,
+                                            lineNumber: 331,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3674,25 +3842,25 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                             children: data.summary
                                         }, void 0, false, {
                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                            lineNumber: 354,
+                                            lineNumber: 332,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, `${data.title}-${i}`, true, {
                                     fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                    lineNumber: 338,
+                                    lineNumber: 316,
                                     columnNumber: 13
                                 }, this))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                        lineNumber: 313,
+                        lineNumber: 291,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                lineNumber: 294,
+                lineNumber: 272,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3712,26 +3880,26 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                             size: 14
                                         }, void 0, false, {
                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                            lineNumber: 370,
+                                            lineNumber: 348,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 365,
+                                        lineNumber: 343,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "h-2 w-2 animate-pulse rounded-full bg-red-600"
                                     }, void 0, false, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 373,
+                                        lineNumber: 351,
                                         columnNumber: 13
                                     }, this),
                                     "Live IPC feed"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                lineNumber: 363,
+                                lineNumber: 341,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3747,12 +3915,12 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                             onDownload: handleDownloadTrackingJson
                                         }, void 0, false, {
                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                            lineNumber: 379,
+                                            lineNumber: 357,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 378,
+                                        lineNumber: 356,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3764,29 +3932,29 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                 trackingData: job?.tracking ?? null
                                             }, void 0, false, {
                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                lineNumber: 389,
+                                                lineNumber: 367,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                            lineNumber: 388,
+                                            lineNumber: 366,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 387,
+                                        lineNumber: 365,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                lineNumber: 377,
+                                lineNumber: 355,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                        lineNumber: 362,
+                        lineNumber: 340,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3806,7 +3974,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                         children: "Proactive insight generation"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                        lineNumber: 401,
+                                                        lineNumber: 379,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3814,13 +3982,13 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                         children: "Backend report"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                        lineNumber: 402,
+                                                        lineNumber: 380,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                lineNumber: 400,
+                                                lineNumber: 378,
                                                 columnNumber: 17
                                             }, this),
                                             activeSlide ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$workspace$2f$components$2f$InsightCard$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["InsightCard"], {
@@ -3830,30 +3998,30 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                 redTeam: activeSlide.redTeam
                                             }, activeIndex, false, {
                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                lineNumber: 406,
+                                                lineNumber: 384,
                                                 columnNumber: 19
                                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: "rounded-lg border border-gray-800 p-6 text-sm text-gray-500",
                                                 children: "Select a timeline item to view coaching detail."
                                             }, void 0, false, {
                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                lineNumber: 414,
+                                                lineNumber: 392,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 399,
+                                        lineNumber: 377,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                    lineNumber: 398,
+                                    lineNumber: 376,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                lineNumber: 397,
+                                lineNumber: 375,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3873,12 +4041,12 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                             className: "text-emerald-500"
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                            lineNumber: 430,
+                                                            lineNumber: 408,
                                                             columnNumber: 21
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                        lineNumber: 429,
+                                                        lineNumber: 407,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3889,7 +4057,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                                 children: "Tactical engine ready"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                                lineNumber: 433,
+                                                                lineNumber: 411,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3897,19 +4065,19 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                                 children: "Ask follow-ups; replies use your engine setting (local Ollama / Llama 3 by default) with job report context when available."
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                                lineNumber: 434,
+                                                                lineNumber: 412,
                                                                 columnNumber: 21
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                        lineNumber: 432,
+                                                        lineNumber: 410,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                lineNumber: 428,
+                                                lineNumber: 406,
                                                 columnNumber: 17
                                             }, this),
                                             chatHistory.map((msg)=>msg.role === "user" ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3920,7 +4088,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                             children: msg.text
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                            lineNumber: 445,
+                                                            lineNumber: 423,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3930,18 +4098,18 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                                 className: "text-gray-400"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                                lineNumber: 449,
+                                                                lineNumber: 427,
                                                                 columnNumber: 23
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                            lineNumber: 448,
+                                                            lineNumber: 426,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, msg.id, true, {
                                                     fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                    lineNumber: 444,
+                                                    lineNumber: 422,
                                                     columnNumber: 19
                                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                     className: "animate-fade-in-up",
@@ -3949,12 +4117,12 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                         text: msg.text
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                        lineNumber: 454,
+                                                        lineNumber: 432,
                                                         columnNumber: 21
                                                     }, this)
                                                 }, msg.id, false, {
                                                     fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                    lineNumber: 453,
+                                                    lineNumber: 431,
                                                     columnNumber: 19
                                                 }, this)),
                                             isTyping && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3967,12 +4135,12 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                             className: "animate-pulse text-emerald-400"
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                            lineNumber: 462,
+                                                            lineNumber: 440,
                                                             columnNumber: 21
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                        lineNumber: 461,
+                                                        lineNumber: 439,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3982,39 +4150,39 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                                 className: "h-1.5 w-1.5 animate-bounce rounded-full bg-gray-500"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                                lineNumber: 465,
+                                                                lineNumber: 443,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                 className: "h-1.5 w-1.5 animate-bounce rounded-full bg-gray-500 [animation-delay:0.2s]"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                                lineNumber: 466,
+                                                                lineNumber: 444,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                 className: "h-1.5 w-1.5 animate-bounce rounded-full bg-gray-500 [animation-delay:0.4s]"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                                lineNumber: 467,
+                                                                lineNumber: 445,
                                                                 columnNumber: 21
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                        lineNumber: 464,
+                                                        lineNumber: 442,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                lineNumber: 460,
+                                                lineNumber: 438,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 423,
+                                        lineNumber: 401,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4032,7 +4200,7 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                         className: "w-full rounded-[24px] border border-gray-800 bg-[#111a12] py-4 pl-6 pr-14 font-sans text-sm text-gray-200 shadow-inner transition-all placeholder-gray-600 hover:bg-[#1a241c] focus:border-emerald-500/50 focus:bg-[#1a241c] focus:outline-none"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                        lineNumber: 478,
+                                                        lineNumber: 456,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4044,18 +4212,18 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                             className: `transition-transform ${promptInput.trim() && !isTyping ? "group-hover:scale-110" : ""}`
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                            lineNumber: 490,
+                                                            lineNumber: 468,
                                                             columnNumber: 19
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                        lineNumber: 485,
+                                                        lineNumber: 463,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                lineNumber: 474,
+                                                lineNumber: 452,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4070,43 +4238,43 @@ function TacticalDashboard({ job, coachAdvice, coachError }) {
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                        lineNumber: 498,
+                                                        lineNumber: 476,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                                lineNumber: 496,
+                                                lineNumber: 474,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                        lineNumber: 473,
+                                        lineNumber: 451,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                                lineNumber: 422,
+                                lineNumber: 400,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                        lineNumber: 396,
+                        lineNumber: 374,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-                lineNumber: 360,
+                lineNumber: 338,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/workspace/components/TacticalDashboard.tsx",
-        lineNumber: 293,
+        lineNumber: 271,
         columnNumber: 5
     }, this);
 }
@@ -4427,6 +4595,14 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
+function classifyFrontendBackendError(err) {
+    const text = err instanceof Error ? err.message : String(err);
+    const lowered = text.toLowerCase();
+    if (lowered.includes('failed to fetch') || lowered.includes('networkerror') || lowered.includes('connection error')) {
+        return `Connectivity issue between frontend and backend: ${text}`;
+    }
+    return text;
+}
 function WorkspacePage() {
     _s();
     const [ingestionComplete, setIngestionComplete] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
@@ -4475,11 +4651,23 @@ function WorkspacePage() {
                 const advice = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$api$2f$coach$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getCoachAdvice"])(jobId, llmPref);
                 setCoachAdvice(advice);
             } catch (ce) {
-                setCoachError(ce instanceof Error ? ce.message : String(ce));
+                const detail = classifyFrontendBackendError(ce);
+                setCoachError(detail);
+                (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["debugSessionLog"])({
+                    sessionId: 'bb63ae',
+                    hypothesisId: 'H5',
+                    location: 'workspace/page.tsx:handleIngestionComplete',
+                    message: 'coach fetch failed',
+                    data: {
+                        jobIdPrefix: jobId.slice(0, 8),
+                        err: detail
+                    }
+                });
             }
             setIngestionComplete(true);
         } catch (e) {
             console.error(e);
+            const detail = classifyFrontendBackendError(e);
             // #region agent log
             (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$debugSessionLog$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["debugSessionLog"])({
                 sessionId: 'bb63ae',
@@ -4488,7 +4676,7 @@ function WorkspacePage() {
                 message: 'tracking fetch failed',
                 data: {
                     jobIdPrefix: jobId.slice(0, 8),
-                    err: String(e)
+                    err: detail
                 }
             });
             // #endregion
@@ -4498,7 +4686,7 @@ function WorkspacePage() {
                 tracking: null
             });
             setCoachAdvice(null);
-            setCoachError(null);
+            setCoachError(detail);
             setIngestionComplete(true);
         }
     };
@@ -4545,7 +4733,7 @@ function WorkspacePage() {
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$workspace$2f$components$2f$Titlebar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Titlebar"], {}, void 0, false, {
                 fileName: "[project]/app/workspace/page.tsx",
-                lineNumber: 118,
+                lineNumber: 140,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4556,20 +4744,20 @@ function WorkspacePage() {
                         setCurrentView: setCurrentView
                     }, void 0, false, {
                         fileName: "[project]/app/workspace/page.tsx",
-                        lineNumber: 120,
+                        lineNumber: 142,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "flex-1 relative flex flex-col min-w-0 bg-[#050805]",
                         children: currentView === 'reports' ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$workspace$2f$components$2f$ReportsArchive$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ReportsArchive"], {}, void 0, false, {
                             fileName: "[project]/app/workspace/page.tsx",
-                            lineNumber: 123,
+                            lineNumber: 145,
                             columnNumber: 13
                         }, this) : !ingestionComplete ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$workspace$2f$components$2f$Hopper$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Hopper"], {
                             onComplete: handleIngestionComplete
                         }, void 0, false, {
                             fileName: "[project]/app/workspace/page.tsx",
-                            lineNumber: 125,
+                            lineNumber: 147,
                             columnNumber: 13
                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$workspace$2f$components$2f$TacticalDashboard$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TacticalDashboard"], {
                             job: activeJob,
@@ -4577,24 +4765,24 @@ function WorkspacePage() {
                             coachError: coachError
                         }, void 0, false, {
                             fileName: "[project]/app/workspace/page.tsx",
-                            lineNumber: 127,
+                            lineNumber: 149,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/app/workspace/page.tsx",
-                        lineNumber: 121,
+                        lineNumber: 143,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/workspace/page.tsx",
-                lineNumber: 119,
+                lineNumber: 141,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/workspace/page.tsx",
-        lineNumber: 117,
+        lineNumber: 139,
         columnNumber: 5
     }, this);
 }

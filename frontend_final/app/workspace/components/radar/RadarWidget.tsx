@@ -2,6 +2,7 @@ import { RefObject, useEffect, useMemo, useState } from "react";
 import { useVideoFrameSync } from "@/hooks/useVideoFrameSync";
 import { adaptTrackingPayload, buildFrameLookup } from "@/lib/trackingAdapter";
 import type { TrackingFrame, TrackingPayload } from "@/lib/types/trackingTypes";
+import { debugSessionLog } from "@/lib/debugSessionLog";
 import RadarCanvas from "./RadarCanvas";
 
 interface RadarWidgetProps {
@@ -36,7 +37,10 @@ export default function RadarWidget({
   const [syncFps, setSyncFps] = useState(30);
 
   useEffect(() => {
-    setCurrentFrame(0);
+    const raf = window.requestAnimationFrame(() => {
+      setCurrentFrame(0);
+    });
+    return () => window.cancelAnimationFrame(raf);
   }, [adaptedTracking]);
 
   useEffect(() => {
@@ -76,25 +80,17 @@ export default function RadarWidget({
 
   useEffect(() => {
     // #region agent log
-    fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "bb63ae",
+    debugSessionLog({
+      sessionId: "bb63ae",
+      hypothesisId: "H1",
+      location: "RadarWidget.tsx:mount",
+      message: "RadarWidget mounted",
+      data: {
+        hasTrackingPayload: Boolean(trackingData),
+        adaptedOk: Boolean(adaptedTracking),
+        totalFrames: lookup?.totalFrames ?? 0,
       },
-      body: JSON.stringify({
-        sessionId: "bb63ae",
-        hypothesisId: "H1",
-        location: "RadarWidget.tsx:mount",
-        message: "RadarWidget mounted",
-        data: {
-          hasTrackingPayload: Boolean(trackingData),
-          adaptedOk: Boolean(adaptedTracking),
-          totalFrames: lookup?.totalFrames ?? 0,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
+    });
     // #endregion
   }, [trackingData, adaptedTracking, lookup?.totalFrames]);
 

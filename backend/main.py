@@ -391,7 +391,10 @@ async def create_job(
     if not filename.lower().endswith(".mp4"):
         raise HTTPException(
             status_code=400,
-            detail={"message": "Only .mp4 uploads are supported for now."},
+            detail={
+                "code": "UPLOAD_FORMAT_UNSUPPORTED",
+                "message": "Only .mp4 uploads are supported for now.",
+            },
         )
 
     job_id = uuid.uuid4().hex
@@ -440,7 +443,10 @@ async def create_beta_job(
     if not filename.lower().endswith(".mp4"):
         raise HTTPException(
             status_code=400,
-            detail={"message": "Only .mp4 uploads are supported for now."},
+            detail={
+                "code": "UPLOAD_FORMAT_UNSUPPORTED",
+                "message": "Only .mp4 uploads are supported for now.",
+            },
         )
 
     if idempotency_key:
@@ -597,7 +603,13 @@ async def get_job_tracking(job_id: str) -> dict[str, Any]:
     with _job_store_lock:
         rec = _job_store.get(job_id)
     if rec is None:
-        raise HTTPException(status_code=404, detail="Job not found.")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "JOB_NOT_FOUND",
+                "message": "Job not found.",
+            },
+        )
     tracking_path = BACKEND_ROOT / "output" / f"{job_id}_tracking_data.json"
     if not tracking_path.is_file():
         # #region agent log
@@ -614,7 +626,10 @@ async def get_job_tracking(job_id: str) -> dict[str, Any]:
         # #endregion
         raise HTTPException(
             status_code=425,
-            detail="Tracking timeline not ready yet. Wait for job completion.",
+            detail={
+                "code": "TRACKING_NOT_READY",
+                "message": "Tracking timeline not ready yet. Wait for job completion.",
+            },
         )
     with tracking_path.open("r", encoding="utf-8") as f_in:
         payload: dict[str, Any] = json.load(f_in)
@@ -738,6 +753,7 @@ async def job_progress_ws(websocket: WebSocket, job_id: str) -> None:
                         "current_step": "Unknown job",
                         "result_path": None,
                         "error": "job_not_found",
+                        "error_code": "JOB_NOT_FOUND",
                     }
                 )
                 return
@@ -751,6 +767,7 @@ async def job_progress_ws(websocket: WebSocket, job_id: str) -> None:
                     "tracking_overlay_path": rec.tracking_overlay_path,
                     "tracking_data_path": rec.tracking_data_path,
                     "error": rec.error,
+                    "error_code": "JOB_FAILED" if rec.status == "error" else None,
                 }
             )
 
@@ -768,6 +785,7 @@ async def job_progress_ws(websocket: WebSocket, job_id: str) -> None:
                     "current_step": "WebSocket error",
                     "result_path": None,
                     "error": str(exc),
+                    "error_code": "WS_STREAM_ERROR",
                 }
             )
         except Exception:

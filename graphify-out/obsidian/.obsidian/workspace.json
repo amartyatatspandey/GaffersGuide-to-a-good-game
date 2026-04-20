@@ -15,9 +15,9 @@
               "state": {
                 "file": "graph.canvas",
                 "viewState": {
-                  "x": 13764.161951915064,
-                  "y": 2251.395044353971,
-                  "zoom": -2.414804910322034
+                  "x": 16796.755282200033,
+                  "y": 1618.5026944256547,
+                  "zoom": -2.8499578759074233
                 }
               },
               "icon": "lucide-layout-dashboard",
@@ -164,6 +164,7 @@
   },
   "left-ribbon": {
     "hiddenItems": {
+      "bases:Create new base": false,
       "switcher:Open quick switcher": false,
       "graph:Open graph view": false,
       "canvas:Create new canvas": false,

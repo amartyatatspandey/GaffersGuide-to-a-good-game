@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "@/lib/apiBase";
+import { debugSessionLog } from "@/lib/debugSessionLog";
 
 export interface CoachingAdviceItem {
   frame_idx: number;
@@ -31,21 +32,13 @@ function _coachDebug(
   message: string,
   data: Record<string, unknown>,
 ): void {
-  fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "bb63ae",
-    },
-    body: JSON.stringify({
-      sessionId: "bb63ae",
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
+  debugSessionLog({
+    sessionId: "bb63ae",
+    hypothesisId,
+    location,
+    message,
+    data,
+  });
 }
 // #endregion
 

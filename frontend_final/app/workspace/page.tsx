@@ -12,10 +12,23 @@ import { getCoachAdvice } from '@/lib/api/coach';
 import type { CoachAdviceResponse } from '@/lib/api/coach';
 import { debugSessionLog } from '@/lib/debugSessionLog';
 
+function classifyFrontendBackendError(err: unknown): string {
+  const text = err instanceof Error ? err.message : String(err);
+  const lowered = text.toLowerCase();
+  if (
+    lowered.includes('failed to fetch') ||
+    lowered.includes('networkerror') ||
+    lowered.includes('connection error')
+  ) {
+    return `Connectivity issue between frontend and backend: ${text}`;
+  }
+  return text;
+}
+
 export default function WorkspacePage() {
   const [ingestionComplete, setIngestionComplete] = useState(false);
   const [currentView, setCurrentView] = useState<'dashboard' | 'reports'>('dashboard');
-  const [activeJob, setActiveJob] = useState<{ jobId: string; file: File; tracking: any } | null>(null);
+  const [activeJob, setActiveJob] = useState<{ jobId: string; file: File; tracking: unknown } | null>(null);
   const [coachAdvice, setCoachAdvice] = useState<CoachAdviceResponse | null>(null);
   const [coachError, setCoachError] = useState<string | null>(null);
   const coachDelayedRefetchSent = useRef<Set<string>>(new Set());
@@ -57,23 +70,32 @@ export default function WorkspacePage() {
         const advice = await getCoachAdvice(jobId, llmPref);
         setCoachAdvice(advice);
       } catch (ce) {
-        setCoachError(ce instanceof Error ? ce.message : String(ce));
+        const detail = classifyFrontendBackendError(ce);
+        setCoachError(detail);
+        debugSessionLog({
+          sessionId: 'bb63ae',
+          hypothesisId: 'H5',
+          location: 'workspace/page.tsx:handleIngestionComplete',
+          message: 'coach fetch failed',
+          data: { jobIdPrefix: jobId.slice(0, 8), err: detail },
+        });
       }
       setIngestionComplete(true);
     } catch (e) {
       console.error(e);
+      const detail = classifyFrontendBackendError(e);
       // #region agent log
       debugSessionLog({
         sessionId: 'bb63ae',
         hypothesisId: 'H1-H5',
         location: 'workspace/page.tsx:handleIngestionComplete',
         message: 'tracking fetch failed',
-        data: { jobIdPrefix: jobId.slice(0, 8), err: String(e) },
+        data: { jobIdPrefix: jobId.slice(0, 8), err: detail },
       });
       // #endregion
       setActiveJob({ jobId, file, tracking: null });
       setCoachAdvice(null);
-      setCoachError(null);
+      setCoachError(detail);
       setIngestionComplete(true);
     }
   };

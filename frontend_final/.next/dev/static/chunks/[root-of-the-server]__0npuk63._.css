@@ -367,6 +367,7 @@
     --color-orange-500: #fe6e00;
     --color-amber-100: #fef3c6;
     --color-amber-200: #fee685;
+    --color-amber-300: #ffd236;
     --color-amber-400: #fcbb00;
     --color-amber-500: #f99c00;
     --color-amber-800: #953d00;
@@ -488,6 +489,7 @@
       --color-orange-500: lab(64.272% 57.1788 90.3583);
       --color-amber-100: lab(95.916% -1.21653 23.111);
       --color-amber-200: lab(91.7203% -.505269 49.9084);
+      --color-amber-300: lab(86.4156% 6.13147 78.3961);
       --color-amber-400: lab(80.1641% 16.6016 99.2089);
       --color-amber-500: lab(72.7183% 31.8672 97.9407);
       --color-amber-800: lab(37.8822% 37.1699 52.2718);
@@ -2900,6 +2902,16 @@
     }
   }
 
+  .text-amber-300\/90 {
+    color: #ffd236e6;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .text-amber-300\/90 {
+      color: color-mix(in oklab, var(--color-amber-300) 90%, transparent);
+    }
+  }
+
   .text-amber-400 {
     color: var(--color-amber-400);
   }
@@ -3024,6 +3036,16 @@
 
   .text-emerald-300 {
     color: var(--color-emerald-300);
+  }
+
+  .text-emerald-300\/80 {
+    color: #5ee9b5cc;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .text-emerald-300\/80 {
+      color: color-mix(in oklab, var(--color-emerald-300) 80%, transparent);
+    }
   }
 
   .text-emerald-300\/90 {

@@ -4,7 +4,14 @@ import { UploadCloud, CheckCircle2, Loader2, Circle, AlertCircle } from 'lucide-
 import { createJob } from '@/lib/api/jobs';
 
 export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File) => void }) {
-  const { currentStep, isProcessing, error, startTracking } = useWebSocketProgress();
+  const {
+    currentStep,
+    isProcessing,
+    error,
+    connectionState,
+    elapsedSeconds,
+    startTracking,
+  } = useWebSocketProgress();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
@@ -17,6 +24,8 @@ export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File)
   }, [currentStep, activeJobId, file, onComplete]);
 
   const stepIndexInMilestones = STEPS.indexOf(currentStep);
+  const isSlowStep = elapsedSeconds >= 30;
+  const isLocalLlmStep = currentStep.toLowerCase().includes('llm (local)');
   const currentIndex =
     isProcessing || currentStep === 'Completed'
       ? stepIndexInMilestones >= 0
@@ -43,9 +52,10 @@ export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File)
       const job = await createJob(selectedFile, llmPref);
       setActiveJobId(job.job_id);
       startTracking(job.job_id);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      alert('Failed to upload video: ' + err.message);
+      const message = err instanceof Error ? err.message : String(err);
+      alert('Failed to upload video: ' + message);
     } finally {
       setIsUploading(false);
     }
@@ -71,7 +81,7 @@ export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File)
       >
         <input 
           type="file" 
-          accept="video/mp4,video/quicktime,video/x-msvideo" 
+          accept="video/mp4,.mp4"
           className="hidden" 
           ref={fileInputRef} 
           onChange={handleFileChange} 
@@ -81,7 +91,7 @@ export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File)
           <>
             <UploadCloud size={40} className="text-gray-600 mb-3" />
             <h2 className="text-lg font-bold text-gray-300 tracking-tight font-sans">System Ready</h2>
-            <p className="text-xs text-gray-500 mt-1 font-mono">Click here to upload match footage</p>
+            <p className="text-xs text-gray-500 mt-1 font-mono">MP4 only — click to upload match footage</p>
           </>
         ) : (
           <>
@@ -91,6 +101,11 @@ export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File)
             <h2 className="text-lg font-bold text-emerald-400 tracking-tight font-mono uppercase">
               {isUploading ? 'Uploading Video...' : 'Processing Pipeline...'}
             </h2>
+            {!isUploading ? (
+              <p className="text-xs text-emerald-300/80 mt-1 font-mono">
+                Connection: {connectionState}
+              </p>
+            ) : null}
           </>
         )}
       </div>
@@ -119,10 +134,20 @@ export function Hopper({ onComplete }: { onComplete: (jobId: string, file: File)
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 border-b border-gray-800 pb-3">Telemetry Pipeline Tracker</h3>
           <p className="text-[11px] font-mono text-emerald-300/90 mb-4">
             Backend step: <span className="text-gray-100">{currentStep}</span>
+            {isProcessing ? (
+              <span className="ml-2 text-gray-500">(running {elapsedSeconds}s)</span>
+            ) : null}
             {stepIndexInMilestones === -1 && currentStep !== 'Pending' && currentStep !== 'Completed' ? (
               <span className="ml-2 text-gray-500">(not in milestone list)</span>
             ) : null}
           </p>
+          {isSlowStep ? (
+            <p className="text-[11px] font-mono text-amber-300/90 mb-4">
+              {isLocalLlmStep
+                ? 'Local LLM generation can take a while on large clips. Pipeline is still active.'
+                : 'This step is taking longer than usual. If it keeps growing, check backend logs.'}
+            </p>
+          ) : null}
           <div className="flex flex-col gap-5">
             {STEPS.map((step, idx) => {
               const matchesCurrent = step === currentStep;

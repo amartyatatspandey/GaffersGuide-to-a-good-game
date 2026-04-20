@@ -6,7 +6,9 @@ import RadarWidget from "./radar/RadarWidget";
 import { Clock, Send, Bot, User, Menu, ChevronLeft } from "lucide-react";
 import { useStreamingText } from "@/hooks/useStreamingText";
 import type { CoachAdviceResponse, CoachingAdviceItem } from "@/lib/api/coach";
+import type { TrackingPayload } from "@/lib/types/trackingTypes";
 import { postCoachChat } from "@/lib/api/coach";
+import { debugSessionLog } from "@/lib/debugSessionLog";
 
 interface TeamInsight {
   payload: string;
@@ -104,7 +106,7 @@ function StreamingBubble({ text }: { text: string }) {
 }
 
 interface DashboardProps {
-  job: { jobId: string; file: File; tracking: any } | null;
+  job: { jobId: string; file: File; tracking: TrackingPayload | null } | null;
   coachAdvice: CoachAdviceResponse | null;
   coachError: string | null;
 }
@@ -139,28 +141,20 @@ export function TacticalDashboard({ job, coachAdvice, coachError }: DashboardPro
   useEffect(() => {
     // #region agent log
     const frameLen = Array.isArray(job?.tracking?.frames) ? job.tracking.frames.length : -1;
-    fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "bb63ae",
+    debugSessionLog({
+      sessionId: "bb63ae",
+      hypothesisId: "H5",
+      location: "TacticalDashboard.tsx:job-tracking",
+      message: "Job / tracking snapshot for radar wiring",
+      data: {
+        hasJob: Boolean(job),
+        jobIdPrefix: job?.jobId?.slice(0, 8) ?? null,
+        hasTracking: Boolean(job?.tracking),
+        frameLen,
+        coachItems: coachAdvice?.advice_items?.length ?? -1,
+        radarWidgetRenderedInLayout: true,
       },
-      body: JSON.stringify({
-        sessionId: "bb63ae",
-        hypothesisId: "H5",
-        location: "TacticalDashboard.tsx:job-tracking",
-        message: "Job / tracking snapshot for radar wiring",
-        data: {
-          hasJob: Boolean(job),
-          jobIdPrefix: job?.jobId?.slice(0, 8) ?? null,
-          hasTracking: Boolean(job?.tracking),
-          frameLen,
-          coachItems: coachAdvice?.advice_items?.length ?? -1,
-          radarWidgetRenderedInLayout: true,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
+    });
     // #endregion
   }, [job, coachAdvice?.advice_items?.length]);
 
@@ -229,21 +223,13 @@ export function TacticalDashboard({ job, coachAdvice, coachError }: DashboardPro
         : "local";
 
     // #region agent log
-    fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "bb63ae",
-      },
-      body: JSON.stringify({
-        sessionId: "bb63ae",
-        hypothesisId: "H2",
-        location: "TacticalDashboard.tsx:handleSendPrompt",
-        message: "Chat submit → FastAPI /api/v1/chat",
-        data: { llmEngine, hasJobId: Boolean(job?.jobId) },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
+    debugSessionLog({
+      sessionId: "bb63ae",
+      hypothesisId: "H2",
+      location: "TacticalDashboard.tsx:handleSendPrompt",
+      message: "Chat submit → FastAPI /api/v1/chat",
+      data: { llmEngine, hasJobId: Boolean(job?.jobId) },
+    });
     // #endregion
 
     try {
@@ -253,21 +239,13 @@ export function TacticalDashboard({ job, coachAdvice, coachError }: DashboardPro
         llmEngine,
       });
       // #region agent log
-      fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "bb63ae",
-        },
-        body: JSON.stringify({
-          sessionId: "bb63ae",
-          hypothesisId: "H4",
-          location: "TacticalDashboard.tsx:chat-reply",
-          message: "FastAPI chat ok",
-          data: { replyLen: reply.length },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+      debugSessionLog({
+        sessionId: "bb63ae",
+        hypothesisId: "H4",
+        location: "TacticalDashboard.tsx:chat-reply",
+        message: "FastAPI chat ok",
+        data: { replyLen: reply.length },
+      });
       // #endregion
       setChatHistory((prev) => [
         ...prev,
