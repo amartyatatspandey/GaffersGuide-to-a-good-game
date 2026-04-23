@@ -33,6 +33,11 @@ from services.pipeline_paths import (  # noqa: E402
     format_pipeline_prerequisite_errors,
 )
 from services.homography_provider import default_homography_provider  # noqa: E402
+from services.cv import (  # noqa: E402
+    ContextAwareSAHIConfig,
+    DetectionContext,
+    OptimizedSAHIWrapper,
+)
 
 from scripts.pipeline_core.e2e_shared import (  # noqa: E402
     BALL_INTERPOLATION_MAX_GAP,
@@ -213,6 +218,48 @@ def _clear_device_cache(device: str | None) -> None:
         LOGGER.debug("Device cache clear skipped", exc_info=True)
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw.strip())
+    except Exception:  # noqa: BLE001
+        return default
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw.strip())
+    except Exception:  # noqa: BLE001
+        return default
+
+
+def _build_context_sahi_config(enabled: bool) -> ContextAwareSAHIConfig:
+    return ContextAwareSAHIConfig(
+        enabled=enabled,
+        conf=_env_float("GAFFERS_SAHI_CONF", 0.25),
+        high_conf_skip_threshold=_env_float("GAFFERS_SAHI_HIGH_CONF_SKIP", 0.25),
+        slice_w=_env_int("GAFFERS_SAHI_SLICE_W", 256),
+        slice_h=_env_int("GAFFERS_SAHI_SLICE_H", 256),
+        overlap_ratio=_env_float("GAFFERS_SAHI_OVERLAP_RATIO", 0.15),
+        max_slices_per_frame=_env_int("GAFFERS_SAHI_MAX_SLICES", 4),
+        temporal_radius_px=_env_int("GAFFERS_SAHI_TEMPORAL_RADIUS", 112),
+        temporal_max_radius_px=_env_int("GAFFERS_SAHI_TEMPORAL_MAX_RADIUS", 360),
+        temporal_expand_step_px=_env_int("GAFFERS_SAHI_TEMPORAL_EXPAND", 24),
+    )
+
+
 def _iter_frame_batches(
     cap: cv2.VideoCapture,
     *,
@@ -239,6 +286,7 @@ def run_cv_tracking_batched(
     batch_size: int = DEFAULT_BATCH_SIZE,
     flow_max_width: int = DEFAULT_FLOW_MAX_WIDTH,
     device: str | None = None,
+    enable_context_sahi: bool | None = None,
 ) -> tuple[list[TacticalFrame], CVTelemetry, list[TrackingFrameArtifact]]:
     if not MODEL_PATH.is_file():
         raise FileNotFoundError(
@@ -258,6 +306,21 @@ def run_cv_tracking_batched(
             use_half = False
             LOGGER.warning("FP16 model cast failed, falling back to FP32.")
     primary_ball_class_ids = _resolve_primary_ball_class_ids(model)
+    use_context_sahi = (
+        _env_bool("GAFFERS_ENABLE_CONTEXT_SAHI", False)
+        if enable_context_sahi is None
+        else bool(enable_context_sahi)
+    )
+    sahi_wrapper = OptimizedSAHIWrapper(
+        model=model,
+        ball_class_ids=primary_ball_class_ids,
+        config=_build_context_sahi_config(use_context_sahi),
+        device=selected_device,
+        use_half=use_half,
+    )
+    sahi_frames_used = 0
+    sahi_slices_total = 0
+    sahi_fallback_frames = 0
     tracker = sv.ByteTrack()
     classifier = TeamClassifier()
     healer = HybridIDHealer()
@@ -340,22 +403,17 @@ def run_cv_tracking_batched(
 
                 detections = sv.Detections.from_ultralytics(result)
                 detections = tracker.update_with_detections(detections)
-                det_conf = getattr(detections, "confidence", None)
-
-                best_ball_bbox: np.ndarray | None = None
-                best_ball_score = -1.0
-                for i in range(len(detections)):
-                    cid = int(detections.class_id[i])
-                    if cid not in primary_ball_class_ids:
-                        continue
-                    score = (
-                        float(det_conf[i])
-                        if det_conf is not None and i < len(det_conf)
-                        else 0.0
-                    )
-                    if score >= best_ball_score:
-                        best_ball_score = score
-                        best_ball_bbox = detections.xyxy[i]
+                ball_result = sahi_wrapper.detect_ball(
+                    DetectionContext(frame_idx=frame_idx, frame_bgr=frame),
+                    detections,
+                )
+                if ball_result.telemetry.used_sahi:
+                    sahi_frames_used += 1
+                    sahi_slices_total += ball_result.telemetry.slices_generated
+                if ball_result.telemetry.used_fallback:
+                    sahi_fallback_frames += 1
+                best_ball_bbox = ball_result.best_ball_bbox
+                best_ball_score = float(ball_result.best_ball_score)
 
                 if best_ball_bbox is not None:
                     telemetry.total_raw_ball_detections += 1
@@ -491,6 +549,13 @@ def run_cv_tracking_batched(
             _clear_device_cache(selected_device)
     finally:
         cap.release()
+    if use_context_sahi:
+        LOGGER.info(
+            "Context SAHI summary: frames=%d slices=%d fallback_frames=%d",
+            sahi_frames_used,
+            sahi_slices_total,
+            sahi_fallback_frames,
+        )
 
     telemetry.total_interpolated_ball_frames = interpolate_ball_positions(
         frames_out, max_gap_frames=BALL_INTERPOLATION_MAX_GAP
@@ -507,6 +572,7 @@ def run_e2e_cloud(
     flow_max_width: int = DEFAULT_FLOW_MAX_WIDTH,
     device: str | None = None,
     llm_engine: LLMEngineArg = "cloud",
+    enable_context_sahi: bool | None = None,
 ) -> Path:
     if progress_callback is not None:
         progress_callback("Pending")
@@ -540,6 +606,7 @@ def run_e2e_cloud(
         batch_size=batch_size,
         flow_max_width=flow_max_width,
         device=device,
+        enable_context_sahi=enable_context_sahi,
     )
     _print_step(f"CV Tracking Complete: Processed {len(raw_frames)} frames.")
     telemetry.total_frames_processed = len(raw_frames)
@@ -681,6 +748,11 @@ def parse_args() -> argparse.Namespace:
         default="cloud",
         help="LLM for coaching completions: local (Ollama) or cloud (Gemini/OpenAI).",
     )
+    parser.add_argument(
+        "--enable-context-sahi",
+        action="store_true",
+        help="Enable context-aware SAHI ball detection wrapper.",
+    )
     return parser.parse_args()
 
 
@@ -695,6 +767,7 @@ def main() -> None:
         flow_max_width=max(64, int(args.flow_max_width)),
         device=args.device,
         llm_engine=llm,
+        enable_context_sahi=bool(args.enable_context_sahi),
     )
 
 
