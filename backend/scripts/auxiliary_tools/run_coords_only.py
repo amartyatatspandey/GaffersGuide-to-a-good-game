@@ -39,7 +39,14 @@ from calculators.possession import (  # noqa: E402
     compute_possession_team_id,
     interpolate_ball_positions,
 )
-from services.homography_resolution import ensure_homography_json_for_video  # noqa: E402
+def _try_ensure_homography(video_path: Path) -> Path | None:
+    """Return homography JSON path, or None if calibration weights are missing."""
+    try:
+        from services.homography_resolution import ensure_homography_json_for_video
+        return ensure_homography_json_for_video(video_path)
+    except FileNotFoundError as exc:
+        LOGGER.warning("Homography unavailable — running without radar projection. (%s)", exc)
+        return None
 from scripts.pipeline_core.track_teams import (  # noqa: E402
     CLASS_BALL,
     CLASS_PLAYER,
@@ -191,10 +198,12 @@ def run_coords_only(
             f"Tracking model not found: {MODEL_PATH}. {format_tracking_model_missing_reason(MODEL_PATH)}"
         )
 
-    homography_path = ensure_homography_json_for_video(video_path)
-    ok, reason = _validate_homography_json(homography_path)
-    if not ok:
-        raise ValueError(f"Invalid homography file {homography_path}: {reason}")
+    homography_path = _try_ensure_homography(video_path)
+    if homography_path is not None:
+        ok, reason = _validate_homography_json(homography_path)
+        if not ok:
+            LOGGER.warning("Ignoring invalid homography (%s) — running without radar.", reason)
+            homography_path = None
 
     model: YOLO = YOLO(str(MODEL_PATH))
     primary_ball_class_ids = _resolve_primary_ball_class_ids(model)
@@ -210,7 +219,12 @@ def run_coords_only(
 
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    radar = TacticalRadar(json_path=homography_path, video_res=(width, height))
+    radar = (
+        TacticalRadar(json_path=homography_path, video_res=(width, height))
+        if homography_path is not None
+        else None
+    )
+    LOGGER.info("Radar projection: %s", "enabled" if radar is not None else "DISABLED (no homography)")
 
     telemetry = CoordsTelemetry()
     frames_out: list[TacticalFrame] = []
@@ -224,12 +238,13 @@ def run_coords_only(
                 break
             telemetry.total_frames_read += 1
 
-            radar.update_camera_angle(video_fi)
-            homography_conf = _homography_confidence(radar, video_fi)
-            if homography_conf >= HOMOGRAPHY_CONFIDENCE_FALLBACK_THRESHOLD:
-                telemetry.frames_standard_homography += 1
-            else:
-                telemetry.frames_low_homography_conf += 1
+            if radar is not None:
+                radar.update_camera_angle(video_fi)
+                homography_conf = _homography_confidence(radar, video_fi)
+                if homography_conf >= HOMOGRAPHY_CONFIDENCE_FALLBACK_THRESHOLD:
+                    telemetry.frames_standard_homography += 1
+                else:
+                    telemetry.frames_low_homography_conf += 1
 
             run_inference = frame_stride <= 1 or (video_fi % frame_stride == 0)
 
@@ -275,12 +290,13 @@ def run_coords_only(
                     best_ball_bbox = detections.xyxy[i]
             if best_ball_bbox is not None:
                 telemetry.total_raw_ball_detections += 1
-                ball_pt = radar.map_to_2d(best_ball_bbox)
+                ball_pt = radar.map_to_2d(best_ball_bbox) if radar is not None else None
                 if ball_pt is not None:
                     ball_xy = [float(ball_pt[0]), float(ball_pt[1])]
 
             radar_pts: list[tuple[int, int] | None] = [
-                radar.map_to_2d(detections.xyxy[i]) for i in range(len(detections))
+                radar.map_to_2d(detections.xyxy[i]) if radar is not None else None
+                for i in range(len(detections))
             ]
             tracker_ids = healer.process_and_heal(
                 detections, frame, radar_pts, video_fi
@@ -377,7 +393,7 @@ def run_coords_only(
 
 def _serialize_run(
     video_path: Path,
-    homography_path: Path,
+    homography_path: Path | None,
     frame_stride: int,
     frames: list[TacticalFrame],
     track_snapshots: list[list[dict[str, Any]]],
@@ -404,7 +420,7 @@ def _serialize_run(
     return {
         "video_path": str(video_path.resolve()),
         "video_stem": video_path.stem,
-        "homography_json": str(homography_path.resolve()),
+        "homography_json": str(homography_path.resolve()) if homography_path is not None else None,
         "frame_stride": frame_stride,
         "telemetry": {
             "total_frames_read": telemetry.total_frames_read,
@@ -420,11 +436,12 @@ def _serialize_run(
 
 def _process_one_video(
     video_path: Path,
-    homography_path: Path,
+    homography_path: Path | None,
     output_dir: Path,
     frame_stride: int,
 ) -> Path:
-    os.environ["GAFFERS_HOMOGRAPHY_JSON"] = str(homography_path.resolve())
+    if homography_path is not None:
+        os.environ["GAFFERS_HOMOGRAPHY_JSON"] = str(homography_path.resolve())
     frames, tracks, telemetry = run_coords_only(video_path, frame_stride=frame_stride)
     payload = _serialize_run(
         video_path, homography_path, frame_stride, frames, tracks, telemetry
@@ -529,17 +546,21 @@ def main() -> int:
 
     if args.homography is not None:
         homography_path = args.homography.expanduser().resolve()
+        ok, reason = _validate_homography_json(homography_path)
+        if not ok:
+            LOGGER.error("Invalid homography: %s", reason)
+            return 2
     else:
         he = os.getenv("GAFFERS_HOMOGRAPHY_JSON", "").strip()
         if he:
             homography_path = Path(he).expanduser().resolve()
+            ok, reason = _validate_homography_json(homography_path)
+            if not ok:
+                LOGGER.error("Invalid homography: %s", reason)
+                return 2
         else:
-            homography_path = ensure_homography_json_for_video(video_path)
-
-    ok, reason = _validate_homography_json(homography_path)
-    if not ok:
-        LOGGER.error("Invalid homography: %s", reason)
-        return 2
+            homography_path = _try_ensure_homography(video_path)
+            # None is acceptable — pipeline runs without radar projection
 
     try:
         _process_one_video(video_path, homography_path, output_dir, args.frame_stride)

@@ -1,5 +1,6 @@
 from __future__ import annotations
-
+# ADD after: from services.llm_router import LLMEngine
+from gaffers_guide.profile import ProfileConfig
 import asyncio
 import json
 import os
@@ -22,6 +23,7 @@ class CVRunner(Protocol):
         video_path: Path,
         progress_callback: Callable[[str], None] | None = None,
         llm_engine: LLMEngine | None = None,
+        profile: ProfileConfig | None = None,
     ) -> Path: ...
 
 
@@ -33,6 +35,7 @@ class LocalCVRunner:
         video_path: Path,
         progress_callback: Callable[[str], None] | None = None,
         llm_engine: LLMEngine | None = None,
+        profile: ProfileConfig | None = None,
     ) -> Path:
         # Lazy import keeps cold-start light for API-only flows.
         from scripts.pipeline_core.run_e2e_cloud import run_e2e_cloud
@@ -45,6 +48,7 @@ class LocalCVRunner:
                 output_prefix=job_id,
                 progress_callback=progress_callback,
                 llm_engine=engine,
+                profile=profile,
             )
 
         return await asyncio.to_thread(_run)
@@ -58,6 +62,7 @@ class CloudCVRunner:
         video_path: Path,
         progress_callback: Callable[[str], None] | None = None,
         llm_engine: LLMEngine | None = None,
+        profile: ProfileConfig | None = None,  # reserved for future remote hint
     ) -> Path:
         webhook_url = os.getenv("MODAL_WEBHOOK_URL", "").strip()
         if not webhook_url:

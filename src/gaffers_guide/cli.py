@@ -5,8 +5,10 @@ import logging
 from pathlib import Path
 from typing import Literal, Sequence
 
+from gaffers_guide.profiles import ProfileConfig, resolve_profile
 
-PrecisionMode = Literal["fast", "high_res", "sahi"]
+
+PrecisionMode = Literal["fast", "balanced", "high_res", "sahi"]
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -20,9 +22,9 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--video", type=Path, required=True, help="Input video path")
     run_parser.add_argument(
         "--precision",
-        choices=("fast", "high_res", "sahi"),
-        default="fast",
-        help="Precision mode",
+        choices=("fast", "balanced", "high_res", "sahi"),
+        default="balanced",
+        help="Quality/speed profile. Choices: fast, balanced, high_res, sahi. (default: balanced)",
     )
     run_parser.add_argument("--output", type=Path, required=True, help="Output directory")
 
@@ -30,10 +32,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _handle_run(video: Path, precision: PrecisionMode, output: Path) -> int:
+    profile: ProfileConfig = resolve_profile(precision)
+
     logging.info("CLI stub run command invoked")
     logging.info("video=%s", video)
-    logging.info("precision=%s", precision)
     logging.info("output=%s", output)
+    logging.info("Active profile — %s", profile)
     return 0
 
 
