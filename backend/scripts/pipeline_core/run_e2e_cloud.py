@@ -1,5 +1,6 @@
 from __future__ import annotations
-
+# ADD after: from services.cv import ...
+from gaffers_guide.profiles import ProfileConfig
 import argparse
 import asyncio
 import json
@@ -245,14 +246,23 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
-def _build_context_sahi_config(enabled: bool) -> ContextAwareSAHIConfig:
+def _build_context_sahi_config(
+    enabled: bool,
+    profile: ProfileConfig | None = None,
+) -> ContextAwareSAHIConfig:
+    # Profile values take precedence; env vars remain the fallback for anything
+    # not expressed in the profile schema.
+    slice_w = profile.sahi_slice_size if profile is not None else _env_int("GAFFERS_SAHI_SLICE_W", 256)
+    slice_h = profile.sahi_slice_size if profile is not None else _env_int("GAFFERS_SAHI_SLICE_H", 256)
+    overlap  = profile.sahi_overlap_ratio if profile is not None else _env_float("GAFFERS_SAHI_OVERLAP_RATIO", 0.15)
+    conf     = profile.conf_threshold if profile is not None else _env_float("GAFFERS_SAHI_CONF", 0.25)
     return ContextAwareSAHIConfig(
         enabled=enabled,
-        conf=_env_float("GAFFERS_SAHI_CONF", 0.25),
+        conf=conf,
         high_conf_skip_threshold=_env_float("GAFFERS_SAHI_HIGH_CONF_SKIP", 0.25),
-        slice_w=_env_int("GAFFERS_SAHI_SLICE_W", 256),
-        slice_h=_env_int("GAFFERS_SAHI_SLICE_H", 256),
-        overlap_ratio=_env_float("GAFFERS_SAHI_OVERLAP_RATIO", 0.15),
+        slice_w=slice_w,
+        slice_h=slice_h,
+        overlap_ratio=overlap,
         max_slices_per_frame=_env_int("GAFFERS_SAHI_MAX_SLICES", 4),
         temporal_radius_px=_env_int("GAFFERS_SAHI_TEMPORAL_RADIUS", 112),
         temporal_max_radius_px=_env_int("GAFFERS_SAHI_TEMPORAL_MAX_RADIUS", 360),
@@ -287,6 +297,7 @@ def run_cv_tracking_batched(
     flow_max_width: int = DEFAULT_FLOW_MAX_WIDTH,
     device: str | None = None,
     enable_context_sahi: bool | None = None,
+    profile: ProfileConfig | None = None,
 ) -> tuple[list[TacticalFrame], CVTelemetry, list[TrackingFrameArtifact]]:
     if not MODEL_PATH.is_file():
         raise FileNotFoundError(
@@ -306,15 +317,27 @@ def run_cv_tracking_batched(
             use_half = False
             LOGGER.warning("FP16 model cast failed, falling back to FP32.")
     primary_ball_class_ids = _resolve_primary_ball_class_ids(model)
-    use_context_sahi = (
-        _env_bool("GAFFERS_ENABLE_CONTEXT_SAHI", False)
-        if enable_context_sahi is None
-        else bool(enable_context_sahi)
+    # Profile overrides env vars when provided; env vars remain the fallback.
+    if profile is not None:
+        use_context_sahi = profile.sahi_enabled
+    elif enable_context_sahi is not None:
+        use_context_sahi = bool(enable_context_sahi)
+    else:
+        use_context_sahi = _env_bool("GAFFERS_ENABLE_CONTEXT_SAHI", False)
+    if profile is not None:
+        LOGGER.info(
+        "Profile applied → imgsz=%s, conf=%s, sahi=%s, frame_skip=%s, batch=%s",
+        profile.imgsz,
+        profile.conf_threshold,
+        profile.sahi_enabled,
+        profile.frame_skip,
+        profile.batch_size,
     )
+
     sahi_wrapper = OptimizedSAHIWrapper(
         model=model,
         ball_class_ids=primary_ball_class_ids,
-        config=_build_context_sahi_config(use_context_sahi),
+        config=_build_context_sahi_config(use_context_sahi, profile=profile),
         device=selected_device,
         use_half=use_half,
     )
@@ -347,7 +370,12 @@ def run_cv_tracking_batched(
 
     try:
         for start_idx, batch_frames in _iter_frame_batches(cap, batch_size=batch_size):
-            kwargs: dict[str, Any] = {"conf": 0.3, "verbose": False}
+            kwargs: dict[str, Any] = {
+                "conf": profile.conf_threshold if profile is not None else 0.3,
+                "verbose": False,
+            }
+            if profile is not None:
+                kwargs["imgsz"] = profile.imgsz
             if selected_device:
                 kwargs["device"] = selected_device
             if use_half:
@@ -573,11 +601,19 @@ def run_e2e_cloud(
     device: str | None = None,
     llm_engine: LLMEngineArg = "cloud",
     enable_context_sahi: bool | None = None,
+    profile: ProfileConfig | None = None,
 ) -> Path:
     if progress_callback is not None:
         progress_callback("Pending")
 
     video_path = video if isinstance(video, Path) else _resolve_video_path(video)
+    # ── Apply profile overrides ─────────────────────────────
+    if profile is not None:
+        LOGGER.info("Using profile: %s", profile)
+
+    batch_size = profile.batch_size
+    flow_max_width = profile.imgsz
+    enable_context_sahi = profile.sahi_enabled
 
     ensure_core_pipeline_directories()
     prereq_gaps = collect_local_cv_pipeline_gaps(video_path=video_path)
@@ -601,12 +637,15 @@ def run_e2e_cloud(
 
     if progress_callback is not None:
         progress_callback("Tracking Players")
+    if profile is not None:
+        LOGGER.info("CV tracking profile: %s", profile)
     raw_frames, telemetry, tracking_frames = run_cv_tracking_batched(
         video_path,
         batch_size=batch_size,
         flow_max_width=flow_max_width,
         device=device,
         enable_context_sahi=enable_context_sahi,
+        profile=profile,
     )
     _print_step(f"CV Tracking Complete: Processed {len(raw_frames)} frames.")
     telemetry.total_frames_processed = len(raw_frames)
