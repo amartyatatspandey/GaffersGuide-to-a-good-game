@@ -254,7 +254,7 @@ def run_coords_only(
 
             ball_xy: list[float] | None = None
 
-            results: list[Any] = model(frame, conf=0.3, verbose=False)
+            results: list[Any] = model(frame, conf=0.15, verbose=False)
             telemetry.total_frames_inferred += 1
 
             if not results:

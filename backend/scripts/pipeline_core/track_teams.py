@@ -64,7 +64,7 @@ from .track_teams_constants import (  # noqa: E402
 )
 from .track_teams_reid_hybrid import HybridIDHealer  # noqa: E402
 
-MODEL_PATH = tracking_model_weights_path()
+MODEL_PATH = BACKEND_ROOT / "models" / "yolo" / "best.pt"
 VIDEO_PATH = BACKEND_ROOT / "data" / "match_test.mp4"
 OUTPUT_PATH = BACKEND_ROOT / "output" / "tracking_teams.mp4"
 
