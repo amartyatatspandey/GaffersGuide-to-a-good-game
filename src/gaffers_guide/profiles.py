@@ -1,8 +1,4 @@
 # src/gaffers_guide/profiles.py
-"""
-Quality/speed profile system for Gaffer's Guide.
-Single source of truth for all runtime profile parameters.
-"""
 
 from __future__ import annotations
 from dataclasses import dataclass
@@ -23,19 +19,22 @@ class ProfileConfig:
     imgsz: int                  # YOLO inference image size
     conf_threshold: float       # Detection confidence threshold
     sahi_enabled: bool          # Whether to use SAHI tiling
-    sahi_slice_size: int        # Tile size (pixels) — ignored if sahi_enabled=False
-    sahi_overlap_ratio: float   # Tile overlap ratio — ignored if sahi_enabled=False
+    sahi_slice_size: int        # Tile size (pixels)
+    sahi_overlap_ratio: float   # Tile overlap ratio
     frame_skip: int             # Process every Nth frame (1 = no skipping)
+    batch_size: int             # Inference batch size
 
     def __str__(self) -> str:
         return (
-            f"Profile '{self.name}': imgsz={self.imgsz}, conf={self.conf_threshold}, "
+            f"Profile '{self.name}': "
+            f"imgsz={self.imgsz}, conf={self.conf_threshold}, "
             f"sahi={self.sahi_enabled}, slice={self.sahi_slice_size}, "
-            f"overlap={self.sahi_overlap_ratio}, frame_skip={self.frame_skip}"
+            f"overlap={self.sahi_overlap_ratio}, frame_skip={self.frame_skip}, "
+            f"batch_size={self.batch_size}"
         )
 
 
-# ── Single source of truth for all profile parameters ──────────────────────
+# ── Single source of truth ───────────────────────────────────────────────
 _PROFILES: dict[str, ProfileConfig] = {
     "fast": ProfileConfig(
         name="fast",
@@ -45,6 +44,7 @@ _PROFILES: dict[str, ProfileConfig] = {
         sahi_slice_size=320,
         sahi_overlap_ratio=0.1,
         frame_skip=3,
+        batch_size=16,
     ),
     "balanced": ProfileConfig(
         name="balanced",
@@ -54,6 +54,7 @@ _PROFILES: dict[str, ProfileConfig] = {
         sahi_slice_size=320,
         sahi_overlap_ratio=0.2,
         frame_skip=1,
+        batch_size=8,
     ),
     "high_res": ProfileConfig(
         name="high_res",
@@ -63,6 +64,7 @@ _PROFILES: dict[str, ProfileConfig] = {
         sahi_slice_size=512,
         sahi_overlap_ratio=0.2,
         frame_skip=1,
+        batch_size=4,
     ),
     "sahi": ProfileConfig(
         name="sahi",
@@ -72,24 +74,12 @@ _PROFILES: dict[str, ProfileConfig] = {
         sahi_slice_size=512,
         sahi_overlap_ratio=0.25,
         frame_skip=1,
+        batch_size=2,
     ),
 }
 
 
 def resolve_profile(name: str) -> ProfileConfig:
-    """
-    Resolve a profile name to its ProfileConfig.
-    Fails fast with a clear ValueError on invalid input.
-
-    Args:
-        name: One of 'fast', 'balanced', 'high_res', 'sahi'
-
-    Returns:
-        Immutable ProfileConfig for the requested profile.
-
-    Raises:
-        ValueError: If name is not a recognised profile.
-    """
     if name not in _PROFILES:
         raise ValueError(
             f"Unknown quality profile: '{name}'. "

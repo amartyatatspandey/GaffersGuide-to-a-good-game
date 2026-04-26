@@ -1,6 +1,6 @@
 from __future__ import annotations
 # ADD after: from services.cv import ...
-from gaffers_guide.profile import ProfileConfig
+from gaffers_guide.profiles import ProfileConfig
 import argparse
 import asyncio
 import json
@@ -324,6 +324,15 @@ def run_cv_tracking_batched(
         use_context_sahi = bool(enable_context_sahi)
     else:
         use_context_sahi = _env_bool("GAFFERS_ENABLE_CONTEXT_SAHI", False)
+    if profile is not None:
+        LOGGER.info(
+        "Profile applied → imgsz=%s, conf=%s, sahi=%s, frame_skip=%s, batch=%s",
+        profile.imgsz,
+        profile.conf_threshold,
+        profile.sahi_enabled,
+        profile.frame_skip,
+        profile.batch_size,
+    )
 
     sahi_wrapper = OptimizedSAHIWrapper(
         model=model,
@@ -366,6 +375,8 @@ def run_cv_tracking_batched(
                 "imgsz": profile.imgsz if profile is not None else 640,
                 "verbose": False,
             }
+            if profile is not None:
+                kwargs["imgsz"] = profile.imgsz
             if selected_device:
                 kwargs["device"] = selected_device
             if use_half:
@@ -597,6 +608,13 @@ def run_e2e_cloud(
         progress_callback("Pending")
 
     video_path = video if isinstance(video, Path) else _resolve_video_path(video)
+    # ── Apply profile overrides ─────────────────────────────
+    if profile is not None:
+        LOGGER.info("Using profile: %s", profile)
+
+    batch_size = profile.batch_size
+    flow_max_width = profile.imgsz
+    enable_context_sahi = profile.sahi_enabled
 
     ensure_core_pipeline_directories()
     prereq_gaps = collect_local_cv_pipeline_gaps(video_path=video_path)
