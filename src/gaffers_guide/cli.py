@@ -38,7 +38,13 @@ def _handle_run(video: Path, precision: PrecisionMode, output: Path) -> int:
     logging.info("video=%s", video)
     logging.info("output=%s", output)
     logging.info("Active profile — %s", profile)
-    return 0
+
+    try:
+        from backend.services.cv.pipeline_runner import run_pipeline
+        return run_pipeline(video=video, output=output, profile=profile)
+    except ImportError:
+        logging.warning("Pipeline runner not available — running in stub mode")
+        return 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
