@@ -363,6 +363,7 @@ def run_cv_tracking_batched(
         for start_idx, batch_frames in _iter_frame_batches(cap, batch_size=batch_size):
             kwargs: dict[str, Any] = {
                 "conf": profile.conf_threshold if profile is not None else 0.3,
+                "imgsz": profile.imgsz if profile is not None else 640,
                 "verbose": False,
             }
             if selected_device:
