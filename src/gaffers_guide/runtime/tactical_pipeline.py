@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from gaffers_guide.pipeline.config import PipelineConfig
+from gaffers_guide.pipeline.e2e import MatchAnalysisPipeline
 from gaffers_guide.profiles import ProfileConfig
 
 
@@ -18,11 +20,11 @@ class TacticalPipeline:
         video: Path,
         output: Path,
     ) -> Path:
-        from gaffers_guide.runtime.run_e2e_cloud import run_e2e_cloud
-
-        output.mkdir(parents=True, exist_ok=True)
-        return run_e2e_cloud(
-            video=video,
-            output_prefix=output.name,
-            profile=self.profile,
+        pipeline = MatchAnalysisPipeline(profile=self.profile)
+        return pipeline.run(
+            PipelineConfig(
+                video=video,
+                output_dir=output,
+                quality_profile=self.profile.name,
+            )
         )
