@@ -1,4 +1,4 @@
-# ⚽ Gaffer's Guide to a Good Game
+# Gaffer's Guide to a Good Game
 
 <div align="center">
 
@@ -11,13 +11,13 @@
 **An end-to-end automated computer vision pipeline for football tactical intelligence.**  
 Turn raw match footage into structured tracking data, tactical metrics, and annotated video — fully automated.
 
-[Getting Started](#7-installation) • [Usage](#9-usage-cli) • [Quality Profiles](#6-quality-profiles) • [Tech Stack](#12-tech-stack) • [Contributing](#contributing)
+[Getting Started](#7-installation) • [Usage](#9-usage-cli) • [Quality Profiles](#6-quality-profiles) • [Tech Stack](#12-tech-stack) • [Contributing](#14-contributing)
 
 </div>
 
 ---
 
-## 📌 Table of Contents
+## Table of Contents
 
 1. [Overview](#1-overview)
 2. [Problem Statement](#2-problem-statement)
@@ -42,10 +42,10 @@ Turn raw match footage into structured tracking data, tactical metrics, and anno
 **Gaffer's Guide** is a production-grade automated computer vision pipeline and tactical intelligence platform built for football (soccer) video analysis.
 
 The system ingests raw broadcast or single-camera match footage and outputs:
-- 🎯 **Frame-by-frame player & ball tracking**
-- 📊 **Tactical metrics** (formations, zones, heatmaps)
-- 🎬 **Annotated video overlays**
-- 📁 **Structured JSON telemetry**
+- Frame-by-frame player and ball tracking
+- Tactical metrics including formations, zones, and heatmaps
+- Annotated video overlays
+- Structured JSON telemetry
 
 All fully automated — no manual annotation required.
 
@@ -54,9 +54,9 @@ All fully automated — no manual annotation required.
 ## 2. Problem Statement
 
 Analyzing football matches manually is:
-- ⏱️ **Extremely time-consuming** — hours of review per match
-- ❌ **Error-prone** — human fatigue affects consistency
-- 💰 **Expensive** — requires dedicated analysis staff
+- Extremely time-consuming — hours of review per match
+- Error-prone — human fatigue affects consistency
+- Expensive — requires dedicated analysis staff
 
 Coaches and analysts need precise, actionable insights — player positioning, team formations, movement heatmaps — from standard footage.
 
@@ -67,25 +67,25 @@ Coaches and analysts need precise, actionable insights — player positioning, t
 ## 3. System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        GAFFER'S GUIDE                           │
-│                                                                 │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐  │
-│  │  INPUT   │───▶│  DETECT  │───▶│  TRACK   │───▶│ ANALYSE  │  │
-│  │  Video   │    │  YOLO    │    │ByteTrack │    │ Tactics  │  │
-│  │  MP4/AVI │    │  + SAHI  │    │  + IDs   │    │ Metrics  │  │
-│  └──────────┘    └──────────┘    └──────────┘    └──────────┘  │
-│                                                       │         │
-│  ┌──────────────────────────────────────────────────┐│         │
-│  │                    OUTPUT                        ││         │
-│  │  📹 Annotated Video  📊 JSON Metrics  📁 Tracking││◀────────┘
-│  └──────────────────────────────────────────────────┘          │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────┐          │
-│  │           QUALITY PROFILE SYSTEM                 │          │
-│  │   fast │ balanced │ high_res │ sahi               │          │
-│  └──────────────────────────────────────────────────┘          │
-└─────────────────────────────────────────────────────────────────┘
++------------------------------------------------------------------+
+|                        GAFFER'S GUIDE                            |
+|                                                                  |
+|  +----------+    +----------+    +----------+    +----------+   |
+|  |  INPUT   |--->|  DETECT  |--->|  TRACK   |--->| ANALYSE  |   |
+|  |  Video   |    |  YOLO    |    |ByteTrack |    | Tactics  |   |
+|  |  MP4/AVI |    |  + SAHI  |    |  + IDs   |    | Metrics  |   |
+|  +----------+    +----------+    +----------+    +----------+   |
+|                                                       |          |
+|  +---------------------------------------------------+|          |
+|  |                    OUTPUT                         ||          |
+|  |  Annotated Video   JSON Metrics   Tracking Data  ||<---------+
+|  +---------------------------------------------------+          |
+|                                                                  |
+|  +---------------------------------------------------+          |
+|  |           QUALITY PROFILE SYSTEM                 |          |
+|  |   fast | balanced | high_res | sahi              |          |
+|  +---------------------------------------------------+          |
++------------------------------------------------------------------+
 ```
 
 **Components:**
@@ -93,7 +93,7 @@ Coaches and analysts need precise, actionable insights — player positioning, t
 - **Detection Layer** — YOLO-based player, referee, and ball detection with optional SAHI tiling
 - **Tracking Layer** — ByteTrack multi-object tracking with persistent IDs
 - **Analytics Layer** — Spatial coordinate transformation, formation detection, zone calculation
-- **Output Layer** — JSON telemetry export + rendered video overlay
+- **Output Layer** — JSON telemetry export and rendered video overlay
 
 ---
 
@@ -101,31 +101,31 @@ Coaches and analysts need precise, actionable insights — player positioning, t
 
 ```
 User runs CLI
-      │
-      ▼
+      |
+      v
 Quality Profile resolved (fast / balanced / high_res / sahi)
-      │
-      ▼
+      |
+      v
 ProfileConfig → imgsz, conf_threshold, sahi_enabled, slice_size
-      │
-      ▼
+      |
+      v
 Video frames extracted and batched
-      │
-      ▼
+      |
+      v
 YOLO model inference (with profile imgsz + conf)
-      │
-      ├──▶ [SAHI enabled?] → Slice region → Batch infer slices → Fuse candidates
-      │
-      ▼
+      |
+      +---> [SAHI enabled?] → Slice region → Batch infer slices → Fuse candidates
+      |
+      v
 Ball candidate ranking (temporal prior + confidence scoring)
-      │
-      ▼
+      |
+      v
 Pitch ROI masking → Homography projection → 2D radar coordinates
-      │
-      ▼
+      |
+      v
 Team classification → Formation detection → Tactical metric calculation
-      │
-      ▼
+      |
+      v
 Output: JSON tracking + JSON metrics + annotated MP4
 ```
 
@@ -135,15 +135,15 @@ Output: JSON tracking + JSON metrics + annotated MP4
 
 | Feature | Description |
 |---|---|
-| 🔍 **SAHI Ball Detection** | Slicing Aided Hyper Inference for precise small-object detection |
-| ⚙️ **Quality Profile System** | 4 runtime profiles trading speed vs. accuracy |
-| 🎯 **Temporal Ball Prior** | Adaptive search windows based on last known ball position |
-| 🟩 **Pitch ROI Masking** | HSV-based green detection to focus inference on the pitch |
-| 🏃 **ByteTrack Integration** | Robust multi-object tracking with persistent player IDs |
-| 🗺️ **Homography Projection** | Camera-to-2D radar coordinate transformation |
-| 📦 **CLI-First Design** | Headless operation for automation and cloud deployment |
-| ☁️ **Cloud-Native Ready** | Docker + cloud infrastructure for scalable batch processing |
-| 🧪 **Fully Tested** | Profile resolution, CLI parsing, and pipeline integration tests |
+| SAHI Ball Detection | Slicing Aided Hyper Inference for precise small-object detection |
+| Quality Profile System | 4 runtime profiles trading speed vs. accuracy |
+| Temporal Ball Prior | Adaptive search windows based on last known ball position |
+| Pitch ROI Masking | HSV-based green detection to focus inference on the pitch |
+| ByteTrack Integration | Robust multi-object tracking with persistent player IDs |
+| Homography Projection | Camera-to-2D radar coordinate transformation |
+| CLI-First Design | Headless operation for automation and cloud deployment |
+| Cloud-Native Ready | Docker and cloud infrastructure for scalable batch processing |
+| Fully Tested | Profile resolution, CLI parsing, and pipeline integration tests |
 
 ---
 
@@ -158,12 +158,12 @@ The profile system is the **core innovation** of this release. One flag controls
 --quality-profile sahi        # Maximum recall
 ```
 
-| Profile | `imgsz` | `conf` | SAHI | Frame Skip | Best For |
+| Profile | imgsz | conf | SAHI | Frame Skip | Best For |
 |---|---|---|---|---|---|
-| `fast` | 480 | 0.35 | ❌ | Every 3rd | Quick previews, large batch jobs |
-| `balanced` | 640 | 0.25 | ❌ | None | Standard full-match analysis |
-| `high_res` | 1280 | 0.20 | ❌ | None | High-detail QA and final renders |
-| `sahi` | 1280 | 0.20 | ✅ | None | Complex scenes, maximum ball recall |
+| fast | 480 | 0.35 | No | Every 3rd frame | Quick previews, large batch jobs |
+| balanced | 640 | 0.25 | No | None | Standard full-match analysis |
+| high_res | 1280 | 0.20 | No | None | High-detail QA and final renders |
+| sahi | 1280 | 0.20 | Yes | None | Complex scenes, maximum ball recall |
 
 > **How profiles work:** Each profile maps directly to `imgsz` and `conf` passed into the YOLO model inference call, plus SAHI slice configuration for the detection wrapper. The entire pipeline behavior changes from a single CLI flag.
 
@@ -407,17 +407,6 @@ git push origin feature/your-feature-name
 | docs | Documentation |
 | test | Tests |
 | merge | Merge conflict resolution |
-
----
-
-## 15. Future Improvements
-
-- Real-Time Processing — Live camera feed support with sub-second latency
-- Kubernetes Scaling — Parallel batch processing across cloud clusters
-- Interactive Dashboard — Electron desktop app for 3D tracking visualization
-- LLM Coaching Insights — Natural language tactical summaries via Gemini or OpenAI
-- Mobile Export — Lightweight output format for coaching apps
-- Event Detection — Automatic detection of shots, passes, tackles, and goals
 
 ---
 
