@@ -1,3 +1,7 @@
+# cython: language_level=3
+# cython: boundscheck=False
+# cython: wraparound=False
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -40,12 +44,21 @@ class TemporalBallPrior:
         self._miss_streak += 1
 
     def current_radius_px(self) -> int:
+        cdef int expanded
         expanded = self._base_radius + self._expand_step * self._miss_streak
         return min(self._max_radius, expanded)
 
     def search_region(
         self, frame_w: int, frame_h: int
     ) -> TemporalSearchRegion | None:
+        cdef double cx
+        cdef double cy
+        cdef int radius
+        cdef int x1
+        cdef int y1
+        cdef int x2
+        cdef int y2
+
         if self._last_ball_xy is None:
             return None
         cx, cy = self._last_ball_xy

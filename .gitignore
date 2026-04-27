@@ -15,6 +15,8 @@ dist/
 build/
 *.manifest
 *.spec
+src/gaffers_guide/**/*.c
+dist_protected*/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

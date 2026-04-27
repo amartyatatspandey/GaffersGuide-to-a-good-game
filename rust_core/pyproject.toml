@@ -1,0 +1,13 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "gaffers-core-math"
+version = "0.1.0"
+requires-python = ">=3.11"
+description = "Optional Rust math kernels for gaffers-guide."
+
+[tool.maturin]
+module-name = "gaffers_core_math"
+features = ["pyo3/extension-module"]

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=69", "wheel", "cython>=3.0", "numpy>=1.26.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -46,6 +46,12 @@ dev = [
     "pytest>=7.4.0",
     "mypy>=1.5.0",
     "black>=23.0.0",
+    "cython>=3.0",
+    "build>=1.2.0",
+]
+compile = [
+    "cython>=3.0",
+    "build>=1.2.0",
 ]
 full = ["gaffers-guide[vision,tactical,dev]"]
 
