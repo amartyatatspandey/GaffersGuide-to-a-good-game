@@ -1,0 +1,96 @@
+name: Build Wheels
+
+on:
+  push:
+    branches: [ "main", "Cython_refactor" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Build for macOS, Windows, and Linux as recommended in BUILDING_WINDOWS_WHEELS.md
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.17.0
+        env:
+          CIBW_BUILD: cp311-*
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_ARCHS_LINUX: x86_64
+          # Smoke-test the wheel
+          CIBW_TEST_COMMAND: >
+            python -c "from gaffers_guide.cv.optimized_sahi_wrapper import OptimizedSAHIWrapper; print('cv ok')" &&
+            python -c "from gaffers_guide.pipeline.track_teams import TeamClassifier; print('pipeline ok')" &&
+            gaffers-guide --help
+
+      - name: Validate wheels (No source leaks)
+        shell: python
+        run: |
+          from pathlib import Path
+          from zipfile import ZipFile
+          import sys
+
+          wheels = list(Path("wheelhouse").glob("*.whl"))
+          if not wheels:
+              print("No wheels found!")
+              sys.exit(1)
+
+          protected = {
+              "gaffers_guide/cv/temporal_ball_prior",
+              "gaffers_guide/cv/pitch_roi_provider",
+              "gaffers_guide/cv/ball_candidate_fuser",
+              "gaffers_guide/cv/slice_batch_inferencer",
+              "gaffers_guide/cv/optimized_sahi_wrapper",
+              "gaffers_guide/pipeline/advanced_pitch_calibration",
+              "gaffers_guide/pipeline/dynamic_homography",
+              "gaffers_guide/pipeline/track_teams",
+              "gaffers_guide/pipeline/track_teams_reid_hybrid",
+              "gaffers_guide/pipeline/reid_healer",
+              "gaffers_guide/pipeline/global_refiner",
+              "gaffers_guide/pipeline/e2e_shared_impl",
+              "gaffers_guide/pipeline/tactical_radar",
+              "gaffers_guide/pipeline/generate_analytics",
+          }
+
+          success = True
+          for wheel in wheels:
+              with ZipFile(wheel) as zf:
+                  names = zf.namelist()
+              
+              compiled = [
+                  name for name in names
+                  if any(name.startswith(module + ".") and name.endswith((".pyd", ".so")) for module in protected)
+              ]
+              leaks = [
+                  name for name in names
+                  if name.rsplit(".", 1)[0] in protected and name.endswith((".py", ".pyx", ".c"))
+              ]
+              
+              print(f"wheel={wheel.name}")
+              print(f"compiled_extensions={len(compiled)}")
+              print(f"source_leaks={len(leaks)}")
+              for leak in leaks:
+                  print(f"LEAK: {leak}")
+              
+              if len(compiled) != len(protected) or leaks:
+                  success = False
+
+          sys.exit(0 if success else 1)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./wheelhouse/*.whl
