@@ -1,9 +1,16 @@
 """API tests: health and basic endpoints."""
 
+from pathlib import Path
+import sys
+
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.main import app
+BACKEND_ROOT = Path(__file__).resolve().parents[1] / "backend"
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from backend.main import app
 
 client = TestClient(app)
 

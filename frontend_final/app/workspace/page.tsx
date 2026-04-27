@@ -26,12 +26,43 @@ function classifyFrontendBackendError(err: unknown): string {
 }
 
 export default function WorkspacePage() {
+  const [engineCheckLoading, setEngineCheckLoading] = useState(true);
+  const [engineAvailable, setEngineAvailable] = useState(true);
   const [ingestionComplete, setIngestionComplete] = useState(false);
   const [currentView, setCurrentView] = useState<'dashboard' | 'reports'>('dashboard');
   const [activeJob, setActiveJob] = useState<{ jobId: string; file: File; tracking: unknown } | null>(null);
   const [coachAdvice, setCoachAdvice] = useState<CoachAdviceResponse | null>(null);
   const [coachError, setCoachError] = useState<string | null>(null);
   const coachDelayedRefetchSent = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    const runPreflight = async () => {
+      try {
+        if (typeof window === 'undefined' || !window.gaffersGuide?.checkEngineStatus) {
+          if (!cancelled) {
+            setEngineAvailable(true);
+            setEngineCheckLoading(false);
+          }
+          return;
+        }
+        const ok = await window.gaffersGuide.checkEngineStatus();
+        if (!cancelled) {
+          setEngineAvailable(Boolean(ok));
+          setEngineCheckLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setEngineAvailable(false);
+          setEngineCheckLoading(false);
+        }
+      }
+    };
+    void runPreflight();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -134,6 +165,30 @@ export default function WorkspacePage() {
     coachAdvice,
     coachAdvice?.advice_items?.length,
   ]);
+
+  if (engineCheckLoading) {
+    return (
+      <div className="h-screen w-screen bg-[#0a0f0a] text-gray-300 flex items-center justify-center">
+        <div className="text-sm tracking-wide opacity-80">Checking core engine status...</div>
+      </div>
+    );
+  }
+
+  if (!engineAvailable) {
+    return (
+      <div className="h-screen w-screen bg-[#0a0f0a] text-gray-300 flex items-center justify-center px-6">
+        <div className="max-w-xl rounded-xl border border-amber-500/40 bg-[#121b12] p-6 shadow-lg">
+          <h1 className="text-xl font-semibold text-amber-300">Setup Required</h1>
+          <p className="mt-3 text-sm leading-relaxed text-gray-200">
+            Core Engine Missing. Please open your terminal and install the AI engine by running:
+          </p>
+          <pre className="mt-4 rounded-md bg-black/50 p-3 text-sm text-emerald-300 overflow-x-auto">
+            pip install gaffers-guide
+          </pre>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#0a0f0a] text-gray-300 antialiased selection:bg-emerald-500/30 selection:text-emerald-300">

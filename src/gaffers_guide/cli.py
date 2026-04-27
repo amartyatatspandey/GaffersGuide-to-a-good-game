@@ -6,9 +6,7 @@ from pathlib import Path
 from typing import Literal, Sequence
 
 from gaffers_guide.profiles import ProfileConfig, resolve_profile
-
-# Import pipeline
-from scripts.pipeline_core.run_e2e_cloud import run_e2e_cloud
+from gaffers_guide.runtime.tactical_pipeline import TacticalPipeline
 
 
 PrecisionMode = Literal["fast", "balanced", "high_res", "sahi"]
@@ -86,15 +84,8 @@ def _handle_run(
     logging.info("output=%s", output)
     logging.info("Active profile — %s", profile)
 
-    # Ensure output directory exists
-    output.mkdir(parents=True, exist_ok=True)
-
-    # ── Run pipeline ───────────────────────────────
-    run_e2e_cloud(
-        video=video,
-        output_prefix=output.name,
-        profile=profile,
-    )
+    pipeline = TacticalPipeline(profile=profile)
+    pipeline.run(video=video, output=output)
 
     logging.info("Pipeline completed successfully.")
 

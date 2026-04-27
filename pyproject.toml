@@ -35,6 +35,12 @@ dependencies = [
 [project.scripts]
 gaffers-guide = "gaffers_guide.cli:main"
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
