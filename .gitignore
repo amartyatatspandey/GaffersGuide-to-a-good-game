@@ -85,3 +85,8 @@ calibration_data.json
 
 # --- Local duplicate / scratch frontend tree (large node_modules) ---
 Gaffers-Guide_ULTIMATE-frontend_dev/
+
+# --- Windows Wheel Build ---
+dist_windows/
+wheelhouse/
+*.pyd
