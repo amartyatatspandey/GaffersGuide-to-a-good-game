@@ -847,7 +847,9 @@ def run_cv_tracking(
             if not ret:
                 break
 
-            radar.update_camera_angle(frame_idx)
+            # radar.update_camera_angle(frame_idx)
+            if radar:
+                radar.update_camera_angle(frame_idx)
             camera_shift = flow_estimator.update(frame)
             homography_conf = _homography_confidence(radar, frame_idx)
             use_fallback = (

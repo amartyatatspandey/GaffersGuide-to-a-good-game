@@ -1,6 +1,6 @@
 from __future__ import annotations
 # ADD after: from services.llm_router import LLMEngine
-from gaffers_guide.profile import ProfileConfig
+from gaffers_guide.profiles import ProfileConfig
 import asyncio
 import json
 import os
