@@ -11,8 +11,8 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 BACKEND_DIR = ROOT_DIR / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
-from scripts.rag_coach import GeneratedPromptRecord  # noqa: E402
 from scripts import e2e_llm_local  # noqa: E402
+from scripts.rag_coach import GeneratedPromptRecord  # noqa: E402
 from services.errors import EngineRoutingError  # noqa: E402
 
 
@@ -69,7 +69,9 @@ def test_run_llm_local_sync_wrapper() -> None:
 
 def test_run_llm_local_empty_prompt_skips_llm() -> None:
     records = [_sample_record(llm_prompt="   ")]
-    with patch.object(e2e_llm_local, "get_tactical_advice", new_callable=AsyncMock) as mock_advice:
+    with patch.object(
+        e2e_llm_local, "get_tactical_advice", new_callable=AsyncMock
+    ) as mock_advice:
         out = asyncio.run(e2e_llm_local.run_llm_local(records))
     mock_advice.assert_not_called()
     assert out[0]["tactical_instruction"] is None

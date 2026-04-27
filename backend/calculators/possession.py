@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import numpy as np
 from typing import Protocol
+
+import numpy as np
 
 
 class PlayerLike(Protocol):
@@ -75,4 +76,3 @@ def interpolate_ball_positions(frames: list[FrameLike], max_gap_frames: int) -> 
             frame.possession_team_id = compute_possession_team_id(frame)
 
     return interpolation_count
-

@@ -4,9 +4,9 @@ import asyncio
 import os
 from typing import Any, Literal
 
+from llm_service import gemini_is_configured, generate_coaching_advice
 from openai import AsyncOpenAI
 
-from llm_service import generate_coaching_advice, gemini_is_configured
 from services.errors import EngineRoutingError
 from services.ollama_client import (
     ensure_ollama_available,
@@ -94,4 +94,3 @@ __all__ = [
     "start_ollama_for_app_lifecycle",
     "stop_ollama_for_app_lifecycle",
 ]
-

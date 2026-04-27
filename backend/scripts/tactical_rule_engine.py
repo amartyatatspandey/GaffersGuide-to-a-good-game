@@ -179,7 +179,10 @@ def evaluate_timeline(
             metrics = frame.get(team_id, {}) or {}
             deepest_x = float(metrics.get("deepest_x", 0.0) or 0.0)
             pitch_control = float(metrics.get("pitch_control_pct", 50.0) or 50.0)
-            if deepest_x > engine.HIGH_LINE_X and pitch_control < engine.MIN_PITCH_CONTROL:
+            if (
+                deepest_x > engine.HIGH_LINE_X
+                and pitch_control < engine.MIN_PITCH_CONTROL
+            ):
                 suicidal_high_values.append(deepest_x)
         if suicidal_high_values:
             frequency_pct = (len(suicidal_high_values) / total_frames) * 100.0

@@ -123,4 +123,3 @@ def apply_ball_metrics_gate(
                 team_metrics["zone14_penetrations"] = 0.0
 
     return timeline, quality
-

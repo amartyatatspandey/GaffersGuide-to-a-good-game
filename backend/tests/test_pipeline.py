@@ -8,7 +8,6 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-
 ROOT_DIR = Path(__file__).resolve().parents[2]
 BACKEND_DIR = ROOT_DIR / "backend"
 
@@ -82,10 +81,14 @@ def test_rule_engine_logic() -> None:
 
     for insight in midfield_disconnect_insights:
         evidence = insight.get("evidence")
-        assert isinstance(evidence, str) and evidence.strip(), "Evidence must be a non-empty string"
+        assert isinstance(evidence, str) and evidence.strip(), (
+            "Evidence must be a non-empty string"
+        )
 
         extracted = _parse_massive_gap_meters(evidence)
-        assert extracted is not None, f"Could not parse evidence meters from: {evidence!r}"
+        assert extracted is not None, (
+            f"Could not parse evidence meters from: {evidence!r}"
+        )
         assert extracted > engine.MAX_LINE_GAP, (
             f"Expected evidence gap ({extracted:.1f}m) to exceed MAX_LINE_GAP "
             f"({engine.MAX_LINE_GAP:.1f}m)"
@@ -120,7 +123,9 @@ def test_fastapi_dry_run() -> None:
     assert payload["pipeline"]["rule_engine"] == "success"
 
     advice_items = payload.get("advice_items")
-    assert isinstance(advice_items, list) and advice_items, "Expected non-empty advice_items"
+    assert isinstance(advice_items, list) and advice_items, (
+        "Expected non-empty advice_items"
+    )
 
     for item in advice_items:
         assert item.get("tactical_instruction") is None
@@ -128,5 +133,7 @@ def test_fastapi_dry_run() -> None:
         assert isinstance(item.get("team"), str) and item["team"]
         assert isinstance(item.get("flaw"), str) and item["flaw"]
         assert isinstance(item.get("evidence"), str) and item["evidence"]
-        assert isinstance(item.get("matched_philosophy_author"), str) and item["matched_philosophy_author"]
-
+        assert (
+            isinstance(item.get("matched_philosophy_author"), str)
+            and item["matched_philosophy_author"]
+        )

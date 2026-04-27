@@ -61,7 +61,13 @@ def run(
 
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    logger.info("Video: %s | frames=%s fps=%.1f | sample_every=%d", video_path.name, total_frames, fps, sample_every)
+    logger.info(
+        "Video: %s | frames=%s fps=%.1f | sample_every=%d",
+        video_path.name,
+        total_frames,
+        fps,
+        sample_every,
+    )
 
     results: list[dict] = []
     frame_idx = 0
@@ -78,11 +84,13 @@ def run(
         H = calibrator.get_homography(frame)
         if H is not None:
             success_count += 1
-            results.append({
-                "frame": frame_idx,
-                "time_sec": round(frame_idx / fps, 2),
-                "homography": H.tolist(),
-            })
+            results.append(
+                {
+                    "frame": frame_idx,
+                    "time_sec": round(frame_idx / fps, 2),
+                    "homography": H.tolist(),
+                }
+            )
             logger.info("Frame %d (t=%.1fs): homography OK", frame_idx, frame_idx / fps)
         else:
             logger.debug("Frame %d: no homography", frame_idx)
@@ -91,15 +99,30 @@ def run(
 
     cap.release()
 
-    logger.info("Done. Success: %d / %d sampled frames", success_count, len(results) if results else 0)
+    logger.info(
+        "Done. Success: %d / %d sampled frames",
+        success_count,
+        len(results) if results else 0,
+    )
 
     if output_json and results:
         output_json.parent.mkdir(parents=True, exist_ok=True)
         with open(output_json, "w", encoding="utf-8") as f:
-            json.dump({"video": str(video_path), "sample_every": sample_every, "homographies": results}, f, indent=2)
+            json.dump(
+                {
+                    "video": str(video_path),
+                    "sample_every": sample_every,
+                    "homographies": results,
+                },
+                f,
+                indent=2,
+            )
         logger.info("Wrote %s", output_json)
     elif output_json and not results:
-        logger.warning("No homography samples; not writing %s (empty file would be skipped by cloud batch)", output_json)
+        logger.warning(
+            "No homography samples; not writing %s (empty file would be skipped by cloud batch)",
+            output_json,
+        )
 
 
 def ensure_homography_json_for_video(
@@ -160,7 +183,9 @@ def _default_output_for_video(video_path: Path) -> Path:
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate TacticalRadar homography JSON from broadcast video.")
+    parser = argparse.ArgumentParser(
+        description="Generate TacticalRadar homography JSON from broadcast video."
+    )
     parser.add_argument(
         "--video",
         type=Path,
@@ -197,7 +222,11 @@ if __name__ == "__main__":
     args = _parse_args()
     video_path = args.video.expanduser().resolve()
     weights_dir = args.weights_dir.expanduser().resolve()
-    out = args.output.expanduser().resolve() if args.output else _default_output_for_video(video_path)
+    out = (
+        args.output.expanduser().resolve()
+        if args.output
+        else _default_output_for_video(video_path)
+    )
     run(
         video_path=video_path,
         weights_dir=weights_dir,

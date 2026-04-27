@@ -20,4 +20,3 @@ class EngineRoutingError(Exception):
         if self.hint:
             payload["hint"] = self.hint
         return payload
-

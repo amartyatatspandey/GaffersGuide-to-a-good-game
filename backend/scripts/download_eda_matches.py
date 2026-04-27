@@ -91,7 +91,9 @@ def clean_youtube_url_remove_playlist_params(url: str) -> str:
     filtered = [(k, v) for (k, v) in query_items if k != "list"]
 
     new_query = urlencode(filtered, doseq=True)
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, new_query, parts.fragment))
+    return urlunsplit(
+        (parts.scheme, parts.netloc, parts.path, new_query, parts.fragment)
+    )
 
 
 def download_match_segment(
@@ -128,7 +130,9 @@ def download_match_segment(
         cleaned_url,
     ]
 
-    logging.info("Downloading %s (%s - %s)", match["name"], match["start"], match["end"])
+    logging.info(
+        "Downloading %s (%s - %s)", match["name"], match["start"], match["end"]
+    )
     subprocess.run(cmd, check=True)
     ensure_quicktime_compatible(out_path)
 
@@ -178,7 +182,7 @@ def main() -> int:
     for match in MATCHES:
         try:
             download_match_segment(match=match, output_dir=output_dir)
-        except subprocess.CalledProcessError as exc:
+        except subprocess.CalledProcessError:
             logging.exception("yt-dlp failed for %s", match["name"])
             failed_matches.append(match["name"])
 
@@ -192,4 +196,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -6,9 +6,10 @@ import asyncio
 import os
 from typing import Any
 
-from scripts.rag_coach import GeneratedPromptRecord
 from services.errors import EngineRoutingError
 from services.llm_router import get_tactical_advice
+
+from scripts.rag_coach import GeneratedPromptRecord
 
 
 async def run_llm_local(
@@ -21,7 +22,11 @@ async def run_llm_local(
 
     Caller must run ``ensure_ollama_available()`` before this (fail fast after CV / RAG).
     """
-    limit = concurrency if concurrency is not None else int(os.getenv("OLLAMA_JOB_LLM_CONCURRENCY", "4"))
+    limit = (
+        concurrency
+        if concurrency is not None
+        else int(os.getenv("OLLAMA_JOB_LLM_CONCURRENCY", "4"))
+    )
     limit = max(1, min(limit, 16))
     semaphore = asyncio.Semaphore(limit)
 

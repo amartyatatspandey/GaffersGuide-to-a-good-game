@@ -14,20 +14,26 @@ import logging
 import os
 import shutil
 import threading
-from datetime import datetime, timezone
-from pathlib import Path
 import uuid
 from dataclasses import dataclass
-from typing import Annotated, Any, Literal
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Annotated, Any
 
 from dotenv import load_dotenv
-from fastapi import File, FastAPI, Form, HTTPException, Query, Request, UploadFile, WebSocket
+from fastapi import (
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    WebSocket,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from openai import AsyncOpenAI
-from pydantic import BaseModel, Field
-
-from llm_service import gemini_is_configured, generate_coaching_advice
+from llm_service import generate_coaching_advice
 from models import (
     ChatRequest,
     ChatResponse,
@@ -37,10 +43,14 @@ from models import (
     ReportEntry,
     ReportsResponse,
 )
-from services.cv_router import CVEngine, CVRouterFactory
-from services.errors import EngineRoutingError
+from openai import AsyncOpenAI
+from pydantic import BaseModel, Field
+from scripts.rag_coach import run as run_rag_synthesizer
+from scripts.tactical_rule_engine import run_engine
 from services.beta_job_store import BetaJobRecord, BetaJobStore
 from services.beta_queue import BetaPipelineQueue, BetaQueueItem
+from services.cv_router import CVEngine, CVRouterFactory
+from services.errors import EngineRoutingError
 from services.llm_policy import (
     build_structured_coaching_prompt,
     format_numbered_steps,
@@ -54,8 +64,6 @@ from services.llm_router import (
     stop_ollama_for_app_lifecycle,
 )
 from services.observability import PipelineMetricsRegistry
-from scripts.rag_coach import run as run_rag_synthesizer
-from scripts.tactical_rule_engine import run_engine
 
 BACKEND_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = BACKEND_ROOT.parent
@@ -127,6 +135,7 @@ async def _metrics_middleware(request: Request, call_next):
     _metrics.incr(f"{key}.status.{response.status_code}")
     return response
 
+
 @dataclass(slots=True)
 class JobRecord:
     job_id: str
@@ -186,9 +195,7 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
 
     with _job_store_lock:
         rec_for_llm = _job_store.get(job_id)
-        job_llm_engine: LLMEngine = (
-            rec_for_llm.llm_engine if rec_for_llm else "cloud"
-        )
+        job_llm_engine: LLMEngine = rec_for_llm.llm_engine if rec_for_llm else "cloud"
 
     try:
         runner = CVRouterFactory.get(cv_engine)
@@ -202,7 +209,9 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
         with _job_store_lock:
             rec = _job_store.get(job_id)
             if rec:
-                report_path_p, overlay_path_p, tracking_path_p = _job_artifact_paths(job_id)
+                report_path_p, overlay_path_p, tracking_path_p = _job_artifact_paths(
+                    job_id
+                )
                 rec.status = "done"
                 rec.current_step = "Completed"
                 rec.result_path = str(report_path)
@@ -291,7 +300,9 @@ async def list_reports() -> ReportsResponse:
         if not name.endswith("_report.json"):
             continue
         job_id = name.removesuffix("_report.json")
-        created_at = datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc).isoformat()
+        created_at = datetime.fromtimestamp(
+            p.stat().st_mtime, tz=timezone.utc
+        ).isoformat()
         reports.append(
             ReportEntry(
                 job_id=job_id,
@@ -578,7 +589,9 @@ async def get_job_artifacts(job_id: str) -> dict[str, Any]:
     return {
         "job_id": job_id,
         "status": rec.status,
-        "report_path": str(report_path_p) if report_path_p.is_file() else rec.result_path,
+        "report_path": str(report_path_p)
+        if report_path_p.is_file()
+        else rec.result_path,
         "tracking_overlay_path": (
             str(overlay_path_p)
             if overlay_path_p.is_file()
@@ -626,7 +639,9 @@ async def get_job_tracking(job_id: str) -> dict[str, Any]:
         {
             "job_id_prefix": job_id[:8],
             "rec_status": rec.status,
-            "frame_keys": len(payload.get("frames", [])) if isinstance(payload.get("frames"), list) else -1,
+            "frame_keys": len(payload.get("frames", []))
+            if isinstance(payload.get("frames"), list)
+            else -1,
         },
     )
     # #endregion
@@ -645,7 +660,9 @@ async def get_job_overlay_video(job_id: str) -> FileResponse:
             status_code=425,
             detail="Tracking overlay video not ready yet. Wait for job completion.",
         )
-    return FileResponse(str(overlay_path), media_type="video/mp4", filename=overlay_path.name)
+    return FileResponse(
+        str(overlay_path), media_type="video/mp4", filename=overlay_path.name
+    )
 
 
 @app.post(
@@ -660,7 +677,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
     If `job_id` is provided, include the job's report insights as context.
     """
     prompt_context = ""
-    selected_llm_engine: LLMEngine = (req.llm_engine or "cloud")
+    selected_llm_engine: LLMEngine = req.llm_engine or "cloud"
     if req.job_id:
         with _job_store_lock:
             rec = _job_store.get(req.job_id)
@@ -708,7 +725,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
     try:
         reply = await get_tactical_advice(full_prompt, selected_llm_engine)
     except EngineRoutingError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.to_detail()) from exc
+        raise HTTPException(
+            status_code=exc.status_code, detail=exc.to_detail()
+        ) from exc
     except Exception as exc:  # noqa: BLE001
         LOGGER.exception("Chat completion failed")
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -839,8 +858,12 @@ async def beta_metrics() -> dict[str, Any]:
     """Return beta pipeline metrics snapshot for baseline and promotion gates."""
     snapshot = _metrics.snapshot()
     counters = snapshot.get("counters", {})
-    succeeded = int(counters.get("beta.jobs.succeeded", 0)) if isinstance(counters, dict) else 0
-    failed = int(counters.get("beta.jobs.failed", 0)) if isinstance(counters, dict) else 0
+    succeeded = (
+        int(counters.get("beta.jobs.succeeded", 0)) if isinstance(counters, dict) else 0
+    )
+    failed = (
+        int(counters.get("beta.jobs.failed", 0)) if isinstance(counters, dict) else 0
+    )
     total = succeeded + failed
     success_rate = (succeeded / total * 100.0) if total else 0.0
     gates = {
@@ -974,7 +997,9 @@ async def get_coach_advice(
             report_cards: list[dict[str, Any]] = json.load(f)
 
         llm_skip_reason: str | None = None
-        needs_local_refresh = any(_card_needs_local_llm_refresh(c) for c in report_cards)
+        needs_local_refresh = any(
+            _card_needs_local_llm_refresh(c) for c in report_cards
+        )
         # #region agent log
         _agent_debug_ndjson(
             "D",
@@ -1074,7 +1099,9 @@ async def get_coach_advice(
         try:
             await ensure_ollama_available()
         except EngineRoutingError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.to_detail()) from exc
+            raise HTTPException(
+                status_code=exc.status_code, detail=exc.to_detail()
+            ) from exc
 
     semaphore = asyncio.Semaphore(llm_concurrency)
 

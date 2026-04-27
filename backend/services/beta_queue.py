@@ -24,7 +24,9 @@ class BetaQueueItem:
 class BetaPipelineQueue:
     """Queue-backed execution model for beta job isolation."""
 
-    def __init__(self, job_store: BetaJobStore, metrics: PipelineMetricsRegistry) -> None:
+    def __init__(
+        self, job_store: BetaJobStore, metrics: PipelineMetricsRegistry
+    ) -> None:
         self._job_store = job_store
         self._metrics = metrics
         self._queue: asyncio.Queue[BetaQueueItem] = asyncio.Queue()

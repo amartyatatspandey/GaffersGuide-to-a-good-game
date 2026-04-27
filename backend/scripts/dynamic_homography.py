@@ -25,19 +25,20 @@ if not _REF_DIR.is_dir():
         "Clone https://github.com/SoccerNet/sn-calibration into backend/references/sn-calibration."
     )
 import sys
+
 if str(_REF_DIR) not in sys.path:
     sys.path.insert(0, str(_REF_DIR))
 
-from src.soccerpitch import SoccerPitch
+from src.baseline_cameras import (
+    estimate_homography_from_line_correspondences,
+    normalization_transform,
+)
 from src.detect_extremities import (
     SegmentationNetwork,
     generate_class_synthesis,
     get_line_extremities,
 )
-from src.baseline_cameras import (
-    normalization_transform,
-    estimate_homography_from_line_correspondences,
-)
+from src.soccerpitch import SoccerPitch
 
 
 def _build_line_matches(
@@ -82,7 +83,9 @@ def _extremities_to_homography(
     """
     line_matches = _build_line_matches(extremities, field, width, height)
     if len(line_matches) < 4:
-        logger.debug("Insufficient line matches for homography: %d < 4", len(line_matches))
+        logger.debug(
+            "Insufficient line matches for homography: %d < 4", len(line_matches)
+        )
         return None
 
     # Normalization: source = pitch (3D points), target = image (2D points)
@@ -91,7 +94,11 @@ def _extremities_to_homography(
     src_pts: list[np.ndarray] = []
     target_keys: set[str] = set()
     for k, v in extremities.items():
-        if k == "Circle central" or "unknown" in k or k not in field.line_extremities_keys:
+        if (
+            k == "Circle central"
+            or "unknown" in k
+            or k not in field.line_extremities_keys
+        ):
             continue
         P3D1, P3D2 = field.line_extremities_keys[k]
         target_keys.add(P3D1)
@@ -102,7 +109,9 @@ def _extremities_to_homography(
 
     T1 = normalization_transform(target_pts)
     T2 = normalization_transform(src_pts)
-    success, homography = estimate_homography_from_line_correspondences(line_matches, T1, T2)
+    success, homography = estimate_homography_from_line_correspondences(
+        line_matches, T1, T2
+    )
     if not success:
         logger.debug("Homography estimation failed (SVD/constraints).")
         return None
@@ -180,7 +189,9 @@ class DynamicPitchCalibrator:
         """FIFA pitch model used for line correspondences (read-only)."""
         return self._field
 
-    def collect_pitch_observations(self, frame: np.ndarray) -> Optional[PitchObservationBundle]:
+    def collect_pitch_observations(
+        self, frame: np.ndarray
+    ) -> Optional[PitchObservationBundle]:
         """
         Run segmentation through coarse SVD homography at SEG resolution.
 
@@ -260,11 +271,18 @@ class DynamicPitchCalibrator:
 
 if __name__ == "__main__":
     import argparse
+
     logging.basicConfig(level=logging.INFO)
 
-    parser = argparse.ArgumentParser(description="Test DynamicPitchCalibrator on a single frame.")
-    parser.add_argument("weights_dir", type=str, help="Path to dir with .pth, mean.npy, std.npy")
-    parser.add_argument("image", type=str, help="Path to a BGR image (e.g. frame from broadcast)")
+    parser = argparse.ArgumentParser(
+        description="Test DynamicPitchCalibrator on a single frame."
+    )
+    parser.add_argument(
+        "weights_dir", type=str, help="Path to dir with .pth, mean.npy, std.npy"
+    )
+    parser.add_argument(
+        "image", type=str, help="Path to a BGR image (e.g. frame from broadcast)"
+    )
     args = parser.parse_args()
 
     calibrator = DynamicPitchCalibrator(args.weights_dir)

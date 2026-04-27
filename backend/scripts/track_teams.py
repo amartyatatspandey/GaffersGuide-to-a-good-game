@@ -42,7 +42,10 @@ from services.pipeline_paths import (  # noqa: E402
     format_tracking_model_missing_reason,
     tracking_model_weights_path,
 )
-from scripts.run_calibrator_on_video import ensure_homography_json_for_video  # noqa: E402
+
+from scripts.run_calibrator_on_video import (
+    ensure_homography_json_for_video,  # noqa: E402
+)
 
 # --- DECOUPLED REID IMPORT ---
 # Explicit fallback: pipeline keeps running if ReID deps or reid_healer.py are missing or broken.
@@ -60,7 +63,9 @@ except Exception as e:  # noqa: BLE001 — intentional graceful degradation
     )
 
 
-def cosine_similarity(v1: np.ndarray | Sequence[float], v2: np.ndarray | Sequence[float]) -> float:
+def cosine_similarity(
+    v1: np.ndarray | Sequence[float], v2: np.ndarray | Sequence[float]
+) -> float:
     """Cosine similarity between two vectors (e.g. 512-D ReID embeddings)."""
     a = np.asarray(v1, dtype=np.float64).ravel()
     b = np.asarray(v2, dtype=np.float64).ravel()
@@ -81,12 +86,12 @@ CLASS_BALL = 1
 CLASS_REF = 2
 
 # Team box colors (BGR for OpenCV)
-COLOR_TEAM_0 = (0, 0, 255)       # Red (Team A)
-COLOR_TEAM_1 = (255, 0, 0)       # Blue (Team B)
+COLOR_TEAM_0 = (0, 0, 255)  # Red (Team A)
+COLOR_TEAM_1 = (255, 0, 0)  # Blue (Team B)
 COLOR_UNKNOWN = (128, 128, 128)  # Gray (waiting for buffer)
-COLOR_GOALKEEPER = (0, 255, 255) # Yellow for GK (team-associated)
-COLOR_BALL = (255, 255, 0)       # Cyan
-COLOR_REF = (0, 165, 255)        # Orange
+COLOR_GOALKEEPER = (0, 255, 255)  # Yellow for GK (team-associated)
+COLOR_BALL = (255, 255, 0)  # Cyan
+COLOR_REF = (0, 165, 255)  # Orange
 TEAM_COLORS = {0: COLOR_TEAM_0, 1: COLOR_TEAM_1}
 
 # Soft lock: min frames before assigning; max history for auto-correction
@@ -139,7 +144,9 @@ class HybridIDHealer:
         if not self.active:
             return
         dead_ids = [
-            tid for tid, last_seen in self.id_last_seen_frame.items() if current_frame - last_seen > 300
+            tid
+            for tid, last_seen in self.id_last_seen_frame.items()
+            if current_frame - last_seen > 300
         ]
         for tid in dead_ids:
             self.id_fingerprints.pop(tid, None)
@@ -189,7 +196,9 @@ class HybridIDHealer:
                 if tid not in self.id_fingerprints:
                     new_fp = self.fingerprint_engine.extract_features(frame, bbox)
                     pr = radar_pts[i]
-                    new_radar_pt = (float(pr[0]), float(pr[1])) if pr is not None else None
+                    new_radar_pt = (
+                        (float(pr[0]), float(pr[1])) if pr is not None else None
+                    )
                     best_match_id: int | None = None
                     best_sim = 0.0
                     if new_fp is not None and new_radar_pt is not None:
@@ -247,7 +256,9 @@ class TeamClassifier:
     def __init__(self) -> None:
         self.player_colors: defaultdict[int, list[np.ndarray]] = defaultdict(list)
         self.player_positions: defaultdict[int, list[float]] = defaultdict(list)
-        self.player_pitch_x: defaultdict[int, list[float]] = defaultdict(list)   # 2D Radar X
+        self.player_pitch_x: defaultdict[int, list[float]] = defaultdict(
+            list
+        )  # 2D Radar X
         self.max_history = 90
         self.global_kmeans = KMeans(n_clusters=2, random_state=42, n_init=10)
         # --- DYNAMIC ANCHOR STATE ---
@@ -255,9 +266,15 @@ class TeamClassifier:
         self.anchors_extracted = False
         self.color_anchors: dict[str, np.ndarray] = {}
         # INVERTED LOCK: role -> single tracker_id (max one ID per singular role)
-        self.locked_role_ids: dict[str, int | None] = {"gk_left": None, "gk_right": None, "referee": None}
+        self.locked_role_ids: dict[str, int | None] = {
+            "gk_left": None,
+            "gk_right": None,
+            "referee": None,
+        }
 
-    def get_dominant_color(self, image: np.ndarray, bbox: np.ndarray) -> np.ndarray | None:
+    def get_dominant_color(
+        self, image: np.ndarray, bbox: np.ndarray
+    ) -> np.ndarray | None:
         """
         Extract dominant jersey color from center-top of bbox (chest) in HSV.
         Crops center-half width and top half height, masks green, K-Means on remaining pixels.
@@ -285,7 +302,9 @@ class TeamClassifier:
         hsv_crop = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
         h_ch, s_ch = hsv_crop[:, :, 0], hsv_crop[:, :, 1]
         green_mask = (
-            (h_ch >= HSV_GREEN_H_LOW) & (h_ch <= HSV_GREEN_H_HIGH) & (s_ch > HSV_GREEN_S_MIN)
+            (h_ch >= HSV_GREEN_H_LOW)
+            & (h_ch <= HSV_GREEN_H_HIGH)
+            & (s_ch > HSV_GREEN_S_MIN)
         )
         non_green = ~green_mask
         if not np.any(non_green):
@@ -310,7 +329,11 @@ class TeamClassifier:
         """Extract exact color profiles for the two teams and referee at kickoff. Lock ref ID."""
         avg_positions: dict[int, float] = {}
         for pid, x_coords in self.player_positions.items():
-            if len(x_coords) > 15 and pid in self.player_colors and len(self.player_colors[pid]) > 0:
+            if (
+                len(x_coords) > 15
+                and pid in self.player_colors
+                and len(self.player_colors[pid]) > 0
+            ):
                 avg_positions[pid] = float(np.mean(x_coords))
 
         if len(avg_positions) < 10:
@@ -324,8 +347,14 @@ class TeamClassifier:
                 max_ref_detections = ref_count
                 ref_id = pid
 
-        if ref_id is not None and ref_id in self.player_colors and len(self.player_colors[ref_id]) > 0:
-            self.color_anchors["referee"] = np.median(self.player_colors[ref_id], axis=0).astype(np.float64)
+        if (
+            ref_id is not None
+            and ref_id in self.player_colors
+            and len(self.player_colors[ref_id]) > 0
+        ):
+            self.color_anchors["referee"] = np.median(
+                self.player_colors[ref_id], axis=0
+            ).astype(np.float64)
             self.locked_role_ids["referee"] = ref_id
 
         outfield_colors: list[np.ndarray] = []
@@ -334,7 +363,9 @@ class TeamClassifier:
                 continue
             if pid not in self.player_colors or len(self.player_colors[pid]) == 0:
                 continue
-            outfield_colors.append(np.median(self.player_colors[pid], axis=0).astype(np.float64))
+            outfield_colors.append(
+                np.median(self.player_colors[pid], axis=0).astype(np.float64)
+            )
 
         if len(outfield_colors) < 2:
             return
@@ -363,7 +394,9 @@ class TeamClassifier:
             min_dist_to_known = float("inf")
             for role, anchor_color in self.color_anchors.items():
                 if role in ("team_0", "team_1", "referee"):
-                    dist = float(np.linalg.norm(player_color - np.asarray(anchor_color).ravel()))
+                    dist = float(
+                        np.linalg.norm(player_color - np.asarray(anchor_color).ravel())
+                    )
                     min_dist_to_known = min(min_dist_to_known, dist)
 
             # THE SPATIAL OVERRIDE: 16.5m penalty box = 165 scaled pixels
@@ -376,7 +409,9 @@ class TeamClassifier:
             left_candidates.sort(key=lambda p: avg_pitch_x[p])
             for pid in left_candidates[:3]:
                 if is_true_outlier(pid, avg_pitch_x[pid]):
-                    self.color_anchors["gk_left"] = np.median(self.player_colors[pid], axis=0).astype(np.float64)
+                    self.color_anchors["gk_left"] = np.median(
+                        self.player_colors[pid], axis=0
+                    ).astype(np.float64)
                     self.locked_role_ids["gk_left"] = pid
                     logger.info("Lazy-loaded Left GK in defensive third: ID=%s", pid)
                     break
@@ -387,7 +422,9 @@ class TeamClassifier:
             right_candidates.sort(key=lambda p: avg_pitch_x[p], reverse=True)
             for pid in right_candidates[:3]:
                 if is_true_outlier(pid, avg_pitch_x[pid]):
-                    self.color_anchors["gk_right"] = np.median(self.player_colors[pid], axis=0).astype(np.float64)
+                    self.color_anchors["gk_right"] = np.median(
+                        self.player_colors[pid], axis=0
+                    ).astype(np.float64)
                     self.locked_role_ids["gk_right"] = pid
                     logger.info("Lazy-loaded Right GK in defensive third: ID=%s", pid)
                     break
@@ -427,7 +464,11 @@ class TeamClassifier:
                         self.player_pitch_x[tid].pop(0)
 
                 # K-Means throttle: need samples until baseline (15), then refresh every 5th frame
-                if tid not in self.player_colors or len(self.player_colors[tid]) < 15 or frame_idx % 5 == 0:
+                if (
+                    tid not in self.player_colors
+                    or len(self.player_colors[tid]) < 15
+                    or frame_idx % 5 == 0
+                ):
                     color = self.get_dominant_color(image, bbox)
                     if color is not None:
                         self.player_colors[tid].append(color)
@@ -505,8 +546,12 @@ class TeamClassifier:
                 roles[tid] = "unknown"
                 continue
             player_color = np.median(self.player_colors[tid], axis=0).ravel()
-            dist_t0 = float(np.linalg.norm(player_color - np.asarray(team_0_anchor).ravel()))
-            dist_t1 = float(np.linalg.norm(player_color - np.asarray(team_1_anchor).ravel()))
+            dist_t0 = float(
+                np.linalg.norm(player_color - np.asarray(team_0_anchor).ravel())
+            )
+            dist_t1 = float(
+                np.linalg.norm(player_color - np.asarray(team_1_anchor).ravel())
+            )
             # RELAXED THRESHOLD: 65.0 accommodates shadows / compression while limiting jersey mix-ups
             if min(dist_t0, dist_t1) > 65.0:
                 roles[tid] = "outlier"
@@ -525,7 +570,11 @@ class TacticalRadar:
     Unified Architecture: 720p Normalization, Anti-Vortex, and Fail-Safe Clamping.
     """
 
-    def __init__(self, json_path: str | Path | None = None, video_res: tuple[int, int] = (640, 360)) -> None:
+    def __init__(
+        self,
+        json_path: str | Path | None = None,
+        video_res: tuple[int, int] = (640, 360),
+    ) -> None:
         if json_path is None:
             env_h = os.getenv("GAFFERS_HOMOGRAPHY_JSON", "").strip()
             if env_h:
@@ -564,13 +613,18 @@ class TacticalRadar:
                 pass
 
         self.available_frames = sorted(self.inv_homographies.keys())
-        logger.info("Tactical Radar loaded and inverted %d dynamic camera matrices", len(self.available_frames))
+        logger.info(
+            "Tactical Radar loaded and inverted %d dynamic camera matrices",
+            len(self.available_frames),
+        )
 
     def update_camera_angle(self, current_frame_idx: int) -> None:
         self.current_frame_idx = current_frame_idx
 
     def draw_blank_pitch(self) -> np.ndarray:
-        pitch = np.ones((self.radar_h, self.radar_w, 3), dtype=np.uint8) * np.array([40, 130, 40], dtype=np.uint8)
+        pitch = np.ones((self.radar_h, self.radar_w, 3), dtype=np.uint8) * np.array(
+            [40, 130, 40], dtype=np.uint8
+        )
         white = (255, 255, 255)
         thickness = 2
         mid_x = self.radar_w // 2
@@ -584,16 +638,30 @@ class TacticalRadar:
         pen_w, pen_h = int(16.5 * self.scale), int(40.32 * self.scale)
         pen_y = (self.radar_h - pen_h) // 2
         cv2.rectangle(pitch, (0, pen_y), (pen_w, pen_y + pen_h), white, thickness)
-        cv2.rectangle(pitch, (self.radar_w - pen_w, pen_y), (self.radar_w, pen_y + pen_h), white, thickness)
+        cv2.rectangle(
+            pitch,
+            (self.radar_w - pen_w, pen_y),
+            (self.radar_w, pen_y + pen_h),
+            white,
+            thickness,
+        )
 
         goal_w, goal_h = int(5.5 * self.scale), int(18.32 * self.scale)
         goal_y = (self.radar_h - goal_h) // 2
         cv2.rectangle(pitch, (0, goal_y), (goal_w, goal_y + goal_h), white, thickness)
-        cv2.rectangle(pitch, (self.radar_w - goal_w, goal_y), (self.radar_w, goal_y + goal_h), white, thickness)
+        cv2.rectangle(
+            pitch,
+            (self.radar_w - goal_w, goal_y),
+            (self.radar_w, goal_y + goal_h),
+            white,
+            thickness,
+        )
 
         spot_r = max(2, int(0.4 * self.scale))
         cv2.circle(pitch, (int(11 * self.scale), center_y), spot_r, white, -1)
-        cv2.circle(pitch, (self.radar_w - int(11 * self.scale), center_y), spot_r, white, -1)
+        cv2.circle(
+            pitch, (self.radar_w - int(11 * self.scale), center_y), spot_r, white, -1
+        )
         return pitch
 
     def map_to_2d(self, bbox: np.ndarray) -> tuple[int, int] | None:
@@ -686,7 +754,9 @@ class TacticalRadar:
         x_center = ((b[:, 0] + b[:, 2]) / 2.0) * scale_x
         y_bottom = b[:, 3] * scale_y
         # OpenCV shape rule: (N, 1, 2) float32
-        points = np.stack([x_center, y_bottom], axis=1).astype(np.float32).reshape(-1, 1, 2)
+        points = (
+            np.stack([x_center, y_bottom], axis=1).astype(np.float32).reshape(-1, 1, 2)
+        )
         if len(points) == 0:
             return []
 
@@ -776,7 +846,11 @@ def get_detection_label(
         if isinstance(payload, tuple):
             team_id, is_gk = payload
             if tracker_id is not None:
-                return f"ID:{tracker_id} T{team_id}-GK" if is_gk else f"ID:{tracker_id} T{team_id}"
+                return (
+                    f"ID:{tracker_id} T{team_id}-GK"
+                    if is_gk
+                    else f"ID:{tracker_id} T{team_id}"
+                )
             return f"T{team_id}-GK" if is_gk else f"Team {team_id}"
     if class_id == CLASS_BALL:
         return "Ball"
@@ -793,8 +867,16 @@ def annotate_frame(
 ) -> np.ndarray:
     """Draw boxes and labels with per-detection colors and labels."""
     n = len(detections)
-    colors = [get_detection_color(int(detections.class_id[i]), team_ids[i]) for i in range(n)]
-    tid_at = (lambda i: int(tracker_ids[i]) if tracker_ids is not None and i < len(tracker_ids) and tracker_ids[i] is not None else None)
+    colors = [
+        get_detection_color(int(detections.class_id[i]), team_ids[i]) for i in range(n)
+    ]
+    tid_at = lambda i: (
+        int(tracker_ids[i])
+        if tracker_ids is not None
+        and i < len(tracker_ids)
+        and tracker_ids[i] is not None
+        else None
+    )
     labels = [
         get_detection_label(int(detections.class_id[i]), team_ids[i], tid_at(i))
         for i in range(n)
@@ -809,7 +891,15 @@ def annotate_frame(
         cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
         (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
         cv2.rectangle(annotated, (x1, y1 - th - 10), (x1 + tw, y1), color, -1)
-        cv2.putText(annotated, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        cv2.putText(
+            annotated,
+            label,
+            (x1, y1 - 5),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 255, 255),
+            2,
+        )
     return annotated
 
 
@@ -867,7 +957,9 @@ def main() -> None:
                 current_radar = radar.draw_blank_pitch()
                 composed = np.zeros((output_height, output_width, 3), dtype=np.uint8)
                 composed[0:height, 0:width] = frame
-                composed[0 : radar.radar_h, width : width + radar.radar_w] = current_radar
+                composed[0 : radar.radar_h, width : width + radar.radar_w] = (
+                    current_radar
+                )
                 out.write(composed)
                 frame_idx += 1
                 continue
@@ -880,7 +972,9 @@ def main() -> None:
                 radar.map_to_2d(detections.xyxy[i]) for i in range(len(detections))
             ]
 
-            tracker_ids = healer.process_and_heal(detections, frame, radar_pts, frame_idx)
+            tracker_ids = healer.process_and_heal(
+                detections, frame, radar_pts, frame_idx
+            )
 
             if tracker_ids is None:
                 tracker_ids = getattr(detections, "tracker_id", None)

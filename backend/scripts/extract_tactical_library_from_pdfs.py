@@ -23,15 +23,39 @@ KNOWN_FLAWS: list[str] = [
 
 # Curated fallbacks when PDF text lacks explicit flaw strings (e.g. military / meta entries).
 MANUAL_TAG_PREFIXES: list[tuple[str, str, list[str]]] = [
-    ("Fernando Diniz / Relationism", "We play within the chaos", ["Midfield Disconnect"]),
+    (
+        "Fernando Diniz / Relationism",
+        "We play within the chaos",
+        ["Midfield Disconnect"],
+    ),
     ("Sun Tzu / Military Strategy", "All warfare", ["Midfield Disconnect"]),
-    ("Niccolò Machiavelli / Military Strategy", "A commander should arrange", ["Midfield Disconnect"]),
-    ("Carlo Ancelotti / Functional Play", "Dominating the midfield", ["Midfield Disconnect"]),
+    (
+        "Niccolò Machiavelli / Military Strategy",
+        "A commander should arrange",
+        ["Midfield Disconnect"],
+    ),
+    (
+        "Carlo Ancelotti / Functional Play",
+        "Dominating the midfield",
+        ["Midfield Disconnect"],
+    ),
     ("Sean Dyche / Direct Play", "Keep them one side", ["Parked Bus"]),
-    ("Johan Cruyff / Positional Play", "Playing football is very simple", ["Midfield Disconnect"]),
+    (
+        "Johan Cruyff / Positional Play",
+        "Playing football is very simple",
+        ["Midfield Disconnect"],
+    ),
     ("Helenio Herrera / Catenaccio", "If you play for yourself", ["Parked Bus"]),
-    ("Antonio Conte / Pragmatism", "You have to be prepared", ["Over-Stretched Formation"]),
-    ("Sam Allardyce / Direct Play", "There is more focus on set pieces", ["Midfield Disconnect"]),
+    (
+        "Antonio Conte / Pragmatism",
+        "You have to be prepared",
+        ["Over-Stretched Formation"],
+    ),
+    (
+        "Sam Allardyce / Direct Play",
+        "There is more focus on set pieces",
+        ["Midfield Disconnect"],
+    ),
 ]
 
 
@@ -81,7 +105,9 @@ def parse_philosophies_chunk(pdf_path: Path) -> list[dict[str, Any]]:
     chunk = t[start:wc]
     chunk = chunk.replace('"philosophies":,', '"philosophies": [')
     chunk = chunk.replace('"tags":,', '"tags": [],')
-    chunk = chunk.replace('"fc_role_recommendations":,', '"fc_role_recommendations": null,')
+    chunk = chunk.replace(
+        '"fc_role_recommendations":,', '"fc_role_recommendations": null,'
+    )
     chunk = re.sub(
         r'("philosophies":\s*\[)\s*\n\s*"author":',
         r'\1\n    {\n      "tags": [],\n      "author":',

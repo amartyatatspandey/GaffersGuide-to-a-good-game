@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check sn-calibration paths for homography pipeline.")
+    parser = argparse.ArgumentParser(
+        description="Check sn-calibration paths for homography pipeline."
+    )
     parser.add_argument(
         "--try-import",
         action="store_true",

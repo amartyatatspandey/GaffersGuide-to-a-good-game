@@ -74,11 +74,15 @@ def _extract_zip_files(reid_root: Path, splits: Iterable[str]) -> None:
         target_dir = reid_root / split
 
         if not zip_path.exists():
-            logger.warning("Expected zip for split '%s' not found at %s", split, zip_path)
+            logger.warning(
+                "Expected zip for split '%s' not found at %s", split, zip_path
+            )
             continue
 
         if target_dir.exists() and any(target_dir.iterdir()):
-            logger.info("Split '%s' already extracted at %s; skipping unzip.", split, target_dir)
+            logger.info(
+                "Split '%s' already extracted at %s; skipping unzip.", split, target_dir
+            )
             continue
 
         logger.info("Extracting %s into %s ...", zip_path, target_dir)
@@ -199,4 +203,3 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
