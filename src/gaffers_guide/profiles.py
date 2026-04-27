@@ -1,88 +1,74 @@
-# src/gaffers_guide/profiles.py
-
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-ProfileName = Literal["fast", "balanced", "high_res", "sahi"]
+QualityProfileName = Literal["fast", "balanced", "high_res", "sahi"]
 
-VALID_PROFILES: tuple[str, ...] = ("fast", "balanced", "high_res", "sahi")
+VALID_PROFILES = ("fast", "balanced", "high_res", "sahi")
+DEFAULT_PROFILE: QualityProfileName = "balanced"
 
+@dataclass(frozen=True, slots=True)
+class QualityProfile:
+    name: QualityProfileName
+    description: str
+    sahi_enabled: bool
+    imgsz: int
+    confidence_threshold: float
+    slice_width: int
+    slice_height: int
+    slice_overlap_ratio: float
 
-@dataclass(frozen=True)
-class ProfileConfig:
-    """
-    Immutable runtime configuration resolved from a named profile.
-    Passed through the pipeline; never stored as a global.
-    """
-    name: str
-    imgsz: int                  # YOLO inference image size
-    conf_threshold: float       # Detection confidence threshold
-    sahi_enabled: bool          # Whether to use SAHI tiling
-    sahi_slice_size: int        # Tile size (pixels)
-    sahi_overlap_ratio: float   # Tile overlap ratio
-    frame_skip: int             # Process every Nth frame (1 = no skipping)
-    batch_size: int             # Inference batch size
+# Keep ProfileConfig as alias for backward compatibility
+ProfileConfig = QualityProfile
 
-    def __str__(self) -> str:
-        return (
-            f"Profile '{self.name}': "
-            f"imgsz={self.imgsz}, conf={self.conf_threshold}, "
-            f"sahi={self.sahi_enabled}, slice={self.sahi_slice_size}, "
-            f"overlap={self.sahi_overlap_ratio}, frame_skip={self.frame_skip}, "
-            f"batch_size={self.batch_size}"
-        )
-
-
-# ── Single source of truth ───────────────────────────────────────────────
-_PROFILES: dict[str, ProfileConfig] = {
-    "fast": ProfileConfig(
+PROFILES: dict[str, QualityProfile] = {
+    "fast": QualityProfile(
         name="fast",
-        imgsz=480,
-        conf_threshold=0.35,
+        description="Prioritises speed/latency. Lower resolution, no SAHI.",
         sahi_enabled=False,
-        sahi_slice_size=320,
-        sahi_overlap_ratio=0.1,
-        frame_skip=3,
-        batch_size=16,
-    ),
-    "balanced": ProfileConfig(
-        name="balanced",
         imgsz=640,
-        conf_threshold=0.25,
-        sahi_enabled=False,
-        sahi_slice_size=320,
-        sahi_overlap_ratio=0.2,
-        frame_skip=1,
-        batch_size=8,
+        confidence_threshold=0.35,
+        slice_width=640,
+        slice_height=640,
+        slice_overlap_ratio=0.0,
     ),
-    "high_res": ProfileConfig(
+    "balanced": QualityProfile(
+        name="balanced",
+        description="Middle ground between speed and quality. Recommended for most use cases.",
+        sahi_enabled=False,
+        imgsz=960,
+        confidence_threshold=0.30,
+        slice_width=800,
+        slice_height=800,
+        slice_overlap_ratio=0.1,
+    ),
+    "high_res": QualityProfile(
         name="high_res",
-        imgsz=1280,
-        conf_threshold=0.20,
+        description="Higher quality output at the cost of lower FPS.",
         sahi_enabled=False,
-        sahi_slice_size=512,
-        sahi_overlap_ratio=0.2,
-        frame_skip=1,
-        batch_size=4,
-    ),
-    "sahi": ProfileConfig(
-        name="sahi",
         imgsz=1280,
-        conf_threshold=0.20,
+        confidence_threshold=0.25,
+        slice_width=960,
+        slice_height=960,
+        slice_overlap_ratio=0.2,
+    ),
+    "sahi": QualityProfile(
+        name="sahi",
+        description="Maximum ball recall using SAHI slicing. Highest runtime cost.",
         sahi_enabled=True,
-        sahi_slice_size=512,
-        sahi_overlap_ratio=0.25,
-        frame_skip=1,
-        batch_size=2,
+        imgsz=1280,
+        confidence_threshold=0.20,
+        slice_width=640,
+        slice_height=640,
+        slice_overlap_ratio=0.3,
     ),
 }
 
-
-def resolve_profile(name: str) -> ProfileConfig:
-    if name not in _PROFILES:
+def resolve_profile(name: str) -> QualityProfile:
+    """Resolve a profile name to a QualityProfile. Fails fast on invalid input."""
+    if name not in PROFILES:
+        valid = ", ".join(VALID_PROFILES)
         raise ValueError(
-            f"Unknown quality profile: '{name}'. "
-            f"Valid choices are: {', '.join(VALID_PROFILES)}"
+            f"Unknown quality profile '{name}'. Valid profiles are: {valid}"
         )
-    return _PROFILES[name]
+    return PROFILES[name]
