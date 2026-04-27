@@ -1,9 +1,8 @@
 import json
+import numpy as np
+import cv2
 import math
 from pathlib import Path
-
-import cv2
-import numpy as np
 
 # Paths
 DATA_PATH = Path("backend/output/clean_tactical_data.json")
@@ -163,9 +162,7 @@ def run_analytics():
             metrics_0.update(
                 {
                     "pitch_control_pct": t0_pct,
-                    "pressure_index_m": analyzer.calculate_pressure_index(
-                        t0_pts, t1_pts
-                    ),
+                    "pressure_index_m": analyzer.calculate_pressure_index(t0_pts, t1_pts),
                     "line_gap_def_mid_m": t0_def_mid,
                     "line_gap_mid_att_m": t0_mid_att,
                     "avg_speed_kmh": float(np.mean(t0_speeds)) if t0_speeds else 0.0,
@@ -176,9 +173,7 @@ def run_analytics():
             metrics_1.update(
                 {
                     "pitch_control_pct": t1_pct,
-                    "pressure_index_m": analyzer.calculate_pressure_index(
-                        t1_pts, t0_pts
-                    ),
+                    "pressure_index_m": analyzer.calculate_pressure_index(t1_pts, t0_pts),
                     "line_gap_def_mid_m": t1_def_mid,
                     "line_gap_mid_att_m": t1_mid_att,
                     "avg_speed_kmh": float(np.mean(t1_speeds)) if t1_speeds else 0.0,
@@ -193,9 +188,7 @@ def run_analytics():
     with open(OUTPUT_PATH, "w") as f:
         json.dump(analytics_timeline, f, indent=4)
 
-    print(
-        f"Generated advanced tactical analytics for {len(analytics_timeline)} frames!"
-    )
+    print(f"Generated advanced tactical analytics for {len(analytics_timeline)} frames!")
     print(f"Saved to {OUTPUT_PATH}")
 
 

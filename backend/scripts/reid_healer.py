@@ -70,11 +70,7 @@ class _ConvLayer(nn.Module):
             bias=False,
             groups=groups,
         )
-        self.bn = (
-            nn.InstanceNorm2d(out_channels, affine=True)
-            if IN
-            else nn.BatchNorm2d(out_channels)
-        )
+        self.bn = nn.InstanceNorm2d(out_channels, affine=True) if IN else nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -84,18 +80,10 @@ class _ConvLayer(nn.Module):
 
 
 class _Conv1x1(nn.Module):
-    def __init__(
-        self, in_channels: int, out_channels: int, stride: int = 1, groups: int = 1
-    ) -> None:
+    def __init__(self, in_channels: int, out_channels: int, stride: int = 1, groups: int = 1) -> None:
         super().__init__()
         self.conv = nn.Conv2d(
-            in_channels,
-            out_channels,
-            1,
-            stride=stride,
-            padding=0,
-            bias=False,
-            groups=groups,
+            in_channels, out_channels, 1, stride=stride, padding=0, bias=False, groups=groups
         )
         self.bn = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
@@ -109,9 +97,7 @@ class _Conv1x1(nn.Module):
 class _Conv1x1Linear(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, stride: int = 1) -> None:
         super().__init__()
-        self.conv = nn.Conv2d(
-            in_channels, out_channels, 1, stride=stride, padding=0, bias=False
-        )
+        self.conv = nn.Conv2d(in_channels, out_channels, 1, stride=stride, padding=0, bias=False)
         self.bn = nn.BatchNorm2d(out_channels)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -122,17 +108,9 @@ class _Conv1x1Linear(nn.Module):
 class _LightConv3x3(nn.Module):
     def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__()
-        self.conv1 = nn.Conv2d(
-            in_channels, out_channels, 1, stride=1, padding=0, bias=False
-        )
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 1, stride=1, padding=0, bias=False)
         self.conv2 = nn.Conv2d(
-            out_channels,
-            out_channels,
-            3,
-            stride=1,
-            padding=1,
-            bias=False,
-            groups=out_channels,
+            out_channels, out_channels, 3, stride=1, padding=1, bias=False, groups=out_channels
         )
         self.bn = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
@@ -156,13 +134,9 @@ class _ChannelGate(nn.Module):
         if num_gates is None:
             num_gates = in_channels
         self.global_avgpool = nn.AdaptiveAvgPool2d(1)
-        self.fc1 = nn.Conv2d(
-            in_channels, in_channels // reduction, 1, bias=True, padding=0
-        )
+        self.fc1 = nn.Conv2d(in_channels, in_channels // reduction, 1, bias=True, padding=0)
         self.relu = nn.ReLU(inplace=True)
-        self.fc2 = nn.Conv2d(
-            in_channels // reduction, num_gates, 1, bias=True, padding=0
-        )
+        self.fc2 = nn.Conv2d(in_channels // reduction, num_gates, 1, bias=True, padding=0)
         if gate_activation == "sigmoid":
             self.gate_activation: nn.Module | None = nn.Sigmoid()
         elif gate_activation == "relu":
@@ -212,11 +186,7 @@ class _OSBlock(nn.Module):
         )
         self.gate = _ChannelGate(mid_channels)
         self.conv3 = _Conv1x1Linear(mid_channels, out_channels)
-        self.downsample = (
-            _Conv1x1Linear(in_channels, out_channels)
-            if in_channels != out_channels
-            else None
-        )
+        self.downsample = _Conv1x1Linear(in_channels, out_channels) if in_channels != out_channels else None
         self.IN = nn.InstanceNorm2d(out_channels, affine=True) if IN else None
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -257,15 +227,9 @@ class OSNet(nn.Module):
 
         self.conv1 = _ConvLayer(3, channels[0], 7, stride=2, padding=3, IN=IN)
         self.maxpool = nn.MaxPool2d(3, stride=2, padding=1)
-        self.conv2 = self._make_layer(
-            blocks[0], layers[0], channels[0], channels[1], True, IN=IN
-        )
-        self.conv3 = self._make_layer(
-            blocks[1], layers[1], channels[1], channels[2], True, IN=False
-        )
-        self.conv4 = self._make_layer(
-            blocks[2], layers[2], channels[2], channels[3], False, IN=False
-        )
+        self.conv2 = self._make_layer(blocks[0], layers[0], channels[0], channels[1], True, IN=IN)
+        self.conv3 = self._make_layer(blocks[1], layers[1], channels[1], channels[2], True, IN=False)
+        self.conv4 = self._make_layer(blocks[2], layers[2], channels[2], channels[3], False, IN=False)
         self.conv5 = _Conv1x1(channels[3], channels[3])
         self.global_avgpool = nn.AdaptiveAvgPool2d(1)
         self.fc = self._construct_fc_layer(feature_dim, channels[3])
@@ -285,11 +249,7 @@ class OSNet(nn.Module):
         for _ in range(1, layer):
             layers_list.append(block(out_channels, out_channels, IN=IN))
         if reduce_spatial_size:
-            layers_list.append(
-                nn.Sequential(
-                    _Conv1x1(out_channels, out_channels), nn.AvgPool2d(2, stride=2)
-                )
-            )
+            layers_list.append(nn.Sequential(_Conv1x1(out_channels, out_channels), nn.AvgPool2d(2, stride=2)))
         return nn.Sequential(*layers_list)
 
     def _construct_fc_layer(self, fc_dim: int, input_dim: int) -> nn.Sequential | None:
@@ -369,11 +329,7 @@ def _unwrap_state_dict(ckpt: Any) -> dict[str, Any]:
             inner = ckpt.get(key)
             if isinstance(inner, nn.Module):
                 return dict(inner.state_dict())
-            if (
-                isinstance(inner, dict)
-                and inner
-                and all(hasattr(v, "shape") for v in inner.values())
-            ):
+            if isinstance(inner, dict) and inner and all(hasattr(v, "shape") for v in inner.values()):
                 return dict(inner)  # type: ignore[arg-type]
         if ckpt and all(hasattr(v, "shape") for v in ckpt.values()):
             return dict(ckpt)  # type: ignore[arg-type]
@@ -426,9 +382,7 @@ class VisualFingerprint:
             except Exception as exc:  # noqa: BLE001 — try next mirror
                 last_err = exc
                 logger.warning("Download failed (%s): %s", url, exc)
-        raise RuntimeError(
-            "Could not download OSNet weights from any mirror"
-        ) from last_err
+        raise RuntimeError("Could not download OSNet weights from any mirror") from last_err
 
     def _load_model(self) -> OSNet:
         try:
@@ -470,9 +424,7 @@ class VisualFingerprint:
             return None
 
         # ReID convention: height x width = 256 x 128
-        crop_resized = cv2.resize(
-            crop, (REID_WIDTH, REID_HEIGHT), interpolation=cv2.INTER_LINEAR
-        )
+        crop_resized = cv2.resize(crop, (REID_WIDTH, REID_HEIGHT), interpolation=cv2.INTER_LINEAR)
         rgb = cv2.cvtColor(crop_resized, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
         rgb = (rgb - IMAGENET_MEAN) / IMAGENET_STD
         chw = np.transpose(rgb, (2, 0, 1))

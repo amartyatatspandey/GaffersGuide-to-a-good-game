@@ -210,7 +210,9 @@ def process_video(
         players = first_frame_detections.get(0, 0)
         ball = first_frame_detections.get(1, 0)
         referees = first_frame_detections.get(2, 0)
-        print(f"Frame 1: {players} Players, {ball} Ball, {referees} Referee")
+        print(
+            f"Frame 1: {players} Players, {ball} Ball, {referees} Referee"
+        )
 
 
 def main() -> None:

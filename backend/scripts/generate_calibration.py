@@ -38,9 +38,7 @@ from soccersegcal.train import LitSoccerFieldSegmentation
 
 def parse_args() -> Namespace:
     """Parse CLI arguments for calibration batch generation."""
-    parser = ArgumentParser(
-        description="Generate homography JSON from match video using Spiideo."
-    )
+    parser = ArgumentParser(description="Generate homography JSON from match video using Spiideo.")
     parser.add_argument(
         "--video",
         type=Path,
@@ -56,11 +54,7 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--checkpoint",
         type=Path,
-        default=Path(
-            os.getenv(
-                "SPIIDEO_CHECKPOINT", "backend/references/soccersegcal/snapshot.ckpt"
-            )
-        ),
+        default=Path(os.getenv("SPIIDEO_CHECKPOINT", "backend/references/soccersegcal/snapshot.ckpt")),
         help="Path to Spiideo segmentation checkpoint (.ckpt).",
     )
     parser.add_argument(
@@ -100,9 +94,7 @@ def camera_to_homography(cam: Camera) -> np.ndarray:
     image_points = np.zeros((4, 2), dtype=np.float32)
 
     for idx, wp in enumerate(world_points):
-        proj = cam.project_point(
-            np.array([wp[0], wp[1], 0.0], dtype=np.float64), distort=False
-        )
+        proj = cam.project_point(np.array([wp[0], wp[1], 0.0], dtype=np.float64), distort=False)
         image_points[idx] = np.array([proj[0], proj[1]], dtype=np.float32)
 
     homography = cv2.getPerspectiveTransform(world_points[:, :2], image_points)
@@ -134,12 +126,8 @@ def main() -> None:
         )
     device = torch.device("cuda")
     logger.info("Loading Spiideo checkpoint from %s on %s", args.checkpoint, device)
-    segmentation_model = LitSoccerFieldSegmentation.load_from_checkpoint(
-        str(args.checkpoint)
-    )
-    segmentation_model = segmentation_model.to(
-        memory_format=torch.channels_last, device=device
-    )
+    segmentation_model = LitSoccerFieldSegmentation.load_from_checkpoint(str(args.checkpoint))
+    segmentation_model = segmentation_model.to(memory_format=torch.channels_last, device=device)
     segmentation_model.eval()
 
     output_data: dict[str, list[dict[str, Any]]] = {"homographies": []}
@@ -158,9 +146,7 @@ def main() -> None:
             try:
                 image_tensor = frame_to_model_tensor(frame, width=args.width).to(device)
                 with torch.no_grad():
-                    segs = torch.sigmoid_(segmentation_model(image_tensor[None]))[
-                        0
-                    ].cpu()
+                    segs = torch.sigmoid_(segmentation_model(image_tensor[None]))[0].cpu()
 
                 ptz_model = segs2cam(segs, world_scale, prev_cam, show=False)
                 if ptz_model is not None:
@@ -171,28 +157,16 @@ def main() -> None:
                     cam = Camera(int(segs.shape[2]), int(segs.shape[1]))
                     cam.from_json_parameters(
                         {
-                            "position_meters": (
-                                ptz_model.camera_position.detach().numpy() * world_scale
-                            ).tolist(),
+                            "position_meters": (ptz_model.camera_position.detach().numpy() * world_scale).tolist(),
                             "principal_point": cam.principal_point,
                             "x_focal_length": focal,
                             "y_focal_length": focal,
-                            "pan_degrees": float(
-                                np.rad2deg(ptz_model.camera_pan.item())
-                            ),
-                            "tilt_degrees": float(
-                                np.rad2deg(ptz_model.camera_tilt.item())
-                            ),
-                            "roll_degrees": float(
-                                np.rad2deg(ptz_model.camera_roll.item())
-                            ),
+                            "pan_degrees": float(np.rad2deg(ptz_model.camera_pan.item())),
+                            "tilt_degrees": float(np.rad2deg(ptz_model.camera_tilt.item())),
+                            "roll_degrees": float(np.rad2deg(ptz_model.camera_roll.item())),
                             "radial_distortion": np.zeros(6, dtype=np.float64).tolist(),
-                            "tangential_distortion": np.zeros(
-                                2, dtype=np.float64
-                            ).tolist(),
-                            "thin_prism_distortion": np.zeros(
-                                4, dtype=np.float64
-                            ).tolist(),
+                            "tangential_distortion": np.zeros(2, dtype=np.float64).tolist(),
+                            "thin_prism_distortion": np.zeros(4, dtype=np.float64).tolist(),
                         }
                     )
                     matrix = camera_to_homography(cam)
@@ -205,9 +179,7 @@ def main() -> None:
             if matrix is None:
                 matrix = np.eye(3, dtype=np.float64)
 
-            output_data["homographies"].append(
-                {"frame": frame_idx, "homography": matrix.tolist()}
-            )
+            output_data["homographies"].append({"frame": frame_idx, "homography": matrix.tolist()})
             logger.info("Calibrated frame %d", frame_idx)
 
         frame_idx += 1

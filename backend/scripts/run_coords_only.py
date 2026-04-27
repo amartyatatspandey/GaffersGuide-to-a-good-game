@@ -12,7 +12,6 @@ Batch:
   PYTHONPATH=/workspace python backend/scripts/run_coords_only.py \\
     --input-dir /workspace/data/training_samples --output-dir /workspace/output
 """
-
 from __future__ import annotations
 
 import argparse
@@ -40,18 +39,15 @@ from calculators.possession import (  # noqa: E402
     compute_possession_team_id,
     interpolate_ball_positions,
 )
+from scripts.run_calibrator_on_video import ensure_homography_json_for_video  # noqa: E402
 from track_teams import (  # noqa: E402
     CLASS_BALL,
     CLASS_PLAYER,
-    MODEL_PATH,
     HybridIDHealer,
+    MODEL_PATH,
     TacticalRadar,
     TeamClassifier,
     format_tracking_model_missing_reason,
-)
-
-from scripts.run_calibrator_on_video import (
-    ensure_homography_json_for_video,  # noqa: E402
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -314,11 +310,11 @@ def run_coords_only(
             tracks_row: list[dict[str, Any]] = []
             for row in frame_data:
                 tid = row["id"]
-                pred = (
-                    role_mapping.get(tid, "unknown") if tid is not None else "unknown"
-                )
+                pred = role_mapping.get(tid, "unknown") if tid is not None else "unknown"
                 team_cls = (
-                    _prediction_to_team(pred) if row["cid"] == CLASS_PLAYER else None
+                    _prediction_to_team(pred)
+                    if row["cid"] == CLASS_PLAYER
+                    else None
                 )
                 bbox = np.asarray(row["bbox"], dtype=np.float64).ravel()
                 rp = row["radar_pt"]
@@ -331,12 +327,7 @@ def run_coords_only(
                     {
                         "track_id": tid,
                         "class_id": int(row["cid"]),
-                        "bbox_xyxy": [
-                            float(bbox[0]),
-                            float(bbox[1]),
-                            float(bbox[2]),
-                            float(bbox[3]),
-                        ],
+                        "bbox_xyxy": [float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])],
                         "radar_xy": radar_list,
                         "team": team_cls,
                     }

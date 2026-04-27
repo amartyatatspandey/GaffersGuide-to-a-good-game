@@ -8,7 +8,6 @@ Reads backend/output/training_coords/*_coords.pkl (one match per file), emits:
 
 Pitch XY from radar projection uses TacticalRadar scale=10 → 10 px ≈ 1 m (1050×680 ≈ 105m×68m).
 """
-
 from __future__ import annotations
 
 import argparse
@@ -63,12 +62,7 @@ def _load_match_tidy(path: Path, match_id: str) -> pd.DataFrame:
             bbox = tr.get("bbox_xyxy") or [np.nan, np.nan, np.nan, np.nan]
             if len(bbox) < 4:
                 bbox = [np.nan, np.nan, np.nan, np.nan]
-            x1, y1, x2, y2 = (
-                float(bbox[0]),
-                float(bbox[1]),
-                float(bbox[2]),
-                float(bbox[3]),
-            )
+            x1, y1, x2, y2 = (float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3]))
             cx = (x1 + x2) / 2.0
             cy = (y1 + y2) / 2.0
             rp = tr.get("radar_xy")
@@ -142,11 +136,9 @@ def _add_physics_and_clean(df: pd.DataFrame, fps: float) -> pd.DataFrame:
     outlier = df["speed_kmh_raw"] > SPEED_OUTLIER_KMH
 
     df["_disp_seg"] = df["_disp_m"].where(~outlier)
-    df["_disp_seg"] = (
-        g["_disp_seg"]
-        .transform(lambda s: s.interpolate(method="linear", limit_direction="both"))
-        .fillna(0.0)
-    )
+    df["_disp_seg"] = g["_disp_seg"].transform(
+        lambda s: s.interpolate(method="linear", limit_direction="both")
+    ).fillna(0.0)
     df["cumulative_distance_m"] = g["_disp_seg"].cumsum()
 
     df["speed_kmh"] = df["speed_kmh_raw"].where(~outlier)
@@ -201,9 +193,7 @@ def _summaries_from_frame(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Prepare tidy tracking CSV for visualization."
-    )
+    parser = argparse.ArgumentParser(description="Prepare tidy tracking CSV for visualization.")
     parser.add_argument(
         "--input-dir",
         type=Path,

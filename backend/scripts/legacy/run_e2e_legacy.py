@@ -28,6 +28,30 @@ load_dotenv(BACKEND_ROOT_LOCAL / ".env")
 if str(BACKEND_ROOT_LOCAL) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT_LOCAL))
 
+from llm_service import generate_coaching_advice, gemini_is_configured  # noqa: E402
+
+from scripts.generate_analytics import TacticalAnalyzer
+from scripts.global_refiner import GlobalRefiner
+from scripts.rag_coach import (
+    GeneratedPromptRecord,
+    TacticalLibrary,
+    load_json,
+    process_insights,
+)
+from models import ChunkTacticalInsight
+from scripts.tactical_rule_engine import evaluate_timeline as evaluate_chunk_insights
+from scripts.run_calibrator_on_video import ensure_homography_json_for_video  # noqa: E402
+from scripts.track_teams import (
+    BACKEND_ROOT,
+    CLASS_BALL,
+    CLASS_PLAYER,
+    HybridIDHealer,
+    MODEL_PATH,
+    TacticalRadar,
+    TeamClassifier,
+    format_tracking_model_missing_reason,
+)
+
 from calculators.advanced_ball_metrics import (
     compute_advanced_ball_metrics,
     in_zone14,
@@ -40,31 +64,6 @@ from calculators.ball_visibility import (
 from calculators.possession import (
     compute_possession_team_id,
     interpolate_ball_positions,
-)
-from llm_service import gemini_is_configured, generate_coaching_advice  # noqa: E402
-from models import ChunkTacticalInsight
-
-from scripts.generate_analytics import TacticalAnalyzer
-from scripts.global_refiner import GlobalRefiner
-from scripts.rag_coach import (
-    GeneratedPromptRecord,
-    TacticalLibrary,
-    load_json,
-    process_insights,
-)
-from scripts.run_calibrator_on_video import (
-    ensure_homography_json_for_video,  # noqa: E402
-)
-from scripts.tactical_rule_engine import evaluate_timeline as evaluate_chunk_insights
-from scripts.track_teams import (
-    BACKEND_ROOT,
-    CLASS_BALL,
-    CLASS_PLAYER,
-    MODEL_PATH,
-    HybridIDHealer,
-    TacticalRadar,
-    TeamClassifier,
-    format_tracking_model_missing_reason,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -240,7 +239,9 @@ def _print_data_guard_reliability(
     reset = "\033[0m" if use_color else ""
 
     if reliability_pct < RELIABILITY_ABORT_PCT:
-        print(f"{red}[❌] ERROR: Data quality too low for tactical analysis.{reset}")
+        print(
+            f"{red}[❌] ERROR: Data quality too low for tactical analysis.{reset}"
+        )
         return reliability_pct, "abort"
     if reliability_pct < RELIABILITY_WARN_PCT:
         print(
@@ -690,10 +691,7 @@ def _apply_ball_metrics_gate(
         if possession_team_id in (0, 1):
             valid_possession_frames += 1
             possession_counts[int(possession_team_id)] += 1
-            if (
-                previous_possession is not None
-                and possession_team_id != previous_possession
-            ):
+            if previous_possession is not None and possession_team_id != previous_possession:
                 turnovers += 1
             previous_possession = int(possession_team_id)
 
@@ -852,7 +850,9 @@ def run_cv_tracking(
             radar.update_camera_angle(frame_idx)
             camera_shift = flow_estimator.update(frame)
             homography_conf = _homography_confidence(radar, frame_idx)
-            use_fallback = homography_conf < HOMOGRAPHY_CONFIDENCE_FALLBACK_THRESHOLD
+            use_fallback = (
+                homography_conf < HOMOGRAPHY_CONFIDENCE_FALLBACK_THRESHOLD
+            )
             if use_fallback:
                 telemetry.frames_optical_flow_fallback += 1
             else:
@@ -942,9 +942,7 @@ def run_cv_tracking(
             radar_pts: list[tuple[int, int] | None] = [
                 radar.map_to_2d(detections.xyxy[i]) for i in range(len(detections))
             ]
-            tracker_ids = healer.process_and_heal(
-                detections, frame, radar_pts, frame_idx
-            )
+            tracker_ids = healer.process_and_heal(detections, frame, radar_pts, frame_idx)
             if tracker_ids is None:
                 tracker_ids = getattr(detections, "tracker_id", None)
 
@@ -1327,9 +1325,7 @@ def run_e2e(
         video_path = _resolve_video_path(video)
 
     if output_prefix == "test_mp4":
-        tracking_overlay_path = (
-            BACKEND_ROOT / "output" / "test_mp4_tracking_overlay.mp4"
-        )
+        tracking_overlay_path = BACKEND_ROOT / "output" / "test_mp4_tracking_overlay.mp4"
         tracking_data_path = BACKEND_ROOT / "output" / "test_mp4_tracking_data.json"
         metrics_output_path = BACKEND_ROOT / "output" / "tactical_metrics_e2e.json"
         report_output_path = BACKEND_ROOT / "output" / "test_mp4_report.json"
@@ -1337,9 +1333,7 @@ def run_e2e(
         tracking_overlay_path = (
             BACKEND_ROOT / "output" / f"{output_prefix}_tracking_overlay.mp4"
         )
-        tracking_data_path = (
-            BACKEND_ROOT / "output" / f"{output_prefix}_tracking_data.json"
-        )
+        tracking_data_path = BACKEND_ROOT / "output" / f"{output_prefix}_tracking_data.json"
         metrics_output_path = (
             BACKEND_ROOT / "output" / f"{output_prefix}_tactical_metrics.json"
         )
@@ -1389,9 +1383,7 @@ def run_e2e(
         for frame in raw_frames
     }
     for frame in refined_frames:
-        ball_xy, possession_team_id = raw_ball_by_frame.get(
-            frame.frame_idx, (None, None)
-        )
+        ball_xy, possession_team_id = raw_ball_by_frame.get(frame.frame_idx, (None, None))
         frame.ball_xy = ball_xy
         frame.possession_team_id = possession_team_id
     _print_step(
@@ -1475,9 +1467,7 @@ def run_e2e(
     print("=" * 72)
     print(f"Total Frames Processed: {telemetry.total_frames_processed}")
     print(f"Frames using standard Homography: {telemetry.frames_standard_homography}")
-    print(
-        f"Frames using Optical Flow Fallback: {telemetry.frames_optical_flow_fallback}"
-    )
+    print(f"Frames using Optical Flow Fallback: {telemetry.frames_optical_flow_fallback}")
     print(f"Total raw ball detections: {telemetry.total_raw_ball_detections}")
     print(
         f"Total frames where the ball was interpolated: {telemetry.total_interpolated_ball_frames}"
@@ -1511,3 +1501,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

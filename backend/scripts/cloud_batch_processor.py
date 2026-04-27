@@ -92,9 +92,7 @@ def _validate_homography_json(path: Path) -> tuple[bool, str]:
 def _log_skip_homography(video_path: Path, homography_path: Path, reason: str) -> None:
     border = "=" * 72
     LOGGER.error(border)
-    LOGGER.error(
-        "MISSING OR INVALID HOMOGRAPHY — SKIPPING THIS MATCH (no wrong-map fallback)"
-    )
+    LOGGER.error("MISSING OR INVALID HOMOGRAPHY — SKIPPING THIS MATCH (no wrong-map fallback)")
     LOGGER.error("Video:              %s", video_path)
     LOGGER.error("Expected JSON path: %s", homography_path.resolve())
     LOGGER.error("Reason:             %s", reason)
@@ -120,9 +118,7 @@ def _run_single_video(video_path: Path) -> bool:
         _log_skip_homography(video_path, homography_path, reason)
         return False
 
-    LOGGER.info(
-        "Processing match: %s (homography: %s)", video_path.name, homography_path
-    )
+    LOGGER.info("Processing match: %s (homography: %s)", video_path.name, homography_path)
 
     env = os.environ.copy()
     env["GAFFERS_HOMOGRAPHY_JSON"] = str(homography_path.resolve())

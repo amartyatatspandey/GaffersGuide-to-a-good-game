@@ -111,9 +111,7 @@ def _spawn_ollama_serve() -> None:
         return
     try:
         _popen_ollama_serve(exe)
-        logger.info(
-            "Spawned `ollama serve` (OLLAMA_AUTO_START); waiting for /api/tags …"
-        )
+        logger.info("Spawned `ollama serve` (OLLAMA_AUTO_START); waiting for /api/tags …")
     except OSError as exc:
         logger.warning("Could not spawn ollama serve: %s", exc)
 
@@ -202,9 +200,7 @@ async def start_ollama_for_app_lifecycle() -> None:
                 )
                 logger.info("Finished `ollama pull %s` (OLLAMA_PULL_ON_START).", model)
             except subprocess.TimeoutExpired:
-                logger.warning(
-                    "ollama pull %s timed out; run manually if needed.", model
-                )
+                logger.warning("ollama pull %s timed out; run manually if needed.", model)
             except OSError as exc:
                 logger.warning("ollama pull %s failed: %s", model, exc)
 
@@ -269,10 +265,7 @@ async def _wait_for_ollama_after_spawn(base_url: str) -> None:
         try:
             res = await _probe_tags(base_url, timeout=probe_timeout)
             if res.status_code < 400:
-                logger.info(
-                    "Ollama responded on /api/tags after auto-start (attempt %s).",
-                    attempt + 1,
-                )
+                logger.info("Ollama responded on /api/tags after auto-start (attempt %s).", attempt + 1)
                 return
         except httpx.ConnectError:
             continue

@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any, Callable, Literal
@@ -25,16 +26,13 @@ PROJECT_ROOT_LOCAL = BACKEND_ROOT_LOCAL.parent
 if str(BACKEND_ROOT_LOCAL) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT_LOCAL))
 
-from calculators.possession import (  # noqa: E402
-    compute_possession_team_id,
-    interpolate_ball_positions,
-)
 from services.llm_router import ensure_ollama_available  # noqa: E402
 from services.pipeline_paths import (  # noqa: E402
     collect_local_cv_pipeline_gaps,
     ensure_core_pipeline_directories,
     format_pipeline_prerequisite_errors,
 )
+from scripts.run_calibrator_on_video import ensure_homography_json_for_video  # noqa: E402
 
 from scripts.e2e_shared import (  # noqa: E402
     BALL_INTERPOLATION_MAX_GAP,
@@ -43,12 +41,12 @@ from scripts.e2e_shared import (  # noqa: E402
     HOMOGRAPHY_CONFIDENCE_FALLBACK_THRESHOLD,
     MIN_BALL_CONFIDENCE,
     PRESS_SUCCESS_WINDOW_FRAMES,
-    CVTelemetry,
     TacticalFrame,
     TacticalPlayer,
+    CVTelemetry,
     TrackingFrameArtifact,
-    _fallback_project_from_camera_shift,
     _final_cards_llm_skipped_low_reliability,
+    _fallback_project_from_camera_shift,
     _homography_confidence,
     _prediction_to_team,
     _print_data_guard_reliability,
@@ -64,18 +62,19 @@ from scripts.e2e_shared import (  # noqa: E402
     synthesize,
 )
 from scripts.global_refiner import GlobalRefiner  # noqa: E402
-from scripts.run_calibrator_on_video import (
-    ensure_homography_json_for_video,  # noqa: E402
-)
 from scripts.track_teams import (  # noqa: E402
     BACKEND_ROOT,
     CLASS_BALL,
     CLASS_PLAYER,
-    MODEL_PATH,
     HybridIDHealer,
+    MODEL_PATH,
     TacticalRadar,
     TeamClassifier,
     format_tracking_model_missing_reason,
+)
+from calculators.possession import (  # noqa: E402
+    compute_possession_team_id,
+    interpolate_ball_positions,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -170,9 +169,7 @@ class DownscaledOpticalFlowEstimator:
         max_distance = 0.0
         best_dx = 0.0
         best_dy = 0.0
-        for new_pt, old_pt, st in zip(
-            new_features, self.prev_features, status, strict=False
-        ):
+        for new_pt, old_pt, st in zip(new_features, self.prev_features, status, strict=False):
             if st[0] != 1:
                 continue
             dx = float(new_pt[0][0] - old_pt[0][0])
@@ -210,11 +207,7 @@ def _clear_device_cache(device: str | None) -> None:
     try:
         if device == "cuda" and torch.cuda.is_available():
             torch.cuda.empty_cache()
-        elif (
-            device == "mps"
-            and hasattr(torch, "mps")
-            and hasattr(torch.mps, "empty_cache")
-        ):
+        elif device == "mps" and hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
             torch.mps.empty_cache()  # type: ignore[attr-defined]
     except Exception:  # noqa: BLE001
         LOGGER.debug("Device cache clear skipped", exc_info=True)
@@ -312,9 +305,7 @@ def run_cv_tracking_batched(
                 radar.update_camera_angle(frame_idx)
                 camera_shift = flow_estimator.update(frame)
                 homography_conf = _homography_confidence(radar, frame_idx)
-                use_fallback = (
-                    homography_conf < HOMOGRAPHY_CONFIDENCE_FALLBACK_THRESHOLD
-                )
+                use_fallback = homography_conf < HOMOGRAPHY_CONFIDENCE_FALLBACK_THRESHOLD
                 if use_fallback:
                     telemetry.frames_optical_flow_fallback += 1
                 else:
@@ -528,22 +519,14 @@ def run_e2e_cloud(
         raise FileNotFoundError(format_pipeline_prerequisite_errors(prereq_gaps))
 
     if output_prefix == "test_mp4":
-        tracking_overlay_path = (
-            BACKEND_ROOT / "output" / "test_mp4_tracking_overlay.mp4"
-        )
+        tracking_overlay_path = BACKEND_ROOT / "output" / "test_mp4_tracking_overlay.mp4"
         tracking_data_path = BACKEND_ROOT / "output" / "test_mp4_tracking_data.json"
         metrics_output_path = BACKEND_ROOT / "output" / "tactical_metrics_e2e.json"
         report_output_path = BACKEND_ROOT / "output" / "test_mp4_report.json"
     else:
-        tracking_overlay_path = (
-            BACKEND_ROOT / "output" / f"{output_prefix}_tracking_overlay.mp4"
-        )
-        tracking_data_path = (
-            BACKEND_ROOT / "output" / f"{output_prefix}_tracking_data.json"
-        )
-        metrics_output_path = (
-            BACKEND_ROOT / "output" / f"{output_prefix}_tactical_metrics.json"
-        )
+        tracking_overlay_path = BACKEND_ROOT / "output" / f"{output_prefix}_tracking_overlay.mp4"
+        tracking_data_path = BACKEND_ROOT / "output" / f"{output_prefix}_tracking_data.json"
+        metrics_output_path = BACKEND_ROOT / "output" / f"{output_prefix}_tactical_metrics.json"
         report_output_path = BACKEND_ROOT / "output" / f"{output_prefix}_report.json"
 
     # Headless cloud run: ensure no stale overlay is interpreted as new output.
@@ -587,13 +570,10 @@ def run_e2e_cloud(
         ),
     )
     raw_ball_by_frame: dict[int, tuple[list[float] | None, int | None]] = {
-        frame.frame_idx: (frame.ball_xy, frame.possession_team_id)
-        for frame in raw_frames
+        frame.frame_idx: (frame.ball_xy, frame.possession_team_id) for frame in raw_frames
     }
     for frame in refined_frames:
-        ball_xy, possession_team_id = raw_ball_by_frame.get(
-            frame.frame_idx, (None, None)
-        )
+        ball_xy, possession_team_id = raw_ball_by_frame.get(frame.frame_idx, (None, None))
         frame.ball_xy = ball_xy
         frame.possession_team_id = possession_team_id
 

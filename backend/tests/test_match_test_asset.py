@@ -12,16 +12,12 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 MATCH = BACKEND_ROOT / "data" / "match_test.mp4"
 
 
-@pytest.mark.skipif(
-    not MATCH.is_file(), reason="match_test.mp4 not present under backend/data/"
-)
+@pytest.mark.skipif(not MATCH.is_file(), reason="match_test.mp4 not present under backend/data/")
 def test_match_test_mp4_non_trivial_size() -> None:
     assert MATCH.stat().st_size > 1_000_000
 
 
-@pytest.mark.skipif(
-    not MATCH.is_file(), reason="match_test.mp4 not present under backend/data/"
-)
+@pytest.mark.skipif(not MATCH.is_file(), reason="match_test.mp4 not present under backend/data/")
 def test_match_test_mp4_packet_count_matches_expected() -> None:
     """Expected: ~3 min @ 25 fps → 4501 packets (per ffprobe -count_packets)."""
     if shutil.which("ffprobe") is None:

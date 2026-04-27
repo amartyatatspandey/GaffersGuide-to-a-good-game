@@ -7,6 +7,7 @@ to backend/models/pretrained. Uses logging; no hardcoded secrets.
 """
 
 import logging
+import os
 import shutil
 import subprocess
 from pathlib import Path

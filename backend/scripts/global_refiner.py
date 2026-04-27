@@ -9,6 +9,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
 
+
 PlayerFactory = Callable[[int | None, str, list[float] | None], object]
 FrameFactory = Callable[[int, list[object]], object]
 
@@ -142,22 +143,15 @@ class GlobalRefiner:
 
         x = arr[valid_idx, 0]
         y = arr[valid_idx, 1]
-        window = min(
-            self.savgol_window,
-            valid_idx.size if valid_idx.size % 2 == 1 else valid_idx.size - 1,
-        )
+        window = min(self.savgol_window, valid_idx.size if valid_idx.size % 2 == 1 else valid_idx.size - 1)
         if window < 5:
             return
         poly = min(self.savgol_polyorder, window - 1)
         if poly < 1:
             return
 
-        arr[valid_idx, 0] = savgol_filter(
-            x, window_length=window, polyorder=poly, mode="interp"
-        )
-        arr[valid_idx, 1] = savgol_filter(
-            y, window_length=window, polyorder=poly, mode="interp"
-        )
+        arr[valid_idx, 0] = savgol_filter(x, window_length=window, polyorder=poly, mode="interp")
+        arr[valid_idx, 1] = savgol_filter(y, window_length=window, polyorder=poly, mode="interp")
 
     def _cap_velocity(self, arr: np.ndarray) -> None:
         valid_idx = np.flatnonzero(~np.isnan(arr[:, 0]) & ~np.isnan(arr[:, 1]))

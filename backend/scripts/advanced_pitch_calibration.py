@@ -70,17 +70,13 @@ def _polyline_to_pixel_segments(
     return segs
 
 
-def _homogeneous_line_from_two_pixels(
-    u0: float, v0: float, u1: float, v1: float
-) -> np.ndarray:
+def _homogeneous_line_from_two_pixels(u0: float, v0: float, u1: float, v1: float) -> np.ndarray:
     p0 = np.array([u0, v0, 1.0], dtype=np.float64)
     p1 = np.array([u1, v1, 1.0], dtype=np.float64)
     return np.cross(p0, p1)
 
 
-def _intersect_lines_homogeneous(
-    l1: np.ndarray, l2: np.ndarray
-) -> Optional[np.ndarray]:
+def _intersect_lines_homogeneous(l1: np.ndarray, l2: np.ndarray) -> Optional[np.ndarray]:
     pt = np.cross(l1, l2)
     if abs(pt[2]) < 1e-9:
         return None
@@ -166,9 +162,7 @@ def _collect_corner_image_points(
                 float(pb[0][1]), float(pb[0][0]), float(pb[-1][1]), float(pb[-1][0])
             )
             inter = _intersect_lines_homogeneous(la_h, lb_h)
-            if inter is not None and (
-                -20 <= inter[0] < width + 20 and -20 <= inter[1] < height + 20
-            ):
+            if inter is not None and (-20 <= inter[0] < width + 20 and -20 <= inter[1] < height + 20):
                 best = inter
         if best is not None:
             img_pts.append(best)
@@ -186,9 +180,7 @@ def _world_points_for_keys(field: SoccerPitch, keys: list[str]) -> np.ndarray:
     return np.asarray(pts, dtype=np.float64)
 
 
-def _mean_corner_disagreement_px(
-    H_a: np.ndarray, H_b: np.ndarray, field: SoccerPitch
-) -> float:
+def _mean_corner_disagreement_px(H_a: np.ndarray, H_b: np.ndarray, field: SoccerPitch) -> float:
     """Mean L2 distance in seg pixels between projections of four pitch corners."""
     if H_a is None or H_b is None or H_a.size == 0 or H_b.size == 0:
         return 1e6
@@ -307,11 +299,7 @@ def _build_residuals_factory(
     """Each observation is (line_class, u_pixel, v_pixel) for one extremity."""
     observations: list[tuple[str, float, float]] = []
     for k, v in extremities.items():
-        if (
-            k == "Circle central"
-            or "unknown" in k
-            or k not in field.line_extremities_keys
-        ):
+        if k == "Circle central" or "unknown" in k or k not in field.line_extremities_keys:
             continue
         if field.get_2d_homogeneous_line(k) is None:
             continue
@@ -335,9 +323,7 @@ def _build_residuals_factory(
             if l_img is None:
                 res.append(1e3)
                 continue
-            uu, vv = _undistort_division_normalized(
-                u, vpix, float(seg_w), float(seg_h), kappa
-            )
+            uu, vv = _undistort_division_normalized(u, vpix, float(seg_w), float(seg_h), kappa)
             res.append(_point_line_distance(uu, vv, l_img))
         return np.asarray(res, dtype=np.float64)
 
@@ -371,9 +357,7 @@ def _refine_homography_lm(
     resid_fn = _build_residuals_factory(extremities, field, seg_w, seg_h)
     r0 = resid_fn(p0)
     if r0.size <= 9:
-        logger.info(
-            "LM skipped: need m > n for LM (got %d residuals, 9 params)", r0.size
-        )
+        logger.info("LM skipped: need m > n for LM (got %d residuals, 9 params)", r0.size)
         return _params_to_H(p0[:8]), float(np.sum(r0**2))
 
     try:
@@ -444,10 +428,7 @@ class AdvancedPitchCalibrator:
             logger.info("SVD vs RANSAC mean corner disagreement: %.2f px", disagree)
             if disagree > H_SEED_DISAGREE_THRESHOLD_PX:
                 H_seed = H_ransac
-                logger.info(
-                    "Using RANSAC homography as LM seed (disagreement > %.1f px)",
-                    H_SEED_DISAGREE_THRESHOLD_PX,
-                )
+                logger.info("Using RANSAC homography as LM seed (disagreement > %.1f px)", H_SEED_DISAGREE_THRESHOLD_PX)
             else:
                 logger.info("Using SVD homography as LM seed")
 
@@ -455,9 +436,7 @@ class AdvancedPitchCalibrator:
             logger.warning("H_seed ill-conditioned; skipping LM")
             H_ref = H_seed
         else:
-            H_ref, _ = _refine_homography_lm(
-                H_seed, obs.extremities, self._field, SEG_W, SEG_H
-            )
+            H_ref, _ = _refine_homography_lm(H_seed, obs.extremities, self._field, SEG_W, SEG_H)
             if not _condition_ok(H_ref):
                 logger.warning("LM result ill-conditioned; reverting to seed")
                 H_ref = H_seed
@@ -470,8 +449,6 @@ class AdvancedPitchCalibrator:
         H_out /= H_out[2, 2] if abs(H_out[2, 2]) > 1e-12 else 1.0
         return H_out.astype(np.float64)
 
-    def collect_pitch_observations(
-        self, frame: np.ndarray
-    ) -> Optional[PitchObservationBundle]:
+    def collect_pitch_observations(self, frame: np.ndarray) -> Optional[PitchObservationBundle]:
         """Delegate to underlying V1 calibrator (for tests / introspection)."""
         return self._base.collect_pitch_observations(frame)

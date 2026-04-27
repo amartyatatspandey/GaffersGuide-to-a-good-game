@@ -28,12 +28,7 @@ def _cleanup_managed_ollama() -> None:
 def test_ensure_ollama_connect_no_binary_raises_not_installed() -> None:
     async def _run() -> None:
         with (
-            patch.object(
-                ollama_client,
-                "_probe_tags",
-                new_callable=AsyncMock,
-                side_effect=httpx.ConnectError("refused"),
-            ),
+            patch.object(ollama_client, "_probe_tags", new_callable=AsyncMock, side_effect=httpx.ConnectError("refused")),
             patch.object(ollama_client, "_ollama_executable", return_value=None),
         ):
             try:
@@ -69,9 +64,7 @@ def test_default_auto_start_when_env_unset_and_not_cloud() -> None:
                 clear=False,
             ),
             patch.object(ollama_client, "_probe_tags", side_effect=_probe_side_effect),
-            patch.object(
-                ollama_client, "_ollama_executable", return_value="/usr/bin/ollama"
-            ),
+            patch.object(ollama_client, "_ollama_executable", return_value="/usr/bin/ollama"),
             patch("subprocess.Popen", mock_popen),
             patch.object(ollama_client.asyncio, "sleep", new_callable=AsyncMock),
         ):
@@ -88,22 +81,11 @@ def test_default_auto_start_off_on_cloud_when_env_unset() -> None:
         with (
             patch.dict(
                 "os.environ",
-                {
-                    "K_SERVICE": "svc",
-                    "OLLAMA_AUTO_START": "",
-                    "OLLAMA_AUTO_START_IN_CLOUD": "",
-                },
+                {"K_SERVICE": "svc", "OLLAMA_AUTO_START": "", "OLLAMA_AUTO_START_IN_CLOUD": ""},
                 clear=False,
             ),
-            patch.object(
-                ollama_client,
-                "_probe_tags",
-                new_callable=AsyncMock,
-                side_effect=httpx.ConnectError("refused"),
-            ),
-            patch.object(
-                ollama_client, "_ollama_executable", return_value="/usr/bin/ollama"
-            ),
+            patch.object(ollama_client, "_probe_tags", new_callable=AsyncMock, side_effect=httpx.ConnectError("refused")),
+            patch.object(ollama_client, "_ollama_executable", return_value="/usr/bin/ollama"),
             patch("subprocess.Popen", mock_popen),
         ):
             try:
@@ -131,15 +113,8 @@ def test_ensure_ollama_cloud_run_no_spawn_without_in_cloud_flag() -> None:
                 },
                 clear=False,
             ),
-            patch.object(
-                ollama_client,
-                "_probe_tags",
-                new_callable=AsyncMock,
-                side_effect=httpx.ConnectError("refused"),
-            ),
-            patch.object(
-                ollama_client, "_ollama_executable", return_value="/usr/bin/ollama"
-            ),
+            patch.object(ollama_client, "_probe_tags", new_callable=AsyncMock, side_effect=httpx.ConnectError("refused")),
+            patch.object(ollama_client, "_ollama_executable", return_value="/usr/bin/ollama"),
             patch("subprocess.Popen", mock_popen),
         ):
             try:
@@ -178,9 +153,7 @@ def test_ensure_ollama_cloud_run_spawns_when_in_cloud_flag() -> None:
                 clear=False,
             ),
             patch.object(ollama_client, "_probe_tags", side_effect=_probe_side_effect),
-            patch.object(
-                ollama_client, "_ollama_executable", return_value="/usr/bin/ollama"
-            ),
+            patch.object(ollama_client, "_ollama_executable", return_value="/usr/bin/ollama"),
             patch("subprocess.Popen", mock_popen),
             patch.object(ollama_client.asyncio, "sleep", new_callable=AsyncMock),
         ):
@@ -206,15 +179,9 @@ def test_ensure_ollama_auto_start_spawns_and_retries() -> None:
         _probe_side_effect.calls = 0  # type: ignore[attr-defined]
 
         with (
-            patch.dict(
-                "os.environ", {"OLLAMA_AUTO_START": "1", "K_SERVICE": ""}, clear=False
-            ),
+            patch.dict("os.environ", {"OLLAMA_AUTO_START": "1", "K_SERVICE": ""}, clear=False),
             patch.object(ollama_client, "_probe_tags", side_effect=_probe_side_effect),
-            patch.object(
-                ollama_client,
-                "_ollama_executable",
-                return_value="/opt/homebrew/bin/ollama",
-            ),
+            patch.object(ollama_client, "_ollama_executable", return_value="/opt/homebrew/bin/ollama"),
             patch("subprocess.Popen", mock_popen),
             patch.object(ollama_client.asyncio, "sleep", new_callable=AsyncMock),
         ):
@@ -231,14 +198,8 @@ def test_lifecycle_start_noop_when_tags_already_ok() -> None:
         ok = MagicMock()
         ok.status_code = 200
         with (
-            patch.dict(
-                os.environ,
-                {"OLLAMA_MANAGED_LIFECYCLE": "1", "K_SERVICE": ""},
-                clear=False,
-            ),
-            patch.object(
-                ollama_client, "_probe_tags", new_callable=AsyncMock, return_value=ok
-            ),
+            patch.dict(os.environ, {"OLLAMA_MANAGED_LIFECYCLE": "1", "K_SERVICE": ""}, clear=False),
+            patch.object(ollama_client, "_probe_tags", new_callable=AsyncMock, return_value=ok),
         ):
             await ollama_client.start_ollama_for_app_lifecycle()
         assert ollama_client._lifecycle_popen is None
@@ -260,9 +221,7 @@ def test_ensure_ollama_tags_http_error_offline() -> None:
     async def _run() -> None:
         bad = MagicMock()
         bad.status_code = 500
-        with patch.object(
-            ollama_client, "_probe_tags", new_callable=AsyncMock, return_value=bad
-        ):
+        with patch.object(ollama_client, "_probe_tags", new_callable=AsyncMock, return_value=bad):
             try:
                 await ollama_client.ensure_ollama_available()
             except EngineRoutingError as exc:

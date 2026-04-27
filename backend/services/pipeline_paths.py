@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 
+
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 GAFFERS_HOMOGRAPHY_JSON_ENV = "GAFFERS_HOMOGRAPHY_JSON"
@@ -194,17 +195,11 @@ def collect_local_cv_pipeline_gaps(*, video_path: Path | None = None) -> list[st
                     "expected top-level object with key 'philosophies' (non-empty list)."
                 )
             elif not isinstance(payload.get("philosophies"), list):
-                gaps.append(
-                    f"[rag] tactical_library.json 'philosophies' must be a list at {lib}."
-                )
+                gaps.append(f"[rag] tactical_library.json 'philosophies' must be a list at {lib}.")
             elif len(payload["philosophies"]) == 0:
-                gaps.append(
-                    f"[rag] tactical_library.json has empty philosophies at {lib}."
-                )
+                gaps.append(f"[rag] tactical_library.json has empty philosophies at {lib}.")
         except json.JSONDecodeError as exc:
-            gaps.append(
-                f"[rag] tactical_library.json is not valid JSON at {lib}: {exc}"
-            )
+            gaps.append(f"[rag] tactical_library.json is not valid JSON at {lib}: {exc}")
 
     if video_path is not None:
         vp = video_path.resolve()
@@ -214,9 +209,7 @@ def collect_local_cv_pipeline_gaps(*, video_path: Path | None = None) -> list[st
             homography_json = resolve_tracking_homography_json_path(vp)
             if not homography_json.is_file():
                 env_set = bool(os.getenv(GAFFERS_HOMOGRAPHY_JSON_ENV, "").strip())
-                can_auto_calibrate = (
-                    sn_calibration_resources_dir().is_dir() and not env_set
-                )
+                can_auto_calibrate = sn_calibration_resources_dir().is_dir() and not env_set
                 if not can_auto_calibrate:
                     gaps.append(
                         f"[homography] {format_homography_missing_error(vp, homography_json)}"

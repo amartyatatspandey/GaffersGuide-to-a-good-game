@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Protocol
-
 import numpy as np
+from typing import Protocol
 
 
 class PlayerLike(Protocol):
@@ -113,7 +112,11 @@ def compute_advanced_ball_metrics(
 
         ball_x = float(curr_ball[0])
 
-        if prev_team in (0, 1) and curr_team in (0, 1) and prev_team != curr_team:
+        if (
+            prev_team in (0, 1)
+            and curr_team in (0, 1)
+            and prev_team != curr_team
+        ):
             win_team = int(curr_team)
             start_ball = frames[i].ball_xy
             end_idx = min(n - 1, i + counter_attack_window_frames)
@@ -126,9 +129,7 @@ def compute_advanced_ball_metrics(
             # Press success: prior pressing team is the one not in possession.
             pressing_team = int(prev_team)
             prior_ball_xy = (
-                frames[i - 1].ball_xy
-                if frames[i - 1].ball_xy is not None
-                else curr_ball
+                frames[i - 1].ball_xy if frames[i - 1].ball_xy is not None else curr_ball
             )
             nearest = _nearest_player_distance(
                 frames[i - 1], team_id=pressing_team, ball_xy=prior_ball_xy
@@ -137,7 +138,9 @@ def compute_advanced_ball_metrics(
                 lookahead_end = min(n - 1, i + press_success_window_frames)
                 success = False
                 for j in range(i, lookahead_end + 1):
-                    p_team = frames[j - 1].possession_team_id if j > 0 else None
+                    p_team = (
+                        frames[j - 1].possession_team_id if j > 0 else None
+                    )
                     c_team = frames[j].possession_team_id
                     if (
                         p_team in (0, 1)
@@ -171,7 +174,9 @@ def compute_advanced_ball_metrics(
                     start_x = float(state["start_x"])
                     forward = team_forward_progress(poss_team, start_x, ball_x)
                     if forward > 10.0:
-                        stats[pressing_team]["lethargic_press_allowed"] += 1.0
+                        stats[pressing_team][
+                            "lethargic_press_allowed"
+                        ] += 1.0
                         state["streak"] = 0
                         state["start_x"] = None
             else:
@@ -196,7 +201,10 @@ def compute_advanced_ball_metrics(
         max_j = min(n - 1, i + fps)
         long_pass_idx: int | None = None
         for j in range(i, max_j + 1):
-            if frames[j].possession_team_id != curr_team or frames[j].ball_xy is None:
+            if (
+                frames[j].possession_team_id != curr_team
+                or frames[j].ball_xy is None
+            ):
                 break
             dist = float(
                 np.hypot(
@@ -252,3 +260,4 @@ def compute_advanced_ball_metrics(
                 in_zone_seq = False
 
     return stats
+

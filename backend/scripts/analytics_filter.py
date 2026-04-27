@@ -1,5 +1,5 @@
-import cv2
 import numpy as np
+import cv2
 
 
 class TacticalPhysicsFilter:
@@ -22,10 +22,8 @@ class TacticalPhysicsFilter:
         # RULE 1: Bounds Check
         out_of_bounds_count = 0
         for pt in pts_array:
-            if (
-                abs(pt[0]) > (self.pitch_length / 2) + 5.0
-                or abs(pt[1]) > (self.pitch_width / 2) + 5.0
-            ):
+            if (abs(pt[0]) > (self.pitch_length / 2) + 5.0 or
+                    abs(pt[1]) > (self.pitch_width / 2) + 5.0):
                 out_of_bounds_count += 1
 
         if (out_of_bounds_count / len(pts_array)) > self.max_out_of_bounds_ratio:

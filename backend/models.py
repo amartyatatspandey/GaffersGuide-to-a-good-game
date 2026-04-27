@@ -85,3 +85,4 @@ class ErrorResponse(BaseModel):
     code: str
     message: str
     hint: str | None = None
+
