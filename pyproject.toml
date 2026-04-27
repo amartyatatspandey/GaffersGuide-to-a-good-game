@@ -17,4 +17,5 @@ addopts = "-ra -q"
 testpaths = [
     "tests",
 ]
-python_files = "test_*.py"
+[tool.ruff]
+line-length = 220
