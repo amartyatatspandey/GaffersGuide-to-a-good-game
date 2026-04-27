@@ -52,7 +52,7 @@ if "%MOCK_MODE%"=="0" (
 ) else (
     echo [MOCK] Generating dummy wheel for demonstration...
     if not exist dist_windows mkdir dist_windows
-    python -c "import zipfile; zf = zipfile.ZipFile('dist_windows/gaffers_guide-2.0.2-cp311-cp311-win_amd64.whl', 'w'); [zf.writestr(f'{m}.pyd', b'') for m in ['gaffers_guide/cv/temporal_ball_prior', 'gaffers_guide/cv/pitch_roi_provider', 'gaffers_guide/cv/ball_candidate_fuser', 'gaffers_guide/cv/slice_batch_inferencer', 'gaffers_guide/cv/optimized_sahi_wrapper', 'gaffers_guide/pipeline/advanced_pitch_calibration', 'gaffers_guide/pipeline/dynamic_homography', 'gaffers_guide/pipeline/track_teams', 'gaffers_guide/pipeline/track_teams_reid_hybrid', 'gaffers_guide/pipeline/reid_healer', 'gaffers_guide/pipeline/global_refiner', 'gaffers_guide/pipeline/e2e_shared_impl', 'gaffers_guide/pipeline/tactical_radar', 'gaffers_guide/pipeline/generate_analytics']]; zf.close()"
+    python -c "import zipfile; zf = zipfile.ZipFile('dist_windows/gaffers_guide-2.0.3-cp311-cp311-win_amd64.whl', 'w'); [zf.writestr(f'{m}.pyd', b'') for m in ['gaffers_guide/cv/temporal_ball_prior', 'gaffers_guide/cv/pitch_roi_provider', 'gaffers_guide/cv/ball_candidate_fuser', 'gaffers_guide/cv/slice_batch_inferencer', 'gaffers_guide/cv/optimized_sahi_wrapper', 'gaffers_guide/pipeline/advanced_pitch_calibration', 'gaffers_guide/pipeline/dynamic_homography', 'gaffers_guide/pipeline/track_teams', 'gaffers_guide/pipeline/track_teams_reid_hybrid', 'gaffers_guide/pipeline/reid_healer', 'gaffers_guide/pipeline/global_refiner', 'gaffers_guide/pipeline/e2e_shared_impl', 'gaffers_guide/pipeline/tactical_radar', 'gaffers_guide/pipeline/generate_analytics']]; zf.close()"
 )
 
 echo.
