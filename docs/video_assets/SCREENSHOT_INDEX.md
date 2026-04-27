@@ -1,0 +1,25 @@
+# Screenshot Delivery Index
+
+- Total screenshots: 21
+
+1. `video_assets/screenshots/01_install/01_install_01_base_install.png` (292597 bytes)
+2. `video_assets/screenshots/01_install/01_install_02_vision_install.png` (295964 bytes)
+3. `video_assets/screenshots/02_imports/02_imports_01_spatial_import.png` (32604 bytes)
+4. `video_assets/screenshots/02_imports/02_imports_02_io_import.png` (31859 bytes)
+5. `video_assets/screenshots/02_imports/02_imports_03_pipeline_import.png` (33178 bytes)
+6. `video_assets/screenshots/02_imports/02_imports_04_pipelineconfig_import.png` (33584 bytes)
+7. `video_assets/screenshots/03_examples_output/03_examples_output_01_spatial_code.png` (41135 bytes)
+8. `video_assets/screenshots/03_examples_output/03_examples_output_02_spatial_output.png` (75451 bytes)
+9. `video_assets/screenshots/03_examples_output/03_examples_output_03_io_code.png` (30212 bytes)
+10. `video_assets/screenshots/03_examples_output/03_examples_output_04_io_output.png` (64480 bytes)
+11. `video_assets/screenshots/03_examples_output/03_examples_output_05_engine_code.png` (39854 bytes)
+12. `video_assets/screenshots/03_examples_output/03_examples_output_06_engine_output.png` (206326 bytes)
+13. `video_assets/screenshots/04_cli/04_cli_01_help.png` (63768 bytes)
+14. `video_assets/screenshots/04_cli/04_cli_02_profiles.png` (58266 bytes)
+15. `video_assets/screenshots/04_cli/04_cli_03_run_help.png` (82896 bytes)
+16. `video_assets/screenshots/04_cli/04_cli_04_invalid_profile.png` (79796 bytes)
+17. `video_assets/screenshots/05_e2e_artifacts/05_e2e_artifacts_01_qa_summary.png` (134906 bytes)
+18. `video_assets/screenshots/05_e2e_artifacts/05_e2e_artifacts_02_artifact_listing.png` (285204 bytes)
+19. `video_assets/screenshots/05_e2e_artifacts/05_e2e_artifacts_03_tracking_json_preview.png` (33695 bytes)
+20. `video_assets/screenshots/05_e2e_artifacts/05_e2e_artifacts_04_metrics_json_preview.png` (25331 bytes)
+21. `video_assets/screenshots/05_e2e_artifacts/05_e2e_artifacts_05_report_json_preview.png` (29051 bytes)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 from numpy.typing import NDArray
@@ -14,8 +14,10 @@ from gaffers_guide.core.types import SpatialMapping
 class HomographyEngine:
     """Compute spatial mappings from pitch corner correspondences."""
 
-    pitch_corners_meters: NDArray[np.float64] = np.array(
-        [[0.0, 0.0], [105.0, 0.0], [105.0, 68.0], [0.0, 68.0]], dtype=np.float64
+    pitch_corners_meters: NDArray[np.float64] = field(
+        default_factory=lambda: np.array(
+            [[0.0, 0.0], [105.0, 0.0], [105.0, 68.0], [0.0, 68.0]], dtype=np.float64
+        )
     )
 
     def fit(

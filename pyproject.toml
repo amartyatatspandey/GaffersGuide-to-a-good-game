@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gaffers-guide"
-version = "0.1.0"
+version = "2.0.2"
 description = "Tactical intelligence and computer vision pipeline for football analytics."
 readme = "README.md"
 requires-python = ">=3.11"

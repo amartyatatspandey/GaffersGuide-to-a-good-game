@@ -1,0 +1,107 @@
+[
+  {
+    "order": 1,
+    "file": "video_assets/screenshots/01_install/01_install_01_base_install.png",
+    "size_bytes": 292597
+  },
+  {
+    "order": 2,
+    "file": "video_assets/screenshots/01_install/01_install_02_vision_install.png",
+    "size_bytes": 295964
+  },
+  {
+    "order": 3,
+    "file": "video_assets/screenshots/02_imports/02_imports_01_spatial_import.png",
+    "size_bytes": 32604
+  },
+  {
+    "order": 4,
+    "file": "video_assets/screenshots/02_imports/02_imports_02_io_import.png",
+    "size_bytes": 31859
+  },
+  {
+    "order": 5,
+    "file": "video_assets/screenshots/02_imports/02_imports_03_pipeline_import.png",
+    "size_bytes": 33178
+  },
+  {
+    "order": 6,
+    "file": "video_assets/screenshots/02_imports/02_imports_04_pipelineconfig_import.png",
+    "size_bytes": 33584
+  },
+  {
+    "order": 7,
+    "file": "video_assets/screenshots/03_examples_output/03_examples_output_01_spatial_code.png",
+    "size_bytes": 41135
+  },
+  {
+    "order": 8,
+    "file": "video_assets/screenshots/03_examples_output/03_examples_output_02_spatial_output.png",
+    "size_bytes": 75451
+  },
+  {
+    "order": 9,
+    "file": "video_assets/screenshots/03_examples_output/03_examples_output_03_io_code.png",
+    "size_bytes": 30212
+  },
+  {
+    "order": 10,
+    "file": "video_assets/screenshots/03_examples_output/03_examples_output_04_io_output.png",
+    "size_bytes": 64480
+  },
+  {
+    "order": 11,
+    "file": "video_assets/screenshots/03_examples_output/03_examples_output_05_engine_code.png",
+    "size_bytes": 39854
+  },
+  {
+    "order": 12,
+    "file": "video_assets/screenshots/03_examples_output/03_examples_output_06_engine_output.png",
+    "size_bytes": 206326
+  },
+  {
+    "order": 13,
+    "file": "video_assets/screenshots/04_cli/04_cli_01_help.png",
+    "size_bytes": 63768
+  },
+  {
+    "order": 14,
+    "file": "video_assets/screenshots/04_cli/04_cli_02_profiles.png",
+    "size_bytes": 58266
+  },
+  {
+    "order": 15,
+    "file": "video_assets/screenshots/04_cli/04_cli_03_run_help.png",
+    "size_bytes": 82896
+  },
+  {
+    "order": 16,
+    "file": "video_assets/screenshots/04_cli/04_cli_04_invalid_profile.png",
+    "size_bytes": 79796
+  },
+  {
+    "order": 17,
+    "file": "video_assets/screenshots/05_e2e_artifacts/05_e2e_artifacts_01_qa_summary.png",
+    "size_bytes": 134906
+  },
+  {
+    "order": 18,
+    "file": "video_assets/screenshots/05_e2e_artifacts/05_e2e_artifacts_02_artifact_listing.png",
+    "size_bytes": 285204
+  },
+  {
+    "order": 19,
+    "file": "video_assets/screenshots/05_e2e_artifacts/05_e2e_artifacts_03_tracking_json_preview.png",
+    "size_bytes": 33695
+  },
+  {
+    "order": 20,
+    "file": "video_assets/screenshots/05_e2e_artifacts/05_e2e_artifacts_04_metrics_json_preview.png",
+    "size_bytes": 25331
+  },
+  {
+    "order": 21,
+    "file": "video_assets/screenshots/05_e2e_artifacts/05_e2e_artifacts_05_report_json_preview.png",
+    "size_bytes": 29051
+  }
+]

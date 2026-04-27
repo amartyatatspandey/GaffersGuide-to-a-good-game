@@ -21,7 +21,7 @@ except Exception:  # noqa: BLE001
     torch = None  # type: ignore[assignment]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT_LOCAL = SCRIPT_DIR.parent.parent.parent.parent
+PROJECT_ROOT_LOCAL = SCRIPT_DIR.parent.parent.parent
 BACKEND_ROOT_LOCAL = PROJECT_ROOT_LOCAL / "backend"
 
 if str(BACKEND_ROOT_LOCAL) not in sys.path:
