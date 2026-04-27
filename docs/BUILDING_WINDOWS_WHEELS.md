@@ -1,10 +1,24 @@
-# Building Windows Wheels
+# Building Windows Wheels (Team Runbook)
 
-This guide explains how to build a Windows wheel for `gaffers-guide` with the
-protected Cython modules compiled into `.pyd` native extensions.
+This runbook is for teammates who need to build a **Windows-compatible wheel**
+for `gaffers-guide` with IP-protected modules compiled as native `.pyd` files.
 
-The goal is to produce a wheel that works on Windows and does **not** ship the
-readable `.py`, `.pyx`, or generated `.c` sources for protected modules.
+Use this when:
+- you need a release wheel for Windows users, or
+- you need to verify that protected source files are not leaked in packaging.
+
+Outcome:
+- a wheel like `gaffers_guide-<version>-cp311-cp311-win_amd64.whl`
+- protected modules present as `.pyd`
+- protected `.py/.pyx/.c` sources excluded from the wheel
+
+## Before You Start (Checklist)
+
+- You are on the intended branch/tag for release.
+- Your working tree is clean.
+- Python 3.11 x64 is installed.
+- You can open **x64 Native Tools Command Prompt for VS 2022**.
+- You are running commands from the repository root.
 
 ## What Gets Compiled
 
@@ -27,9 +41,9 @@ The protected modules are compiled from Cython into native extensions:
 
 On Windows these become `.pyd` files inside the wheel.
 
-## Prerequisites
+## Prerequisites (Windows)
 
-1. Install **Python 3.11** from <https://www.python.org/downloads/>.
+1. Install **Python 3.11 (64-bit)** from <https://www.python.org/downloads/>.
    - Check **Add python.exe to PATH** during installation.
    - Use 64-bit Python.
 
@@ -41,22 +55,29 @@ On Windows these become `.pyd` files inside the wheel.
    - MSVC v143 or newer
    - Windows 10/11 SDK
 
-4. Open:
+4. Open this shell before building:
 
 ```bat
 x64 Native Tools Command Prompt for VS 2022
 ```
 
-Do not use a normal Command Prompt for the first build. The Native Tools prompt
-sets compiler environment variables that Python needs to compile `.pyd` files.
+Do not use a normal Command Prompt for your first build. The Native Tools shell
+sets compiler environment variables required to build `.pyd` extensions.
 
-## Build The Wheel
+5. Confirm Python and compiler are available:
 
-From the repository root:
+```bat
+py -3.11 --version
+where cl
+```
+
+## Build the Wheel
+
+From repository root:
 
 ```bat
 cd path\to\phoenix-work
-python -m venv .venv
+py -3.11 -m venv .venv
 .venv\Scripts\activate
 python -m pip install --upgrade pip
 python -m pip install cython numpy build setuptools wheel
@@ -64,15 +85,15 @@ python setup_ext.py build_ext --inplace
 python -m build --wheel --outdir dist_windows
 ```
 
-The wheel should be written to `dist_windows` and look similar to:
+Expected output wheel in `dist_windows`:
 
 ```text
 gaffers_guide-2.0.2-cp311-cp311-win_amd64.whl
 ```
 
-## Verify The Wheel Does Not Leak Protected Sources
+## Validate Wheel Contents (No Source Leaks)
 
-List the wheel contents:
+Quick visual check:
 
 ```bat
 python -m zipfile -l dist_windows\gaffers_guide-*.whl
@@ -96,7 +117,7 @@ gaffers_guide/pipeline/track_teams.pyx
 gaffers_guide/pipeline/track_teams.c
 ```
 
-You can run this quick audit:
+Deterministic audit (recommended):
 
 ```bat
 python - <<PY
@@ -150,13 +171,13 @@ compiled_extensions=14
 source_leaks=0
 ```
 
-## Install And Smoke-Test The Wheel
+## Install and Smoke-Test the Wheel
 
-Create a clean test environment:
+Create a clean test venv:
 
 ```bat
 cd path\to\phoenix-work
-python -m venv .venv-wheel-test
+py -3.11 -m venv .venv-wheel-test
 .venv-wheel-test\Scripts\activate
 python -m pip install --upgrade pip
 python -m pip install dist_windows\gaffers_guide-*.whl
@@ -170,24 +191,46 @@ python -c "from gaffers_guide.pipeline.track_teams import TeamClassifier; print(
 gaffers-guide --help
 ```
 
-## Common Windows Issues
+## Common Windows Issues and Fixes
 
 ### `Microsoft Visual C++ 14.0 or greater is required`
 
 Install or repair **Microsoft C++ Build Tools**, then reopen **x64 Native Tools
 Command Prompt for VS 2022**.
 
+### `error: subprocess-exited-with-error` while compiling extensions
+
+- Ensure you are in the Native Tools shell.
+- Ensure the active Python is 3.11 (`python --version`).
+- Recreate venv and reinstall build deps.
+
 ### `Python.h: No such file or directory`
 
 Use the official Python installer from python.org and make sure it is a full
 CPython install, not the Microsoft Store shim.
+
+### `No module named Cython` during `setup_ext.py`
+
+Install build deps in the active venv:
+
+```bat
+python -m pip install cython numpy build setuptools wheel
+```
 
 ### Wheel imports locally but fails on another Windows machine
 
 Build and test on the same Python minor version. A wheel built for `cp311` is
 for Python 3.11. It will not install on Python 3.12.
 
-## Recommended Release Workflow
+### Wrong Python selected by `python`
+
+Use explicit launcher:
+
+```bat
+py -3.11 -m venv .venv
+```
+
+## Release Workflow Recommendation
 
 For repeatable releases, use GitHub Actions with `cibuildwheel` to build:
 
@@ -195,4 +238,14 @@ For repeatable releases, use GitHub Actions with `cibuildwheel` to build:
 - Windows amd64 wheels
 - Linux wheels if needed later
 
-This is more reliable than asking teammates to build manually every release.
+This is more reliable than manual teammate builds for every release.
+
+## Handoff Artifacts to Share
+
+After a successful Windows build, share:
+
+- `dist_windows\gaffers_guide-<version>-cp311-cp311-win_amd64.whl`
+- the audit output showing:
+  - `compiled_extensions=14`
+  - `source_leaks=0`
+- optional smoke-test log (`cv ok`, `pipeline ok`, CLI help output)

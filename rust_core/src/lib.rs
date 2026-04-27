@@ -80,6 +80,7 @@ impl TemporalBallPrior {
 }
 
 #[pyfunction]
+#[pyo3(signature = (candidates, temporal_anchor_xy=None, search_radius_px=0))]
 fn rank_candidates_rs(
     candidates: Vec<(f64, f64, f64, f64, f64)>,
     temporal_anchor_xy: Option<(f64, f64)>,
