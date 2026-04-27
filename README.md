@@ -1,100 +1,168 @@
-# Gaffer's Guide to a Good Game
+# ⚽ Gaffer's Guide to a Good Game
+
+<div align="center">
+
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![YOLO](https://img.shields.io/badge/Ultralytics-YOLO-FF6B35?style=for-the-badge&logo=yolo&logoColor=white)
+![OpenCV](https://img.shields.io/badge/OpenCV-4.x-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)
+
+**An end-to-end automated computer vision pipeline for football tactical intelligence.**  
+Turn raw match footage into structured tracking data, tactical metrics, and annotated video — fully automated.
+
+[Getting Started](#7-installation) • [Usage](#9-usage-cli) • [Quality Profiles](#6-quality-profiles) • [Tech Stack](#12-tech-stack) • [Contributing](#contributing)
+
+</div>
+
+---
+
+## 📌 Table of Contents
+
+1. [Overview](#1-overview)
+2. [Problem Statement](#2-problem-statement)
+3. [System Architecture](#3-system-architecture)
+4. [Pipeline Flow](#4-pipeline-flow)
+5. [Key Features](#5-key-features)
+6. [Quality Profiles](#6-quality-profiles)
+7. [Installation](#7-installation)
+8. [Environment Setup](#8-environment-setup)
+9. [Usage (CLI)](#9-usage-cli)
+10. [Output](#10-output)
+11. [Performance Notes](#11-performance-notes)
+12. [Tech Stack](#12-tech-stack)
+13. [Project Structure](#13-project-structure)
+14. [Contributing](#14-contributing)
+15. [Future Improvements](#15-future-improvements)
+
+---
 
 ## 1. Overview
-Gaffer's Guide is an automated computer vision pipeline and tactical intelligence platform designed for sports video analysis. The system processes raw football (soccer) footage to automatically extract player tracking data, calculate tactical metrics, and generate fully annotated visualizations. 
+
+**Gaffer's Guide** is a production-grade automated computer vision pipeline and tactical intelligence platform built for football (soccer) video analysis.
+
+The system ingests raw broadcast or single-camera match footage and outputs:
+- 🎯 **Frame-by-frame player & ball tracking**
+- 📊 **Tactical metrics** (formations, zones, heatmaps)
+- 🎬 **Annotated video overlays**
+- 📁 **Structured JSON telemetry**
+
+All fully automated — no manual annotation required.
+
+---
 
 ## 2. Problem Statement
-Analyzing football matches manually is a time-consuming, repetitive process that is highly susceptible to human error. Coaches and sports analysts require precise, actionable insights—such as player positioning, team formations, and movement heatmaps—from standard broadcast or single-camera footage. This project bridges the gap between raw video feeds and structured tactical data through an automated, end-to-end computer vision pipeline.
+
+Analyzing football matches manually is:
+- ⏱️ **Extremely time-consuming** — hours of review per match
+- ❌ **Error-prone** — human fatigue affects consistency
+- 💰 **Expensive** — requires dedicated analysis staff
+
+Coaches and analysts need precise, actionable insights — player positioning, team formations, movement heatmaps — from standard footage.
+
+**Gaffer's Guide bridges the gap between raw video and structured tactical intelligence through a fully automated pipeline.**
+
+---
 
 ## 3. System Architecture
-The system is built as a robust, multi-stage data processing pipeline:
-- **Input:** Ingestion of raw sports video footage (MP4, AVI) via the Command Line Interface (CLI).
-- **Processing:** Video frames are extracted, resized, and optionally sliced based on the selected quality profile.
-- **Detection:** State-of-the-art computer vision models (YOLO) detect players, referees, and the ball in each frame.
-- **Tracking:** Detected entities are assigned unique IDs and tracked continuously across frames using advanced tracking algorithms.
-- **Analysis:** Spatial data is transformed into tactical metrics, calculating team formations, player zones, and match events.
-- **Output:** The pipeline produces structured tracking data, tactical metrics in JSON format, and a final rendered video overlay.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        GAFFER'S GUIDE                           │
+│                                                                 │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐  │
+│  │  INPUT   │───▶│  DETECT  │───▶│  TRACK   │───▶│ ANALYSE  │  │
+│  │  Video   │    │  YOLO    │    │ByteTrack │    │ Tactics  │  │
+│  │  MP4/AVI │    │  + SAHI  │    │  + IDs   │    │ Metrics  │  │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────┘  │
+│                                                       │         │
+│  ┌──────────────────────────────────────────────────┐│         │
+│  │                    OUTPUT                        ││         │
+│  │  📹 Annotated Video  📊 JSON Metrics  📁 Tracking││◀────────┘
+│  └──────────────────────────────────────────────────┘          │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────┐          │
+│  │           QUALITY PROFILE SYSTEM                 │          │
+│  │   fast │ balanced │ high_res │ sahi               │          │
+│  └──────────────────────────────────────────────────┘          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Components:**
+- **Input Layer** — CLI-driven ingestion of MP4/AVI footage
+- **Detection Layer** — YOLO-based player, referee, and ball detection with optional SAHI tiling
+- **Tracking Layer** — ByteTrack multi-object tracking with persistent IDs
+- **Analytics Layer** — Spatial coordinate transformation, formation detection, zone calculation
+- **Output Layer** — JSON telemetry export + rendered video overlay
+
+---
 
 ## 4. Pipeline Flow
-The step-by-step execution flow of the system operates as follows:
-1. **Initialization:** The user submits a video file via the CLI, specifying an output directory and a quality profile.
-2. **Configuration Resolution:** The system configures the runtime parameters (e.g., resolution, batch size, SAHI activation) based on the chosen profile.
-3. **Inference Execution:** The video is processed sequentially or batched frame-by-frame. Players and the ball are detected and tracked.
-4. **Metric Generation:** The raw bounding box coordinates are passed to the analytics engine to derive higher-level tactical insights.
-5. **Rendering & Export:** The system overlays the tracking data onto the original video and exports the JSON telemetry files.
+
+```
+User runs CLI
+      │
+      ▼
+Quality Profile resolved (fast / balanced / high_res / sahi)
+      │
+      ▼
+ProfileConfig → imgsz, conf_threshold, sahi_enabled, slice_size
+      │
+      ▼
+Video frames extracted and batched
+      │
+      ▼
+YOLO model inference (with profile imgsz + conf)
+      │
+      ├──▶ [SAHI enabled?] → Slice region → Batch infer slices → Fuse candidates
+      │
+      ▼
+Ball candidate ranking (temporal prior + confidence scoring)
+      │
+      ▼
+Pitch ROI masking → Homography projection → 2D radar coordinates
+      │
+      ▼
+Team classification → Formation detection → Tactical metric calculation
+      │
+      ▼
+Output: JSON tracking + JSON metrics + annotated MP4
+```
+
+---
 
 ## 5. Key Features
-- **Modular Pipeline:** Independent stages for detection, tracking, and analytics, allowing for easy updates and maintenance.
-- **CLI-Based Execution:** A robust Command Line Interface for headless operation and automation.
-- **Configurable Quality Profiles:** Dynamic runtime profiles that trade off inference speed against detection precision.
-- **Scalable Processing:** Capable of running on local hardware or being scaled in a cloud-native environment.
+
+| Feature | Description |
+|---|---|
+| 🔍 **SAHI Ball Detection** | Slicing Aided Hyper Inference for precise small-object detection |
+| ⚙️ **Quality Profile System** | 4 runtime profiles trading speed vs. accuracy |
+| 🎯 **Temporal Ball Prior** | Adaptive search windows based on last known ball position |
+| 🟩 **Pitch ROI Masking** | HSV-based green detection to focus inference on the pitch |
+| 🏃 **ByteTrack Integration** | Robust multi-object tracking with persistent player IDs |
+| 🗺️ **Homography Projection** | Camera-to-2D radar coordinate transformation |
+| 📦 **CLI-First Design** | Headless operation for automation and cloud deployment |
+| ☁️ **Cloud-Native Ready** | Docker + cloud infrastructure for scalable batch processing |
+| 🧪 **Fully Tested** | Profile resolution, CLI parsing, and pipeline integration tests |
+
+---
 
 ## 6. Quality Profiles
-The system introduces a dynamic profile configuration to meet diverse processing needs:
-- `fast`: Optimized for maximum throughput and large batch jobs. It utilizes reduced resolutions for quick previews.
-- `balanced`: The default profile. It offers an optimal middle ground, delivering strong accuracy at a reasonable processing speed.
-- `high_res`: Operates at full resolution. Best suited for high-detail analysis and final deliverable rendering where precision is paramount.
-- `sahi`: Utilizes Slicing Aided Hyper Inference (SAHI). It is designed for crowded scenes and small object detection (like the ball), offering the highest accuracy at the cost of the slowest runtime.
 
-## 7. Installation
-Clone the repository and install the necessary dependencies:
+The profile system is the **core innovation** of this release. One flag controls the entire runtime behavior.
 
 ```bash
-git clone https://github.com/amartyatatspandey/GaffersGuide-to-a-good-game.git
-cd GaffersGuide-to-a-good-game
-
-# Create and activate a virtual environment
-python -m venv .venv
-source .venv/bin/activate        # macOS/Linux
-# .venv\Scripts\activate         # Windows
-
-# Install pipeline dependencies
-pip install -r backend/requirements.txt
+--quality-profile fast        # Speed priority
+--quality-profile balanced    # Default — best all-rounder
+--quality-profile high_res    # Quality priority
+--quality-profile sahi        # Maximum recall
 ```
 
-## 8. Environment Setup
-To ensure the pipeline correctly resolves its internal modules, configure the Python path before execution. It is recommended to add this to your `.env` or shell profile:
+| Profile | `imgsz` | `conf` | SAHI | Frame Skip | Best For |
+|---|---|---|---|---|---|
+| `fast` | 480 | 0.35 | ❌ | Every 3rd | Quick previews, large batch jobs |
+| `balanced` | 640 | 0.25 | ❌ | None | Standard full-match analysis |
+| `high_res` | 1280 | 0.20 | ❌ | None | High-detail QA and final renders |
+| `sahi` | 1280 | 0.20 | ✅ | None | Complex scenes, maximum ball recall |
 
-```bash
-export PYTHONPATH=backend:src      # macOS/Linux
-# set PYTHONPATH=backend;src       # Windows
-```
-
-## 9. Usage (CLI)
-The primary entry point for the pipeline is the CLI. Run the pipeline with the following command:
-
-```bash
-python -m gaffers_guide.cli run \
-  --video "<path_to_video_file>" \
-  --output "<output_directory>" \
-  --quality-profile <profile_name>
-```
-
-**Arguments:**
-- `--video` (Required): The relative or absolute path to the input video file.
-- `--output` (Required): The directory where the final video and JSON files will be saved.
-- `--quality-profile` (Required): Select one of `fast`, `balanced`, `high_res`, or `sahi`.
-
-## 10. Output
-Upon completion, the system generates the following files in the specified output directory:
-- `*_tracking_data.json`: Frame-by-frame spatial coordinates and tracking IDs for every detected entity.
-- `*_tactical_metrics.json`: Derived analytical insights, including calculated formations, zones, and events.
-- `*.mp4`: The original video overlaid with high-quality bounding boxes and tracking visualizations.
-
-## 11. Performance Notes
-- **When to use `fast` vs `sahi`:** Use the `fast` profile for quick sanity checks or large batch processing. Reserve `sahi` strictly for complex, densely packed footage where ball tracking is failing on lower profiles.
-- **Hardware Considerations:** Profiles like `high_res` and `sahi` require significant GPU VRAM. For optimal performance, execution on a dedicated CUDA-enabled GPU or high-tier cloud instance is highly recommended.
-
-## 12. Tech Stack
-The project is built on a modern, high-performance ecosystem:
-- **Python (3.11+)**: Core language for pipeline orchestration.
-- **OpenCV**: Video frame extraction, resizing, and rendering.
-- **Ultralytics (YOLO)**: State-of-the-art object detection models.
-- **Supervision**: Advanced tracking algorithms and visualization utilities.
-- **SAHI**: Slicing Aided Hyper Inference for detecting highly compact or small objects.
-- **Scikit-learn & Pandas**: Data manipulation and clustering for tactical metric calculation.
-
-## 13. Future Improvements
-- **Real-Time Processing:** Optimizing the pipeline to process live camera feeds with sub-second latency for in-match coaching.
-- **Scalability Enhancements:** Expanding cloud-native deployment via Docker to orchestrate massively parallel batch processing across Kubernetes clusters.
-- **Advanced UI/Dashboard:** Fully integrating the standalone Electron desktop application to ingest and visualize the generated 3D tracking data interactively.
+> **How profiles work:** Each profile maps directly to `imgsz` and `conf` passed into the YOLO model inference call, plus SAHI slice configuration for the detection wrapper. The entire pipeline behavior changes from a single CLI flag.
