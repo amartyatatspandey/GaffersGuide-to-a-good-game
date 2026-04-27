@@ -19,7 +19,7 @@ A computer vision pipeline for automated video analysis, player tracking, and ta
 
 ## Overview
 
-Gaffer's Guide processes sports video footage through an end-to-end cloud pipeline to produce:
+Gaffer's Guide processes sports video footage through an end-to-end  pipeline to produce:
 - Player tracking data
 - Tactical metrics
 - Annotated output video
