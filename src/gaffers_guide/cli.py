@@ -112,7 +112,6 @@ def _handle_profiles_list() -> int:
     print("\n* = default profile\n")
     return 0
 
-
 def main(argv: Sequence[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
