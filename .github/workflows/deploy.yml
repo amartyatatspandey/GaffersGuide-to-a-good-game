@@ -1,0 +1,51 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker --quiet
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -f backend/Dockerfile -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api:${{ github.sha }} -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api:latest .
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api:${{ github.sha }}
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy gaffers-guide-api \
+            --image=gcr.io/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api:${{ github.sha }} \
+            --region=us-central1 \
+            --platform=managed \
+            --allow-unauthenticated \
+            --update-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest,API_KEY=API_KEY:latest \
+            --update-env-vars=USE_PARALLEL=true,FRAME_STEP=3,MAX_WORKERS=2 \
+            --cpu=2 \
+            --memory=4Gi \
+            --timeout=900 \
+            --concurrency=10 \
+            --min-instances=0 \
+            --max-instances=1 \
+            --add-volume=name=gaffers-storage,type=cloud-storage,bucket=gaffers-guide-storage \
+            --add-volume-mount=volume=gaffers-storage,mount-path=/mnt/gaffers-storage

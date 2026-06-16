@@ -21,7 +21,16 @@ RUN pip install --no-cache-dir -r /app/requirements.txt && \
 # For smaller images, omit it and mount weights at runtime or pre-generate *_homographies.json.
 COPY . /app
 
+# Symlink data, output, and model weight directories to the GCS FUSE mount path
+RUN rm -rf /app/backend/data/uploads /app/backend/data/reports /app/backend/output /app/backend/models/pretrained && \
+    mkdir -p /app/backend/data /app/backend/models && \
+    ln -s /mnt/gaffers-storage/uploads /app/backend/data/uploads && \
+    ln -s /mnt/gaffers-storage/reports /app/backend/data/reports && \
+    ln -s /mnt/gaffers-storage/output /app/backend/output && \
+    ln -s /mnt/gaffers-storage/models /app/backend/models/pretrained
+
 ENV PYTHONPATH=/app/backend:/app
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

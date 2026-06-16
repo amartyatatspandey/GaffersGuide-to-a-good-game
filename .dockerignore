@@ -4,7 +4,8 @@
 **/*.mov
 
 # Local Data & Outputs
-backend/data/
+backend/data/uploads/
+backend/data/reports/
 backend/output/
 
 # Virtual Environments
