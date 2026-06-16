@@ -1,0 +1,11 @@
+[
+  {
+    "frame_idx": 0,
+    "team": "team_0",
+    "flaw": "Experimental spacing signal",
+    "severity": "medium",
+    "evidence": "Processed 4501 frames using opencv + cpu. Chunks=2 mode=balanced",
+    "matched_philosophy_author": "Experiment Engine",
+    "tactical_instruction": "1. Compact midfield shape.\n2. Track weak-side runner.\n3. Trigger press on back-pass."
+  }
+]

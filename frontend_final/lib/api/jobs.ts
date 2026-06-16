@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from '@/lib/apiBase';
+import { getApiBaseUrl, getAuthHeaders } from '@/lib/apiBase';
 import { debugSessionLog } from '@/lib/debugSessionLog';
 import type { TrackingPayload } from '@/lib/types/trackingTypes';
 
@@ -15,15 +15,20 @@ const defaultCvEngine =
 export async function createJob(
   file: File,
   llmEngine: 'local' | 'cloud' = 'local',
+  qualityProfile: string = 'balanced',
+  chunkingInterval: string = '15-minute intervals',
 ): Promise<JobResponse> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('cv_engine', defaultCvEngine);
   formData.append('llm_engine', llmEngine);
+  formData.append('quality_profile', qualityProfile);
+  formData.append('chunking_interval', chunkingInterval);
 
   const base = getApiBaseUrl();
   const res = await fetch(`${base}/api/v1/jobs`, {
     method: 'POST',
+    headers: getAuthHeaders(),
     body: formData,
   });
 
@@ -67,7 +72,7 @@ export async function getTracking(jobId: string): Promise<TrackingPayload> {
   const maxAttempts = 48;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: getAuthHeaders() });
     // #region agent log
     debugSessionLog({
       sessionId: 'bb63ae',
@@ -102,3 +107,48 @@ export async function getTracking(jobId: string): Promise<TrackingPayload> {
 
   throw new Error('Tracking not ready or not found');
 }
+
+export async function listReports(): Promise<any[]> {
+  const base = getApiBaseUrl();
+  const res = await fetch(`${base}/api/v1/elite/reports`, { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error('Failed to list reports');
+  return res.json();
+}
+
+export async function getReport(reportId: string): Promise<any> {
+  const base = getApiBaseUrl();
+  const res = await fetch(`${base}/api/v1/elite/reports/${reportId}`, { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch report');
+  return res.json();
+}
+
+export async function saveReport(reportData: any): Promise<{ status: string; filename: string }> {
+  const base = getApiBaseUrl();
+  const res = await fetch(`${base}/api/v1/elite/reports/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify(reportData),
+  });
+  if (!res.ok) throw new Error('Failed to save report');
+  return res.json();
+}
+
+export async function deleteReport(reportId: string): Promise<{ status: string }> {
+  const base = getApiBaseUrl();
+  const res = await fetch(`${base}/api/v1/elite/reports/${reportId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete report');
+  return res.json();
+}
+
+export async function getJobEvents(jobId: string): Promise<any> {
+  const base = getApiBaseUrl();
+  const res = await fetch(`${base}/api/v1/jobs/${jobId}/events`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to fetch job events');
+  return res.json();
+}
+

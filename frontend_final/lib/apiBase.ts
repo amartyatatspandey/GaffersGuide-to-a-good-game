@@ -1,7 +1,14 @@
 declare global {
   interface Window {
     /** Set by Electron preload (`electron/preload.cjs`) when packaged or dev. */
-    gaffersGuide?: { getApiBase: () => string };
+    gaffersGuide?: { 
+      getApiBase: () => string;
+      windowControls?: {
+        minimize: () => void;
+        maximize: () => void;
+        close: () => void;
+      };
+    };
   }
 }
 
@@ -35,3 +42,19 @@ export function getWsBaseUrl(): string {
   }
   return httpUrl.replace('http://', 'ws://');
 }
+
+export function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+  if (apiKey) {
+    headers["X-API-Key"] = apiKey;
+  }
+  if (typeof window !== 'undefined') {
+    const cloudApiKey = localStorage.getItem("gaffer-cloud-api-key");
+    if (cloudApiKey) {
+      headers["X-LLM-API-Key"] = cloudApiKey;
+    }
+  }
+  return headers;
+}
+

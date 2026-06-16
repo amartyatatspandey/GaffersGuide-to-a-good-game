@@ -106,6 +106,7 @@ class TrackingFrameArtifact:
     homography_confidence: float
     used_optical_flow_fallback: bool
     camera_shift_xy: tuple[float, float]
+    ball_canvas: list[float] | None = None
 
 
 class OpticalFlowCameraShiftEstimator:
@@ -859,6 +860,7 @@ def run_cv_tracking(
                 telemetry.frames_standard_homography += 1
 
             ball_xy: list[float] | None = None
+            ball_canvas: list[float] | None = None
 
             results: list[Any] = model(frame, conf=0.3, verbose=False)
             if not results:
@@ -938,6 +940,7 @@ def run_cv_tracking(
                 if ball_pt is not None:
                     last_ball_radar = (int(ball_pt[0]), int(ball_pt[1]))
                     ball_xy = [float(ball_pt[0]), float(ball_pt[1])]
+                    ball_canvas = [float((best_ball_bbox[0] + best_ball_bbox[2]) / 2.0), float((best_ball_bbox[1] + best_ball_bbox[3]) / 2.0)]
 
             radar_pts: list[tuple[int, int] | None] = [
                 radar.map_to_2d(detections.xyxy[i]) for i in range(len(detections))
@@ -1034,6 +1037,7 @@ def run_cv_tracking(
                         "y_pitch": float(rp[1]) if rp is not None else None,
                         "x_canvas": x_canvas,
                         "y_canvas": y_canvas,
+                        "bbox": [float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])],
                     }
                 )
             frame_artifacts.append(
@@ -1048,6 +1052,7 @@ def run_cv_tracking(
                         float(camera_shift[0]),
                         float(camera_shift[1]),
                     ),
+                    ball_canvas=ball_canvas,
                 )
             )
             if annotated_writer is None:
@@ -1079,6 +1084,41 @@ def run_cv_tracking(
     telemetry.total_interpolated_ball_frames = interpolate_ball_positions(
         frames_out, max_gap_frames=BALL_INTERPOLATION_MAX_GAP
     )
+
+    # Calculate individual player speeds
+    player_last_seen = {}
+    fps = 25.0
+    for f in frame_artifacts:
+        for p in f.players:
+            g_id = p.get("id")
+            if g_id is None:
+                p["speed_kmh"] = 0.0
+                continue
+            x_raw = p.get("x_pitch")
+            y_raw = p.get("y_pitch")
+            if x_raw is None or y_raw is None:
+                p["speed_kmh"] = 0.0
+                continue
+            
+            x = x_raw / 10.0
+            y = y_raw / 10.0
+            
+            speed_kmh = 0.0
+            if g_id in player_last_seen:
+                last_f = player_last_seen[g_id]["frame_idx"]
+                last_x = player_last_seen[g_id]["x"]
+                last_y = player_last_seen[g_id]["y"]
+                
+                frames_elapsed = f.frame_idx - last_f
+                if 0 < frames_elapsed < fps * 2:
+                    dist = np.hypot(x - last_x, y - last_y)
+                    time_sec = frames_elapsed / fps
+                    speed_ms = dist / time_sec
+                    speed_kmh = speed_ms * 3.6
+            
+            p["speed_kmh"] = round(float(speed_kmh), 2)
+            player_last_seen[g_id] = {"frame_idx": f.frame_idx, "x": x, "y": y}
+
     return frames_out, telemetry, frame_artifacts
 
 
@@ -1101,7 +1141,7 @@ def _write_tracking_artifact(
             "total_interpolated_ball_frames": telemetry.total_interpolated_ball_frames,
             # ``x_pitch`` / ``y_pitch`` / ``ball_xy`` in frames are TacticalRadar canvas
             # pixels (scale=10 → 10 px ≈ 1 m on a 105×68 m pitch).
-            "player_position_space": "radar_pixels",
+            "player_position_space": "meters",
             "radar_pixels_per_meter": 10,
         },
         "frames": [
@@ -1113,6 +1153,7 @@ def _write_tracking_artifact(
                 "homography_confidence": fr.homography_confidence,
                 "used_optical_flow_fallback": fr.used_optical_flow_fallback,
                 "camera_shift_xy": [fr.camera_shift_xy[0], fr.camera_shift_xy[1]],
+                "ball_canvas": fr.ball_canvas,
             }
             for fr in frames
         ],
@@ -1175,6 +1216,7 @@ def build_metrics_timeline(raw_frames: list[TacticalFrame]) -> list[dict[str, An
                 "max_speed_kmh": float(np.max(t1_speeds)) if t1_speeds else 0.0,
             }
         )
+        zonal_data = analyzer.calculate_zonal_data(t0_pts, t1_pts, ball_xy=frame.ball_xy)
         timeline.append(
             {
                 "frame_idx": frame.frame_idx,
@@ -1183,6 +1225,7 @@ def build_metrics_timeline(raw_frames: list[TacticalFrame]) -> list[dict[str, An
                 "ball_x": (frame.ball_xy[0] if frame.ball_xy is not None else None),
                 "ball_y": (frame.ball_xy[1] if frame.ball_xy is not None else None),
                 "possession_team_id": frame.possession_team_id,
+                "zonal_data": zonal_data,
             }
         )
 

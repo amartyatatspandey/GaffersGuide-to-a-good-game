@@ -15,6 +15,8 @@ class BetaJobRecord:
     cv_engine: str
     llm_engine: str
     source_video_path: str
+    quality_profile: str = "balanced"
+    chunking_interval: str = "15-minute intervals"
     result_path: str | None = None
     tracking_overlay_path: str | None = None
     tracking_data_path: str | None = None

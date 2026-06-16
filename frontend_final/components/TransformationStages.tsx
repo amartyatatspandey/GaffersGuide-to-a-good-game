@@ -160,7 +160,7 @@ export function TransformationStages() {
           
           {/* Left: SVG Visual */}
           <div className="flex-1 w-full aspect-square md:aspect-video lg:aspect-square bg-surface border border-slate-dark rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden p-6 relative">
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="popLayout">
               <motion.div
                 key={activeStage}
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -193,7 +193,7 @@ export function TransformationStages() {
             </div>
 
             <div className="min-h-[200px]">
-              <AnimatePresence mode="wait">
+              <AnimatePresence mode="popLayout">
                 <motion.div
                   key={activeStage}
                   initial={{ opacity: 0, y: 10 }}

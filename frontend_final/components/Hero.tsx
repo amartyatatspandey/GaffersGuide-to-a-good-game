@@ -2,10 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, animate } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { TextReveal } from "@/components/TextReveal";
 
 export function Hero() {
   const [pipelineStep, setPipelineStep] = useState(0);
+  const router = useRouter();
+
+  const handleInitialize = () => {
+    router.push("/workspace");
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -46,10 +52,30 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.4 }}
-            className="text-lg md:text-xl text-chalk/80 max-w-xl mx-auto lg:mx-0 font-sans font-normal leading-relaxed"
+            className="text-lg md:text-xl text-chalk/80 max-w-xl mx-auto lg:mx-0 font-sans font-normal leading-relaxed mb-10"
           >
             Ingest raw match footage. Extract coordinate data. Identify strategic vulnerabilities instantly. Processed securely offline.
           </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.6 }}
+            className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4"
+          >
+            <button 
+              onClick={handleInitialize}
+              className="px-8 py-4 bg-neon text-pitch font-mono font-bold uppercase tracking-widest rounded shadow-[0_0_30px_rgba(0,230,118,0.3)] hover:shadow-[0_0_50px_rgba(0,230,118,0.5)] transition-all transform hover:-translate-y-1 active:scale-95"
+            >
+              Initialize Analysis Engine
+            </button>
+            <a 
+              href="#terminal" 
+              className="px-8 py-4 bg-transparent border border-slate-light text-chalk/60 font-mono text-xs uppercase tracking-widest rounded hover:bg-white/5 transition-all"
+            >
+              View Documentation
+            </a>
+          </motion.div>
         </div>
 
         {/* Dynamic Pipeline Visual Side */}
@@ -85,7 +111,7 @@ export function Hero() {
                     <circle key={`p-${i}`} cx={p.cx} cy={p.cy} r="6" fill={p.team === "us" ? "#00e676" : "#e8f0e9"} />
                   ))}
 
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence mode="popLayout">
                     {/* STEP 1: DETECT (Draw bounding boxes and scan line) */}
                     {pipelineStep === 0 && (
                       <motion.g key="step-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

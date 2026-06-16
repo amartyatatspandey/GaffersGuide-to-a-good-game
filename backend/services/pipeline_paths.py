@@ -162,7 +162,7 @@ def format_tracking_model_missing_reason(path: Path) -> str:
 
 def ensure_core_pipeline_directories() -> None:
     """Create layout dirs so weights can be dropped in and artifacts can be written."""
-    for rel in ("models/pretrained", "output", "data/uploads", "data"):
+    for rel in ("models/pretrained", "models/calibration", "output", "data/uploads", "data", "references"):
         (BACKEND_ROOT / rel).mkdir(parents=True, exist_ok=True)
 
 

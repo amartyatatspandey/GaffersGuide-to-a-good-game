@@ -5,11 +5,13 @@ import { X, Cloud, Lock, Cpu, Server } from 'lucide-react';
 const LS_ENGINE = "gaffer-engine-type";
 const LS_CONNECTIVITY = "gaffer-connectivity";
 const LS_OLLAMA_MODEL = "gaffer-ollama-model";
+const LS_CLOUD_API_KEY = "gaffer-cloud-api-key";
 
 export function EngineSettingsModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const [engineType, setEngineType] = useState<'cloud' | 'local'>('local');
   const [connectivity, setConnectivity] = useState<'online' | 'offline'>('online');
   const [ollamaModel, setOllamaModel] = useState<string>("llama3");
+  const [cloudApiKey, setCloudApiKey] = useState<string>("");
 
   useEffect(() => {
     if (!isOpen || typeof window === "undefined") return;
@@ -19,6 +21,8 @@ export function EngineSettingsModal({ isOpen, onClose }: { isOpen: boolean, onCl
     if (con === "online" || con === "offline") setConnectivity(con);
     const m = localStorage.getItem(LS_OLLAMA_MODEL);
     if (m && m.trim()) setOllamaModel(m.trim());
+    const key = localStorage.getItem(LS_CLOUD_API_KEY);
+    if (key) setCloudApiKey(key);
   }, [isOpen]);
 
   useEffect(() => {
@@ -35,6 +39,11 @@ export function EngineSettingsModal({ isOpen, onClose }: { isOpen: boolean, onCl
     if (typeof window === "undefined") return;
     localStorage.setItem(LS_OLLAMA_MODEL, ollamaModel.trim() || "llama3");
   }, [ollamaModel]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(LS_CLOUD_API_KEY, cloudApiKey.trim());
+  }, [cloudApiKey]);
 
   if (!isOpen) return null;
 
@@ -113,6 +122,8 @@ export function EngineSettingsModal({ isOpen, onClose }: { isOpen: boolean, onCl
                 <div className="relative">
                   <input 
                     type="password" 
+                    value={cloudApiKey}
+                    onChange={(e) => setCloudApiKey(e.target.value)}
                     placeholder="sk-..." 
                     className="w-full bg-[#0a0f0a] border border-gray-700 rounded-lg px-4 py-3 text-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all font-mono text-sm"
                   />

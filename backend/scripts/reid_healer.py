@@ -362,7 +362,12 @@ class VisualFingerprint:
         self.model_dir.mkdir(parents=True, exist_ok=True)
         self.model_path = self.model_dir / WEIGHT_FILENAME
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            self.device = torch.device("mps")
+        else:
+            self.device = torch.device("cpu")
         logger.info("Initializing ReID VisualFingerprint on %s", self.device)
 
         self._ensure_model_downloaded()

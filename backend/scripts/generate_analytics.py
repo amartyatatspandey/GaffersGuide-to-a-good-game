@@ -112,6 +112,77 @@ class TacticalAnalyzer:
             "highest_x": max_x,
         }
 
+    def calculate_zonal_data(self, team_0_pts, team_1_pts, ball_xy=None):
+        """
+        Divide the pitch into a 4x4 grid (16 tactical zones).
+        Returns a list of 16 dicts with metrics per zone.
+        Zones are ordered: row-major from Top-Left (-52.5, 34) to Bottom-Right (52.5, -34).
+        """
+        zones = []
+        x_bins = np.linspace(-PITCH_LENGTH / 2, PITCH_LENGTH / 2, 5)
+        y_bins = np.linspace(PITCH_WIDTH / 2, -PITCH_WIDTH / 2, 5) # Top to bottom
+
+        t0_arr = np.array(team_0_pts) if team_0_pts else np.empty((0, 2))
+        t1_arr = np.array(team_1_pts) if team_1_pts else np.empty((0, 2))
+
+        for i in range(4): # Y (rows)
+            for j in range(4): # X (cols)
+                x_min, x_max = x_bins[j], x_bins[j+1]
+                y_max, y_min = y_bins[i], y_bins[i+1] # Y is inverted in bins
+
+                # Count players in zone
+                t0_in = 0
+                if t0_arr.size > 0:
+                    t0_in = int(np.sum((t0_arr[:, 0] >= x_min) & (t0_arr[:, 0] < x_max) & 
+                                   (t0_arr[:, 1] >= y_min) & (t0_arr[:, 1] < y_max)))
+                
+                t1_in = 0
+                if t1_arr.size > 0:
+                    t1_in = int(np.sum((t1_arr[:, 0] >= x_min) & (t1_arr[:, 0] < x_max) & 
+                                   (t1_arr[:, 1] >= y_min) & (t1_arr[:, 1] < y_max)))
+
+                # Simple possession/ball check
+                has_ball = False
+                if ball_xy:
+                    bx, by = ball_xy
+                    if (x_min <= bx < x_max) and (y_min <= by < y_max):
+                        has_ball = True
+
+                # Pressing intensity: sum of proximity in this zone
+                pressure = 0.0
+                if t0_in > 0 and t1_in > 0:
+                    pressure = min(100.0, (t0_in + t1_in) * 15.0)
+
+                # Control: based on player count ratio
+                total_players = t0_in + t1_in
+                t0_ctrl = 50.0
+                if total_players > 0:
+                    t0_ctrl = (t0_in / total_players) * 100.0
+
+                # Overload: high density relative to opponent
+                overload = max(0, t0_in - t1_in) if t0_in > 1 else 0
+                
+                # Local compactness: density per area (normalized)
+                local_compactness = min(100.0, (t0_in * 20.0))
+
+                zones.append({
+                    "zone_id": i * 4 + j,
+                    "x_range": [float(x_min), float(x_max)],
+                    "y_range": [float(y_min), float(y_max)],
+                    "team_0_density": int(t0_in),
+                    "team_1_density": int(t1_in),
+                    "control_pct": float(t0_ctrl),
+                    "pressure_index": float(pressure),
+                    "has_ball": has_ball,
+                    "vulnerability": float(max(0, 100 - t0_ctrl) if j < 2 else max(0, t0_ctrl) if j > 1 else 50),
+                    "threat_level": float(t0_ctrl if j > 1 else 100 - t0_ctrl if j < 2 else 50),
+                    "overload": int(overload),
+                    "compactness": float(local_compactness),
+                    "transition_potential": float(70.0 if (j==1 or j==2) else 30.0) # Midfield sectors have higher transition potential
+                })
+        
+        return zones
+
 
 def run_analytics():
     if not DATA_PATH.exists():

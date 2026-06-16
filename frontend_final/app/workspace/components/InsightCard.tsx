@@ -1,18 +1,52 @@
 "use client";
 import React, { useState } from 'react';
 import { useStreamingText } from '@/hooks/useStreamingText';
-import { TacticalGrid } from './TacticalGrid';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Zap, TrendingUp, Shield, Activity, Film, Play, User, Clock } from 'lucide-react';
 
-export interface KeywordConfig {
-  text: string;
-  color: 'emerald' | 'amber' | 'cyan';
-  role: string;
-}
+const EVENT_NAME_LOOKUP: Record<string, string> = {
+  // Movement
+  "MOV_001": "High-Speed Run",
+  "MOV_002": "Sprint",
+  "MOV_003": "Recovery Run",
+  "MOV_004": "Overlap Run",
+  "MOV_005": "Underlap Run",
+  "MOV_006": "Third-Man Run",
+  "MOV_007": "Diagonal Run",
+  // Positional
+  "POS_001": "Wide Positioning",
+  "POS_002": "Half-Space Occupation",
+  "POS_003": "Between-Lines",
+  "POS_004": "Deep Positioning",
+  "POS_005": "Advanced Positioning",
+  "POS_006": "Pressing Trap Position",
+  // Threat
+  "THR_001": "Dangerous Run",
+  "THR_002": "Final-Third Entry",
+  "THR_003": "Box Entry",
+  "THR_004": "Transition Involvement",
+  "THR_005": "Dangerous Reception",
+  "THR_006": "Channel Exploitation",
+  "THR_007": "Isolated Defender Exploit",
+  // Shape
+  "SHP_001": "High Press Moment",
+  "SHP_002": "Mid Block",
+  "SHP_003": "Low Block",
+  "SHP_004": "Compact Shape",
+  "SHP_005": "Stretched Shape",
+  "SHP_006": "Overload Zone",
+  "SHP_007": "Pressing Trap Triggered",
+  "SHP_008": "Counter-Attack Launch",
+  // Transition
+  "TRN_001": "Defensive Transition",
+  "TRN_002": "Offensive Transition",
+  "TRN_003": "Press Success",
+  "TRN_004": "Press Failure",
+  "TRN_005": "Counter-Attack Sequence",
+};
 
 interface TeamInsight {
   payload: string;
-  keywords: KeywordConfig[];
+  keywords: any[];
 }
 
 interface InsightCardProps {
@@ -20,119 +54,249 @@ interface InsightCardProps {
   minute: string;
   blueTeam: TeamInsight;
   redTeam: TeamInsight;
+  metrics?: any;
+  evidenceClips?: any[];
+  threatContext?: any;
+  eventCountSummary?: Record<string, number> | null;
+  onPlayClip?: (startTimeS: number) => void;
+  useAltNames?: boolean;
+  dictionary?: Record<string, string>;
 }
 
-export function InsightCard({ title, minute, blueTeam, redTeam }: InsightCardProps) {
+export function InsightCard({
+  title,
+  minute,
+  blueTeam,
+  redTeam,
+  metrics,
+  evidenceClips = [],
+  threatContext,
+  eventCountSummary,
+  onPlayClip,
+  useAltNames = false,
+  dictionary = {},
+}: InsightCardProps) {
   const [activeTeam, setActiveTeam] = useState<'blue' | 'red'>('blue');
   const currentData = activeTeam === 'blue' ? blueTeam : redTeam;
   const { displayedText } = useStreamingText(currentData.payload, 20);
-  const [activeRole, setActiveRole] = useState<string | null>(null);
-  const [isGridOpen, setIsGridOpen] = useState(false);
 
-  const handleRoleClick = (role: string) => {
-    setActiveRole(role);
-    setIsGridOpen(true);
-  };
+  // blue = team_1, red = team_0  (matches backend naming)
+  const teamMetrics = activeTeam === 'blue' ? metrics?.team_1 : metrics?.team_0;
 
-  const renderInterpolatedText = (text: string) => {
-    if (currentData.keywords.length === 0) return <span>{text}</span>;
-    const regexText = currentData.keywords.map(k => k.text).join('|');
-    const regex = new RegExp(`(${regexText})`, 'gi');
-    const parts = text.split(regex);
+  const compactnessLabel = teamMetrics?.compactness != null
+    ? (teamMetrics.compactness > 70 ? "High" : teamMetrics.compactness > 40 ? "Med" : "Low")
+    : "—";
+  const transitionLabel = teamMetrics?.transition_speed != null
+    ? (teamMetrics.transition_speed > 70 ? "Fast" : teamMetrics.transition_speed > 40 ? "Norm" : "Slow")
+    : "—";
+  const tacticalPower = teamMetrics?.tactical_power?.toFixed(1)
+    ?? (activeTeam === 'blue' ? metrics?.team_blue_score?.toFixed(1) : metrics?.team_red_score?.toFixed(1))
+    ?? "—";
+  const winProb = metrics?.win_probability
+    ? (activeTeam === 'blue' ? metrics.win_probability.team_blue : metrics.win_probability.team_red)
+    : teamMetrics?.win_prob
+    ?? "—";
 
-    return parts.map((part, i) => {
-      const kw = currentData.keywords.find(k => k.text.toLowerCase() === part.toLowerCase());
-      if (kw) {
-        // Build color scheme
-        const colorClasses = 
-          kw.color === 'emerald' ? 'text-emerald-400 bg-emerald-900/30 shadow-[0_0_8px_rgba(52,211,153,0.4)] hover:bg-emerald-800' :
-          kw.color === 'amber'   ? 'text-amber-400 bg-amber-900/30 shadow-[0_0_8px_rgba(251,191,36,0.4)] hover:bg-amber-800' :
-          kw.color === 'cyan'    ? 'text-cyan-400 bg-cyan-900/30 shadow-[0_0_8px_rgba(34,211,238,0.4)] hover:bg-cyan-800' : '';
-
-        return (
-          <span 
-            key={i} 
-            onClick={() => handleRoleClick(kw.role)}
-            className={`font-bold px-1.5 py-0.5 rounded cursor-pointer transition-all ${colorClasses}`}
-          >
-            {part}
-          </span>
-        );
-      }
-      return <span key={i}>{part}</span>;
-    });
-  };
+  const hasTelemetry = (evidenceClips && evidenceClips.length > 0) || 
+                       (threatContext?.top_threats && threatContext.top_threats.length > 0) ||
+                       (eventCountSummary && Object.keys(eventCountSummary).length > 0);
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 shadow-lg mb-4 max-w-2xl relative overflow-hidden font-sans transition-all duration-500">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-3">
-        <h3 className="text-xl font-bold text-gray-200 flex items-center gap-2">
-          <span>🚨</span> {title}
-        </h3>
-      </div>
-
-      {/* Team Toggle */}
-      <div className="flex mb-5 bg-[#0a0f0a] border border-gray-700/50 p-1 rounded-lg w-full max-w-[280px]">
-        <button 
-          onClick={() => setActiveTeam('blue')}
-          className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all ${
-            activeTeam === 'blue' ? 'bg-blue-600/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'text-gray-500 hover:text-gray-300'
-          }`}
-        >
-          Team Blue
-        </button>
-        <button 
-          onClick={() => setActiveTeam('red')}
-          className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all ${
-            activeTeam === 'red' ? 'bg-red-600/20 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'text-gray-500 hover:text-gray-300'
-          }`}
-        >
-          Team Red
-        </button>
-      </div>
+    <div className="w-full flex flex-col gap-6 font-sans">
       
-      {/* Interactive Tactical Role Badges */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {Array.from(new Set(currentData.keywords.map(k => k.role))).map((uniqueRole, idx) => (
-           <button 
-             key={idx}
-             onClick={() => handleRoleClick(uniqueRole)}
-             className="px-3 py-1 bg-emerald-900/50 text-emerald-300 border border-emerald-800 rounded-full text-xs font-bold tracking-wide hover:bg-emerald-800 transition-colors cursor-pointer ring-2 ring-transparent hover:ring-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)] uppercase">
-             {uniqueRole}
-           </button>
-        ))}
-      </div>
-      
-      {/* Philosophical Anchor */}
-      <blockquote className="border-l-4 border-gray-600 pl-3 mb-4 italic text-sm text-gray-400">
-        "The intention is to overload the midfield to gain numerical superiority."<br/>
-        <span className="font-semibold non-italic">- Pep Guardiola / Positional Play</span>
-      </blockquote>
-      
-      {/* Actionable Instruction */}
-      <p className="text-gray-200 leading-relaxed text-sm transition-all duration-300">
-        {renderInterpolatedText(displayedText)}
-        <span className="inline-block w-2 bg-emerald-500 animate-pulse h-4 align-middle ml-1 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span>
-      </p>
-
-      {/* Grid Expansion Toggle */}
-      <div className="mt-6 flex justify-center border-t border-gray-700/50 pt-3">
-         <button 
-           onClick={() => setIsGridOpen(!isGridOpen)} 
-           className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-emerald-400 uppercase tracking-widest font-mono transition-colors"
-         >
-           {isGridOpen ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
-           {isGridOpen ? 'Collapse Spatial Grid' : 'Expand Spatial Grid'}
-         </button>
-      </div>
-
-      {/* Embedded Tactical Grid */}
-      {isGridOpen && (
-        <div id="tactical-grid-overlay" className="mt-4 h-[300px] w-full bg-gray-900 border border-gray-700 rounded-lg relative overflow-hidden transition-all duration-500 flex items-center justify-center p-2">
-           <TacticalGrid activeRole={activeRole} />
+      {/* Metrics Bar */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-black/30 border border-gray-800 p-3 rounded-lg flex flex-col gap-1">
+          <span className="text-[9px] font-mono uppercase text-gray-500 tracking-widest">Tactical Power</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-emerald-400">
+              {tacticalPower}
+            </span>
+            <Activity size={12} className="text-emerald-500/50" />
+          </div>
         </div>
-      )}
+        <div className="bg-black/30 border border-gray-800 p-3 rounded-lg flex flex-col gap-1">
+          <span className="text-[9px] font-mono uppercase text-gray-500 tracking-widest">Win Prob</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-cyan-400">
+              {winProb}{winProb !== "—" ? "%" : ""}
+            </span>
+            <TrendingUp size={12} className="text-cyan-500/50" />
+          </div>
+        </div>
+        <div className="bg-black/30 border border-gray-800 p-3 rounded-lg flex flex-col gap-1">
+          <span className="text-[9px] font-mono uppercase text-gray-500 tracking-widest">Compactness</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-amber-400">
+              {compactnessLabel}
+            </span>
+            <Shield size={12} className="text-amber-500/50" />
+          </div>
+        </div>
+        <div className="bg-black/30 border border-gray-800 p-3 rounded-lg flex flex-col gap-1">
+          <span className="text-[9px] font-mono uppercase text-gray-500 tracking-widest">Trans. Speed</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-white">
+              {transitionLabel}
+            </span>
+            <Zap size={12} className="text-emerald-500/50" />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid: Split info on left, telemetry on right if available */}
+      <div className={`grid grid-cols-1 ${hasTelemetry ? 'lg:grid-cols-[1.2fr_0.8fr]' : ''} gap-8`}>
+        
+        {/* Left Side: Coach Instructions */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-gray-800 pb-2">
+            <h3 className="text-lg font-bold text-gray-100 flex items-center gap-2">
+              <span className="text-red-500 font-mono">[{minute}&apos;]</span>
+              {title}
+            </h3>
+            <div className="flex bg-gray-900 rounded-md p-0.5 border border-gray-800">
+              <button 
+                onClick={() => setActiveTeam('blue')}
+                className={`px-3 py-1 text-[10px] font-bold uppercase rounded ${activeTeam === 'blue' ? 'bg-blue-600/30 text-blue-400' : 'text-gray-500'}`}
+              >
+                {useAltNames && dictionary["team_1"] ? dictionary["team_1"] : "Blue"}
+              </button>
+              <button 
+                onClick={() => setActiveTeam('red')}
+                className={`px-3 py-1 text-[10px] font-bold uppercase rounded ${activeTeam === 'red' ? 'bg-red-600/30 text-red-400' : 'text-gray-500'}`}
+              >
+                {useAltNames && dictionary["team_0"] ? dictionary["team_0"] : "Red"}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-[#111a12]/30 border border-emerald-500/10 rounded-xl p-5 relative overflow-hidden flex-1">
+             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/40" />
+             <p className="text-gray-300 leading-relaxed text-sm font-medium">
+               {displayedText}
+               <span className="inline-block w-1.5 h-4 bg-emerald-500 ml-1 animate-pulse" />
+             </p>
+          </div>
+        </div>
+
+        {/* Right Side: Telemetry / Visual Evidence */}
+        {hasTelemetry && (
+          <div className="flex flex-col gap-4 bg-gray-950/40 border border-gray-900 rounded-2xl p-5 backdrop-blur-sm">
+            
+            {/* 1. Evidence Clips */}
+            {evidenceClips && evidenceClips.length > 0 && (
+              <div className="space-y-2.5">
+                <h4 className="text-[10px] font-bold font-mono text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <Film size={12} className="text-emerald-500" />
+                  Visual Evidence Clips
+                </h4>
+                <div className="space-y-2">
+                  {evidenceClips.map((clip, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => onPlayClip && onPlayClip(clip.start_time_s)}
+                      className="w-full text-left p-3 bg-black/40 hover:bg-[#111a12]/15 border border-gray-900 hover:border-emerald-500/30 rounded-xl transition-all flex items-center justify-between group"
+                    >
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="text-xs font-semibold text-gray-300 truncate group-hover:text-emerald-400 transition-colors">
+                          {clip.label || "Evidence Moment"}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[9px] font-mono text-gray-600 flex items-center gap-1">
+                            <Clock size={8} />
+                            {Math.floor(clip.start_time_s / 60)}:{(Math.floor(clip.start_time_s % 60)).toString().padStart(2, '0')}
+                          </span>
+                          <span className="text-[9px] font-mono text-emerald-500/50 bg-emerald-500/5 px-1.5 py-0.5 rounded">
+                            {Math.round(clip.confidence_pct || clip.relevance_score * 100)}% Match
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-6 w-6 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-500/20 group-hover:scale-105 transition-all">
+                        <Play size={10} fill="currentColor" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 2. Top Threats */}
+            {threatContext?.top_threats && threatContext.top_threats.length > 0 && (
+              <div className="space-y-2.5 pt-2 border-t border-gray-900">
+                <h4 className="text-[10px] font-bold font-mono text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <User size={12} className="text-emerald-500" />
+                  Key Opponent Threats
+                </h4>
+                <div className="space-y-2">
+                  {threatContext.top_threats.map((threat: any, idx: number) => (
+                    <div key={idx} className="p-3 bg-black/20 border border-gray-900/80 rounded-xl space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${threat.team_id === 'team_0' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                            P{threat.player_id}
+                          </div>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
+                            {useAltNames && dictionary[`P${threat.player_id}`] ? `${dictionary[`P${threat.player_id}`]} (${useAltNames && dictionary[threat.team_id] ? dictionary[threat.team_id] : (threat.team_id === 'team_0' ? 'Red' : 'Blue')})` : (threat.team_id === 'team_0' ? 'Red Team' : 'Blue Team')}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-mono font-bold text-emerald-400">
+                          Threat: {threat.threat_score.toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="h-1 bg-gray-900 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${threat.team_id === 'team_0' ? 'bg-red-500' : 'bg-blue-500'}`} 
+                          style={{ width: `${threat.threat_score}%` }} 
+                        />
+                      </div>
+                      {threat.explanation && (
+                        <p className="text-[9px] text-gray-500 leading-normal font-sans pt-0.5">
+                          {threat.explanation}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Event Frequencies */}
+            {eventCountSummary && Object.keys(eventCountSummary).length > 0 && (
+              <div className="space-y-2.5 pt-2 border-t border-gray-900">
+                <h4 className="text-[10px] font-bold font-mono text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <Activity size={12} className="text-emerald-500" />
+                  Ontology Triggers
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(eventCountSummary).map(([code, count]) => (
+                    <div 
+                      key={code}
+                      className="px-2.5 py-1 bg-black/40 border border-gray-900 hover:border-emerald-500/20 rounded-lg flex items-center gap-2 transition-colors cursor-help"
+                      title={`${code}: ${EVENT_NAME_LOOKUP[code] || 'Unknown Event'}`}
+                    >
+                      <span className="text-[9px] font-mono font-semibold text-gray-400">
+                        {(() => {
+                          const orig = EVENT_NAME_LOOKUP[code] || code;
+                          return useAltNames && dictionary[orig] ? dictionary[orig] : orig;
+                        })()}
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1 py-0.25 rounded">
+                        {count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+      </div>
+
+      <div className="mt-auto pt-4 border-t border-gray-900 flex justify-between items-center">
+         <span className="text-[9px] font-mono text-gray-600 uppercase tracking-widest italic">Tactical Engine Analysis active · v1.2</span>
+         <span className="text-[9px] font-mono text-emerald-500/50 uppercase tracking-widest">Gaffer&apos;s Guide Standard</span>
+      </div>
     </div>
   );
 }

@@ -57,7 +57,7 @@ export function PrivacyMoat() {
             </button>
           </div>
 
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout">
              <motion.div
                key={isLocal ? "local" : "cloud"}
                initial={{ opacity: 0, y: 10 }}
@@ -80,7 +80,7 @@ export function PrivacyMoat() {
 
         {/* Badges Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout">
             {activeBadges.map((badge, idx) => (
               <motion.div
                 key={`${isLocal}-${idx}`}

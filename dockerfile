@@ -22,4 +22,4 @@ COPY . /app
 ENV PYTHONPATH=/app/backend:/app
 
 # Default command keeps container reusable for batch jobs.
-CMD ["python", "backend/scripts/cloud_batch_processor.py"]
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "@/lib/apiBase";
+import { getApiBaseUrl, getAuthHeaders } from "@/lib/apiBase";
 
 export interface CoachingAdviceItem {
   frame_idx: number;
@@ -31,11 +31,12 @@ function _coachDebug(
   message: string,
   data: Record<string, unknown>,
 ): void {
-  fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
+  fetch(`${getApiBaseUrl()}/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Debug-Session-Id": "bb63ae",
+      ...getAuthHeaders(),
     },
     body: JSON.stringify({
       sessionId: "bb63ae",
@@ -64,7 +65,7 @@ function coachAdviceUrl(
 
 async function _coachFetch(url: string): Promise<Response> {
   try {
-    return await fetch(url);
+    return await fetch(url, { headers: getAuthHeaders() });
   } catch (e) {
     const inner = e instanceof Error ? e.message : String(e);
     // #region agent log
@@ -222,6 +223,18 @@ export async function getCoachAdvice(
   throw new Error("Coach advice not available.");
 }
 
+export async function getEnrichedReport(jobId: string): Promise<any[]> {
+  const base = getApiBaseUrl();
+  const res = await fetch(`${base}/api/v1/jobs/${jobId}/report/enriched`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(`Enriched report failed (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
+
 export interface CoachChatResponse {
   reply: string;
 }
@@ -230,15 +243,23 @@ export async function postCoachChat(params: {
   message: string;
   jobId: string | null;
   llmEngine: "local" | "cloud";
+  history?: { role: "user" | "ai"; text: string }[];
 }): Promise<CoachChatResponse> {
   const base = getApiBaseUrl();
   const res = await fetch(`${base}/api/v1/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
     body: JSON.stringify({
       message: params.message,
       job_id: params.jobId,
       llm_engine: params.llmEngine,
+      history: (params.history ?? []).map((h) => ({
+        role: h.role === "ai" ? "assistant" : "user",
+        content: h.text,
+      })),
     }),
   });
 

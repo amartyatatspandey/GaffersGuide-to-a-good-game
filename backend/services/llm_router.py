@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import os
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from openai import AsyncOpenAI
 
 from llm_service import generate_coaching_advice, gemini_is_configured
+from services.diagnostics import log_event, log_error
 from services.errors import EngineRoutingError
 from services.ollama_client import (
     ensure_ollama_available,
@@ -15,7 +17,52 @@ from services.ollama_client import (
     stop_ollama_for_app_lifecycle,
 )
 
+@dataclass(frozen=True)
+class QualityProfile:
+    name: str
+    description: str
+    max_tokens: int
+    temperature: float
+
+QUALITY_MODES = {
+    "fast": QualityProfile("Fast", "Optimized for speed", 300, 0.2),
+    "balanced": QualityProfile("Balanced", "Best for standard analysis", 600, 0.35),
+    "high_res": QualityProfile("High Res", "Maximum fidelity for critical tactical flaws", 1000, 0.4),
+}
+
 LLMEngine = Literal["local", "cloud"]
+
+async def detect_intent(prompt: str) -> Literal["general", "tactical", "profile", "evidence_request", "threat_query"]:
+    """
+    Classifies the user's query intent to route to the correct context pipeline.
+    """
+    p = prompt.lower()
+    
+    # Threat query keywords
+    if any(k in p for k in ["who is causing", "biggest threat", "most dangerous", "dangerous player", "who should i watch", "highest threat", "threat ranking"]):
+        return "threat_query"
+
+    # Profile / settings keywords
+    if any(k in p for k in ["setting", "profile", "mode", "quality", "account", "login", "export"]):
+        return "profile"
+
+    # Evidence request keywords
+    legacy_keywords = ["show me", "prove", "show the clip", "show clip", "when did", "give me an example", "give an example", "where is the evidence"]
+    if any(k in p for k in legacy_keywords):
+        return "evidence_request"
+        
+    # Smart action + visual target matching (robust to typos like "shoe" and synonyms)
+    request_actions = ["show", "shoe", "shwo", "sho", "play", "watch", "view", "get", "give", "display", "retrieve", "find", "list", "want", "need", "request", "see", "prove", "look at"]
+    visual_targets = ["clip", "video", "footage", "recording", "moment", "example", "evidence", "proof", "sequence"]
+    if any(act in p for act in request_actions) and any(tgt in p for tgt in visual_targets):
+        return "evidence_request"
+    
+    # Tactical match keywords (specific to the current match analysis)
+    if any(k in p for k in ["this match", "the video", "that flaw", "why did team", "my team", "stats", "metrics", "analysis"]):
+        return "tactical"
+    
+    # General football knowledge keywords
+    return "general"
 
 
 async def _generate_cloud(prompt: str) -> str:
@@ -90,6 +137,9 @@ __all__ = [
     "LLMEngine",
     "get_tactical_advice",
     "generate_coaching_text",
+    "detect_intent",
+    "QualityProfile",
+    "QUALITY_MODES",
     "ensure_ollama_available",
     "start_ollama_for_app_lifecycle",
     "stop_ollama_for_app_lifecycle",

@@ -19,6 +19,7 @@ class BetaQueueItem:
     job_id: str
     video_path: Path
     cv_engine: str
+    llm_engine: str
 
 
 class BetaPipelineQueue:
@@ -65,6 +66,7 @@ class BetaPipelineQueue:
                         job_id=item.job_id,
                         video_path=item.video_path,
                         progress_callback=progress,
+                        llm_engine=item.llm_engine, # type: ignore[arg-type]
                     )
                 output_dir = Path(__file__).resolve().parent.parent / "output"
                 overlay = output_dir / f"{item.job_id}_tracking_overlay.mp4"

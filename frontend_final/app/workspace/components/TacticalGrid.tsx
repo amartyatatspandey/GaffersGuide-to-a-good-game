@@ -1,47 +1,83 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
+import { Target, Shield, Zap, Activity, TrendingUp, Info } from 'lucide-react';
 
-export function TacticalGrid({ activeRole }: { activeRole: string | null }) {
-  // A CSS Grid representing the pitch
-  const isFalse9 = activeRole === 'False 9';
-  const isZone14 = activeRole === 'Zone 14';
-  const isInvertedFB = activeRole === 'Inverted Fullback';
+export function TacticalGrid({ zonalData }: { zonalData?: any[] }) {
+  const [hoveredZone, setHoveredZone] = useState<any>(null);
+
+  if (!zonalData || zonalData.length === 0) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0f0a] border border-gray-900 rounded-xl relative overflow-hidden">
+          <Activity className="text-gray-800 animate-pulse mb-2" size={32} />
+          <p className="text-[10px] font-mono text-gray-600 uppercase tracking-widest font-bold">Awaiting spatial telemetry...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full h-full p-4 flex flex-col items-center justify-center bg-[#111a12] border border-[#1a2420] rounded-xl relative overflow-hidden">
-      <h3 className="absolute top-4 left-4 text-xs font-bold text-gray-500 uppercase tracking-widest font-mono">Spatial Mapping</h3>
+    <div className="w-full h-full flex flex-col bg-[#050805] border border-gray-900 rounded-xl relative overflow-hidden group">
       
-      <div className="w-full max-w-xs aspect-[3/4] grid grid-rows-6 grid-cols-4 gap-1 p-2 border border-gray-800 bg-pitch rounded-md relative shadow-2xl">
-        {/* Draw a grid of cells representing positional zones */}
-        {Array.from({ length: 24 }).map((_, i) => {
-          const r = Math.floor(i / 4);
-          const c = i % 4;
+      <div className="flex-1 w-full grid grid-cols-4 grid-rows-4 gap-1 p-1 bg-black/40 border border-gray-800/50 rounded-lg relative overflow-hidden">
+        {/* Pitch markings */}
+        <div className="absolute top-1/2 left-0 w-full h-[1px] bg-white/5 pointer-events-none" />
+        <div className="absolute top-0 left-1/2 w-[1px] h-full bg-white/5 pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full border border-white/5 pointer-events-none" />
+
+        {zonalData.slice(0, 16).map((zone, i) => {
+          const control = zone.avg_control_pct;
+          const threat = zone.threat_level;
           
-          let highlightClass = "border border-gray-800/20 bg-[#0a0f0a] transition-all duration-500";
+          let colorClass = "bg-gray-900/10";
+          let borderClass = "border-gray-800/10";
           
-          // Zone 14 is conceptually the center-attacking block (Row 2, Col 1&2 for 4 columns)
-          if (r === 2 && (c === 1 || c === 2) && (isZone14 || isFalse9)) {
-            highlightClass = "border border-emerald-500 shadow-[inset_0_0_20px_rgba(16,185,129,0.4)] bg-emerald-900/30 animate-pulse";
+          if (control > 65) {
+            colorClass = "bg-emerald-500/10 hover:bg-emerald-500/25";
+            borderClass = "border-emerald-500/30";
+          } else if (control < 35) {
+            colorClass = "bg-red-500/10 hover:bg-red-500/25";
+            borderClass = "border-red-500/30";
+          } else if (control < 50) {
+             colorClass = "bg-amber-500/10 hover:bg-amber-500/25";
+             borderClass = "border-amber-500/30";
           }
-          
-          // Inverted FB highlight (Row 4, Col 2 or 1 ... cutting inside into midfield)
-          if (r === 3 && (c === 1 || c === 2) && isInvertedFB) {
-            highlightClass = "border border-emerald-500 shadow-[inset_0_0_20px_rgba(16,185,129,0.4)] bg-emerald-900/30 animate-pulse";
-          }
-          
-          return <div key={i} className={highlightClass} />;
+
+          return (
+            <div 
+              key={i} 
+              className={`relative transition-all duration-300 border ${borderClass} ${colorClass} cursor-pointer overflow-hidden flex items-center justify-center`}
+              onMouseEnter={() => setHoveredZone(zone)}
+              onMouseLeave={() => setHoveredZone(null)}
+            >
+               {/* Intensity indicator */}
+               <div 
+                 className="absolute bottom-0 left-0 h-[1.5px] bg-white/20 transition-all duration-500"
+                 style={{ width: `${zone.avg_pressure_index || 0}%` }}
+               />
+
+               <span className="text-[9px] font-mono text-gray-600 font-bold opacity-30">
+                  {zone.zone_id}
+               </span>
+
+               {/* Hover Stats */}
+               {hoveredZone === zone && (
+                 <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-2 z-20">
+                    <div className="text-[9px] font-mono text-gray-400 uppercase mb-1">Control</div>
+                    <div className="text-xs font-bold text-emerald-500">{Math.round(control)}%</div>
+                 </div>
+               )}
+            </div>
+          );
         })}
-        
-        {/* Midline representation */}
-        <div className="absolute top-1/2 left-0 w-full h-[1px] bg-gray-700 pointer-events-none"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-gray-700 pointer-events-none"></div>
       </div>
-      
-      {activeRole && (
-        <div className="absolute bottom-4 right-4 bg-emerald-900/50 text-emerald-400 border border-emerald-500 px-3 py-1 font-mono text-xs font-bold shadow-lg uppercase bounce-in">
-          TRACKING: {activeRole}
-        </div>
-      )}
+
+      <div className="p-2 border-t border-gray-900 bg-black/20 flex justify-between items-center">
+         <div className="flex gap-4">
+            <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-emerald-500/30 rounded-sm" /><span className="text-[8px] text-gray-600 uppercase font-mono">Dominance</span></div>
+            <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-amber-500/30 rounded-sm" /><span className="text-[8px] text-gray-600 uppercase font-mono">Contested</span></div>
+            <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 bg-red-500/30 rounded-sm" /><span className="text-[8px] text-gray-600 uppercase font-mono">Vulnerable</span></div>
+         </div>
+         <span className="text-[8px] font-mono text-gray-700 uppercase italic">Interactive Zonal Matrix</span>
+      </div>
     </div>
   );
 }

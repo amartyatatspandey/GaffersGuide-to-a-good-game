@@ -39,6 +39,7 @@ def run(
     output_json: Path | None,
     *,
     use_advanced_calibration: bool = True,
+    progress_callback: Callable[[str], None] | None = None,
 ) -> None:
     if not video_path.is_file():
         raise FileNotFoundError(f"Video not found: {video_path}")
@@ -66,6 +67,8 @@ def run(
     results: list[dict] = []
     frame_idx = 0
     success_count = 0
+    
+    total_samples = (total_frames // sample_every) + 1
 
     while True:
         ret, frame = cap.read()
@@ -74,6 +77,11 @@ def run(
         if frame_idx % sample_every != 0:
             frame_idx += 1
             continue
+        
+        sample_idx = (frame_idx // sample_every) + 1
+        if progress_callback:
+            pct = min(100, int((sample_idx / total_samples) * 100))
+            progress_callback(f"Tracking Players (Calibrating: {pct}%)")
 
         H = calibrator.get_homography(frame)
         if H is not None:
@@ -107,6 +115,7 @@ def ensure_homography_json_for_video(
     *,
     sample_every: int = DEFAULT_SAMPLE_EVERY,
     use_advanced_calibration: bool = True,
+    progress_callback: Callable[[str], None] | None = None,
 ) -> Path:
     """
     Resolve homography JSON for ``video_path`` (env override or per-stem under ``output/``).
@@ -145,6 +154,7 @@ def ensure_homography_json_for_video(
             sample_every=sample_every,
             output_json=expected,
             use_advanced_calibration=use_advanced_calibration,
+            progress_callback=progress_callback,
         )
 
     if not expected.is_file():

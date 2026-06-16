@@ -3,6 +3,7 @@ import { useVideoFrameSync } from "@/hooks/useVideoFrameSync";
 import { adaptTrackingPayload, buildFrameLookup } from "@/lib/trackingAdapter";
 import type { TrackingFrame, TrackingPayload } from "@/lib/types/trackingTypes";
 import RadarCanvas from "./RadarCanvas";
+import { getApiBaseUrl, getAuthHeaders } from "@/lib/apiBase";
 
 interface RadarWidgetProps {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -76,11 +77,12 @@ export default function RadarWidget({
 
   useEffect(() => {
     // #region agent log
-    fetch("http://127.0.0.1:7265/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704", {
+    fetch(`${getApiBaseUrl()}/ingest/b94af6c0-0f3f-4385-ab39-095f9a480704`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Debug-Session-Id": "bb63ae",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify({
         sessionId: "bb63ae",

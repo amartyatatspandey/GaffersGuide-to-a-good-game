@@ -19,9 +19,205 @@ class RuleEngine:
         self.MAX_LINE_GAP = 20.0  # meters
         self.HIGH_LINE_X = 20.0  # meters past center
         self.LOW_BLOCK_X = -25.0  # meters behind center
-        self.POOR_PRESS_DIST = 6.0  # meters
-        self.MAX_TEAM_LENGTH = 45.0  # meters
+        self.POOR_PRESS_DIST = 8.0  # meters (increased from 6.0 for sensitivity)
+        self.MAX_TEAM_LENGTH = 65.0  # meters (increased from 55.0 to prevent false over-stretch flags)
         self.MIN_PITCH_CONTROL = 40.0  # percentage
+
+    def calculate_tactical_scores(self, metrics_timeline: list[dict[str, Any]]) -> dict[str, Any]:
+        """
+        Elite-grade tactical KPI scorecard with professional coaching standards.
+        Includes: compactness (H/V/midfield), press resistance, width utilization,
+        line staggering, overload score, transition speed, and confidence percentages.
+        """
+        def safe_mean(frames: list[dict], key: str, default: float) -> float:
+            vals = [float(f.get(key, default) or default) for f in frames]
+            return statistics.mean(vals) if vals else default
+
+        def aggregate(tid: str) -> dict[str, float]:
+            frames = [f.get(tid, {}) for f in metrics_timeline if tid in f]
+            if not frames:
+                return {}
+
+            team_len = safe_mean(frames, "team_length_m", 50.0)
+            team_wid = safe_mean(frames, "team_width_m", 40.0)
+            pitch_ctrl = safe_mean(frames, "pitch_control_pct", 50.0)
+            press_idx = safe_mean(frames, "pressure_index_m", 10.0)
+            line_gap = safe_mean(frames, "line_gap_def_mid_m", 15.0)
+            mid_gap = safe_mean(frames, "line_gap_mid_att_m", 15.0)
+            avg_speed = safe_mean(frames, "avg_speed_mps", 4.0)
+            area = safe_mean(frames, "area_sq_meters", 800.0)
+            deepest_x = safe_mean(frames, "deepest_x", 0.0)
+
+            # --- Compactness KPIs ---
+            # Vertical: how tight front-to-back (lower team length = better)
+            compactness_v = max(0.0, min(100.0, 100.0 - (team_len - 20.0) * 1.5))
+            # Horizontal: how contained side-to-side (40m width is optimal)
+            compactness_h = max(0.0, min(100.0, 100.0 - abs(team_wid - 40.0) * 1.2))
+            # Midfield compactness: gap between def and mid lines
+            compactness_mid = max(0.0, min(100.0, 100.0 - (line_gap * 3.5)))
+            # Overall weighted compactness
+            compactness = compactness_v * 0.4 + compactness_h * 0.3 + compactness_mid * 0.3
+
+            # --- Advanced KPIs ---
+            # Press resistance: ability to cope under pressure (higher pitch control + lower press dist = better)
+            press_resistance = max(0.0, min(100.0, (pitch_ctrl * 0.6) + max(0.0, (12.0 - press_idx) * 3.5)))
+
+            # Width utilization: optimal width is 38-48m; extremes are penalized
+            if 38.0 <= team_wid <= 48.0:
+                width_utilization = min(100.0, 85.0 + (team_wid - 38.0) * 1.5)
+            else:
+                width_utilization = max(0.0, min(100.0, 85.0 - abs(team_wid - 43.0) * 2.5))
+
+            # Line staggering: measures how well the three lines are spaced (optimal is 15-20m each)
+            ideal_gap = 17.5
+            stagger_dev = abs(line_gap - ideal_gap) + abs(mid_gap - ideal_gap)
+            line_staggering = max(0.0, min(100.0, 100.0 - stagger_dev * 2.5))
+
+            # Overload score: pitch control + compactness = ability to create numerical advantages
+            overload_score = max(0.0, min(100.0, (pitch_ctrl * 0.55) + (compactness * 0.45)))
+
+            # Transition speed: how fast the team moves (5-8 m/s optimal)
+            if 4.5 <= avg_speed <= 7.5:
+                transition_speed = min(100.0, 60.0 + (avg_speed - 4.5) * 13.3)
+            else:
+                transition_speed = max(0.0, 100.0 - abs(avg_speed - 6.0) * 15.0)
+
+            # Midfield control
+            midfield_control = max(0.0, min(100.0, pitch_ctrl))
+
+            # Pressing intensity
+            pressing = max(0.0, min(100.0, 100.0 - (press_idx * 5.0)))
+
+            # Defensive shape
+            defensive_shape = max(0.0, min(100.0, 100.0 - (line_gap * 2.0)))
+
+            return {
+                "compactness": round(compactness, 1),
+                "compactness_vertical": round(compactness_v, 1),
+                "compactness_horizontal": round(compactness_h, 1),
+                "compactness_midfield": round(compactness_mid, 1),
+                "midfield_control": round(midfield_control, 1),
+                "pressing": round(pressing, 1),
+                "defensive_shape": round(defensive_shape, 1),
+                "press_resistance": round(press_resistance, 1),
+                "width_utilization": round(width_utilization, 1),
+                "line_staggering": round(line_staggering, 1),
+                "overload_score": round(overload_score, 1),
+                "transition_speed": round(transition_speed, 1),
+            }
+
+        red = aggregate("team_0")
+        blue = aggregate("team_1")
+
+        def weighted_power(m: dict) -> float:
+            """Professional Tactical Power Index — weighted across all KPIs."""
+            if not m:
+                return 0.0
+            return (
+                m.get("compactness", 0) * 0.20 +
+                m.get("midfield_control", 0) * 0.18 +
+                m.get("pressing", 0) * 0.12 +
+                m.get("defensive_shape", 0) * 0.14 +
+                m.get("press_resistance", 0) * 0.10 +
+                m.get("width_utilization", 0) * 0.08 +
+                m.get("line_staggering", 0) * 0.08 +
+                m.get("overload_score", 0) * 0.06 +
+                m.get("transition_speed", 0) * 0.04
+            )
+
+        red_power = weighted_power(red)
+        blue_power = weighted_power(blue)
+        total = max(red_power + blue_power, 1.0)
+
+        red_win_prob = round(max(0.0, min(100.0, (red_power / total) * 100.0)), 1)
+        blue_win_prob = round(max(0.0, min(100.0, (blue_power / total) * 100.0)), 1)
+
+        # Confidence: based on how many frames had data
+        frames_with_t0 = sum(1 for f in metrics_timeline if "team_0" in f)
+        frames_with_t1 = sum(1 for f in metrics_timeline if "team_1" in f)
+        total_frames = max(len(metrics_timeline), 1)
+        confidence_red = round(min(100.0, (frames_with_t0 / total_frames) * 100.0), 1)
+        confidence_blue = round(min(100.0, (frames_with_t1 / total_frames) * 100.0), 1)
+
+        # Aggregate zonal data
+        zonal_aggregated = []
+        all_zonal_frames = [f.get("zonal_data", []) for f in metrics_timeline if "zonal_data" in f]
+        if all_zonal_frames:
+            num_zones = len(all_zonal_frames[0])
+            for z_idx in range(num_zones):
+                zone_frames = [frame[z_idx] for frame in all_zonal_frames if len(frame) > z_idx]
+                if not zone_frames:
+                    continue
+                
+                z_0_densities = [f["team_0_density"] for f in zone_frames]
+                z_1_densities = [f["team_1_density"] for f in zone_frames]
+                z_ctrl = [f["control_pct"] for f in zone_frames]
+                z_press = [f["pressure_index"] for f in zone_frames]
+                z_vuln = [f["vulnerability"] for f in zone_frames]
+                z_threat = [f["threat_level"] for f in zone_frames]
+                z_overload = [f.get("overload", 0) for f in zone_frames]
+                z_comp = [f.get("compactness", 0) for f in zone_frames]
+                z_trans = [f.get("transition_potential", 0) for f in zone_frames]
+
+                zonal_aggregated.append({
+                    "zone_id": z_idx,
+                    "x_range": zone_frames[0]["x_range"],
+                    "y_range": zone_frames[0]["y_range"],
+                    "avg_team_0_density": round(statistics.mean(z_0_densities), 2),
+                    "avg_team_1_density": round(statistics.mean(z_1_densities), 2),
+                    "avg_control_pct": round(statistics.mean(z_ctrl), 1),
+                    "avg_pressure_index": round(statistics.mean(z_press), 1),
+                    "has_ball_frequency": round(sum(1 for f in zone_frames if f["has_ball"]) / len(zone_frames), 2),
+                    "vulnerability": round(statistics.mean(z_vuln), 1),
+                    "threat_level": round(statistics.mean(z_threat), 1),
+                    "overload_score": round(statistics.mean(z_overload), 1),
+                    "local_compactness": round(statistics.mean(z_comp), 1),
+                    "transition_potential": round(statistics.mean(z_trans), 1),
+                })
+
+        return {
+            "team_0": {
+                "compactness": red.get("compactness", 0),
+                "compactness_vertical": red.get("compactness_vertical", 0),
+                "compactness_horizontal": red.get("compactness_horizontal", 0),
+                "compactness_midfield": red.get("compactness_midfield", 0),
+                "control": red.get("midfield_control", 0),
+                "intensity": red.get("pressing", 0),
+                "defensive_shape": red.get("defensive_shape", 0),
+                "press_resistance": red.get("press_resistance", 0),
+                "width_utilization": red.get("width_utilization", 0),
+                "line_staggering": red.get("line_staggering", 0),
+                "overload_score": red.get("overload_score", 0),
+                "transition_speed": red.get("transition_speed", 0),
+                "tactical_power": round(red_power, 1),
+                "win_prob": red_win_prob,
+                "confidence_pct": confidence_red,
+            },
+            "team_1": {
+                "compactness": blue.get("compactness", 0),
+                "compactness_vertical": blue.get("compactness_vertical", 0),
+                "compactness_horizontal": blue.get("compactness_horizontal", 0),
+                "compactness_midfield": blue.get("compactness_midfield", 0),
+                "control": blue.get("midfield_control", 0),
+                "intensity": blue.get("pressing", 0),
+                "defensive_shape": blue.get("defensive_shape", 0),
+                "press_resistance": blue.get("press_resistance", 0),
+                "width_utilization": blue.get("width_utilization", 0),
+                "line_staggering": blue.get("line_staggering", 0),
+                "overload_score": blue.get("overload_score", 0),
+                "transition_speed": blue.get("transition_speed", 0),
+                "tactical_power": round(blue_power, 1),
+                "win_prob": blue_win_prob,
+                "confidence_pct": confidence_blue,
+            },
+            "team_red_score": round(red_power, 2),
+            "team_blue_score": round(blue_power, 2),
+            "win_probability": {
+                "team_red": red_win_prob,
+                "team_blue": blue_win_prob,
+            },
+            "zonal_analytics": zonal_aggregated,
+        }
 
     def evaluate_team(
         self, frame_idx: int, team_name: str, metrics: dict[str, Any]
@@ -143,10 +339,45 @@ def evaluate_timeline(
         "team_1",
     )
 
+    # 1. Calculate Tactical Scores and Win Probability
+    summary = engine.calculate_tactical_scores(metrics_timeline)
+
+    # Data coverage confidence
+    frames_t0 = sum(1 for f in metrics_timeline if "team_0" in f)
+    frames_t1 = sum(1 for f in metrics_timeline if "team_1" in f)
+    coverage_t0 = round((frames_t0 / total_frames) * 100.0, 1)
+    coverage_t1 = round((frames_t1 / total_frames) * 100.0, 1)
+    summary_confidence = round((coverage_t0 + coverage_t1) / 2.0, 1)
+
+    t0 = summary["team_0"]
+    t1 = summary["team_1"]
+
+    # 2. Inject Match Summary with full KPI data
+    global_insights: list[dict[str, Any]] = [
+        {
+            "team_id": "global",
+            "flaw": "Match Summary",
+            "severity": "Info",
+            "frequency_pct": 100.0,
+            "confidence_pct": summary_confidence,
+            "confidence_reason": f"Based on {total_frames} frames with {coverage_t0:.0f}%/{coverage_t1:.0f}% data coverage for Red/Blue.",
+            "evidence": (
+                f"Tactical Power: Red {t0.get('tactical_power', 0):.1f} vs Blue {t1.get('tactical_power', 0):.1f}. "
+                f"Win Probability: Red {t0.get('win_prob', 50)}% | Blue {t1.get('win_prob', 50)}%. "
+                f"Compactness: Red {t0.get('compactness', 0):.0f} / Blue {t1.get('compactness', 0):.0f}. "
+                f"Press Resistance: Red {t0.get('press_resistance', 0):.0f} / Blue {t1.get('press_resistance', 0):.0f}. "
+                f"Width Utilization: Red {t0.get('width_utilization', 0):.0f} / Blue {t1.get('width_utilization', 0):.0f}. "
+                f"Line Staggering: Red {t0.get('line_staggering', 0):.0f} / Blue {t1.get('line_staggering', 0):.0f}. "
+                f"Transition Speed: Red {t0.get('transition_speed', 0):.0f} / Blue {t1.get('transition_speed', 0):.0f}."
+            ),
+            "summary_data": summary,
+        }
+    ]
+
     output: list[dict[str, Any]] = []
 
     for team_id in team_ids:
-        insights: list[dict[str, Any]] = []
+        current_team_insights: list[dict[str, Any]] = []
 
         # --- Rule 1: Midfield Disconnect
         mid_gap_values: list[float] = []
@@ -160,15 +391,23 @@ def evaluate_timeline(
             frequency_pct = (len(mid_gap_values) / total_frames) * 100.0
             if frequency_pct > min_frequency_pct:
                 average_metric_m = statistics.mean(mid_gap_values)
-                insights.append(
+                max_gap = max(mid_gap_values)
+                # Confidence: frequency certainty × threshold margin × data coverage
+                threshold_margin = min(1.0, (average_metric_m - engine.MAX_LINE_GAP) / engine.MAX_LINE_GAP)
+                frames_with_data = sum(1 for f in metrics_timeline if team_id in f)
+                data_coverage = frames_with_data / total_frames
+                confidence_pct = round(min(99.0, (frequency_pct / 100.0) * 0.45 + threshold_margin * 0.35 + data_coverage * 0.20) * 100.0, 1)
+                current_team_insights.append(
                     {
                         "team_id": team_id,
                         "flaw": "Midfield Disconnect",
                         "severity": "High",
                         "frequency_pct": frequency_pct,
-                        "evidence": _evidence_text(
-                            frequency_pct=frequency_pct,
-                            average_metric_m=average_metric_m,
+                        "confidence_pct": confidence_pct,
+                        "confidence_reason": f"Avg gap {average_metric_m:.1f}m (threshold {engine.MAX_LINE_GAP}m), detected in {frequency_pct:.0f}% of frames.",
+                        "evidence": (
+                            f"Avg line gap {average_metric_m:.1f}m (peak {max_gap:.1f}m) — "
+                            f"threshold is {engine.MAX_LINE_GAP}m. Violated in {frequency_pct:.0f}% of frames."
                         ),
                     }
                 )
@@ -185,15 +424,21 @@ def evaluate_timeline(
             frequency_pct = (len(suicidal_high_values) / total_frames) * 100.0
             if frequency_pct > min_frequency_pct:
                 average_metric_m = statistics.mean(suicidal_high_values)
-                insights.append(
+                threshold_margin = min(1.0, (average_metric_m - engine.HIGH_LINE_X) / engine.HIGH_LINE_X)
+                frames_with_data = sum(1 for f in metrics_timeline if team_id in f)
+                data_coverage = frames_with_data / total_frames
+                confidence_pct = round(min(99.0, (frequency_pct / 100.0) * 0.50 + threshold_margin * 0.30 + data_coverage * 0.20) * 100.0, 1)
+                current_team_insights.append(
                     {
                         "team_id": team_id,
                         "flaw": "Suicidal High Line",
                         "severity": "Critical",
                         "frequency_pct": frequency_pct,
-                        "evidence": _evidence_text(
-                            frequency_pct=frequency_pct,
-                            average_metric_m=average_metric_m,
+                        "confidence_pct": confidence_pct,
+                        "confidence_reason": f"Defensive line avg {average_metric_m:.1f}m high with <{engine.MIN_PITCH_CONTROL}% pitch control for {frequency_pct:.0f}% of frames.",
+                        "evidence": (
+                            f"Defensive line pushed to avg {average_metric_m:.1f}m (threshold {engine.HIGH_LINE_X}m) "
+                            f"with insufficient pitch control. Vulnerable in {frequency_pct:.0f}% of frames."
                         ),
                     }
                 )
@@ -211,15 +456,21 @@ def evaluate_timeline(
             frequency_pct = (len(parked_bus_values) / total_frames) * 100.0
             if frequency_pct > min_frequency_pct:
                 average_metric_m = statistics.mean(parked_bus_values)
-                insights.append(
+                threshold_margin = min(1.0, (engine.LOW_BLOCK_X - average_metric_m) / max(engine.LOW_BLOCK_X, 1.0))
+                frames_with_data = sum(1 for f in metrics_timeline if team_id in f)
+                data_coverage = frames_with_data / total_frames
+                confidence_pct = round(min(99.0, (frequency_pct / 100.0) * 0.45 + threshold_margin * 0.35 + data_coverage * 0.20) * 100.0, 1)
+                current_team_insights.append(
                     {
                         "team_id": team_id,
                         "flaw": "Parked Bus",
                         "severity": "Medium",
                         "frequency_pct": frequency_pct,
-                        "evidence": _evidence_text(
-                            frequency_pct=frequency_pct,
-                            average_metric_m=average_metric_m,
+                        "confidence_pct": confidence_pct,
+                        "confidence_reason": f"Deepest defender avg {average_metric_m:.1f}m deep with compressed area, in {frequency_pct:.0f}% of frames.",
+                        "evidence": (
+                            f"Team entrenched — deepest defender avg {average_metric_m:.1f}m from goal. "
+                            f"Highly compressed formation area (<600 sq.m) in {frequency_pct:.0f}% of frames."
                         ),
                     }
                 )
@@ -235,15 +486,22 @@ def evaluate_timeline(
             frequency_pct = (len(lethargic_press_values) / total_frames) * 100.0
             if frequency_pct > min_frequency_pct:
                 average_metric_m = statistics.mean(lethargic_press_values)
-                insights.append(
+                threshold_margin = min(1.0, (average_metric_m - engine.POOR_PRESS_DIST) / engine.POOR_PRESS_DIST)
+                frames_with_data = sum(1 for f in metrics_timeline if team_id in f)
+                data_coverage = frames_with_data / total_frames
+                confidence_pct = round(min(99.0, (frequency_pct / 100.0) * 0.50 + threshold_margin * 0.30 + data_coverage * 0.20) * 100.0, 1)
+                current_team_insights.append(
                     {
                         "team_id": team_id,
                         "flaw": "Lethargic Press",
                         "severity": "Medium",
                         "frequency_pct": frequency_pct,
-                        "evidence": _evidence_text(
-                            frequency_pct=frequency_pct,
-                            average_metric_m=average_metric_m,
+                        "confidence_pct": confidence_pct,
+                        "confidence_reason": f"Avg pressing distance {average_metric_m:.1f}m — {average_metric_m - engine.POOR_PRESS_DIST:.1f}m beyond the {engine.POOR_PRESS_DIST}m threshold.",
+                        "evidence": (
+                            f"Average pressing distance {average_metric_m:.1f}m to nearest opponent "
+                            f"({engine.POOR_PRESS_DIST}m threshold exceeded in {frequency_pct:.0f}% of frames). "
+                            f"Opposition able to build without pressure."
                         ),
                     }
                 )
@@ -259,21 +517,27 @@ def evaluate_timeline(
             frequency_pct = (len(over_stretched_values) / total_frames) * 100.0
             if frequency_pct > min_frequency_pct:
                 average_metric_m = statistics.mean(over_stretched_values)
-                insights.append(
+                threshold_margin = min(1.0, (average_metric_m - engine.MAX_TEAM_LENGTH) / engine.MAX_TEAM_LENGTH)
+                frames_with_data = sum(1 for f in metrics_timeline if team_id in f)
+                data_coverage = frames_with_data / total_frames
+                confidence_pct = round(min(99.0, (frequency_pct / 100.0) * 0.45 + threshold_margin * 0.35 + data_coverage * 0.20) * 100.0, 1)
+                current_team_insights.append(
                     {
                         "team_id": team_id,
                         "flaw": "Over-Stretched Formation",
                         "severity": "High",
                         "frequency_pct": frequency_pct,
-                        "evidence": _evidence_text(
-                            frequency_pct=frequency_pct,
-                            average_metric_m=average_metric_m,
+                        "confidence_pct": confidence_pct,
+                        "confidence_reason": f"Team length avg {average_metric_m:.1f}m ({average_metric_m - engine.MAX_TEAM_LENGTH:.1f}m beyond the {engine.MAX_TEAM_LENGTH}m safe limit).",
+                        "evidence": (
+                            f"Team vertically stretched to avg {average_metric_m:.1f}m end-to-end "
+                            f"(safe limit: {engine.MAX_TEAM_LENGTH}m). Creates passable channels in {frequency_pct:.0f}% of frames."
                         ),
                     }
                 )
 
         # Return top 1-3 most severe/frequent insights per team.
-        insights.sort(
+        current_team_insights.sort(
             key=lambda ins: (
                 _severity_rank(str(ins.get("severity", ""))),
                 float(ins.get("frequency_pct", 0.0)),
@@ -281,9 +545,10 @@ def evaluate_timeline(
             reverse=True,
         )
 
-        output.extend(insights[: max(1, top_k_per_team)])
+        output.extend(current_team_insights[: max(1, top_k_per_team)])
 
-    return output
+    # Prepend the global summary to the output
+    return global_insights + output
 
 
 def run_engine(

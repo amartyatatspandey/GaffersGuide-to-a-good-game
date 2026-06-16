@@ -221,7 +221,7 @@ class HybridIDHealer:
                     elif new_fp is not None:
                         self.id_fingerprints[tid] = new_fp
 
-                if frame_idx % 15 == 0 or tid not in self.id_fingerprints:
+                if frame_idx % 90 == 0 or tid not in self.id_fingerprints:
                     fp = self.fingerprint_engine.extract_features(frame, bbox)
                     if fp is not None:
                         self.id_fingerprints[tid] = fp
@@ -249,7 +249,7 @@ class TeamClassifier:
         self.player_positions: defaultdict[int, list[float]] = defaultdict(list)
         self.player_pitch_x: defaultdict[int, list[float]] = defaultdict(list)   # 2D Radar X
         self.max_history = 90
-        self.global_kmeans = KMeans(n_clusters=2, random_state=42, n_init=10)
+        self.global_kmeans = KMeans(n_clusters=2, random_state=42, n_init=3)
         # --- DYNAMIC ANCHOR STATE ---
         self.yolo_class_history: defaultdict[int, list[int]] = defaultdict(list)
         self.anchors_extracted = False
@@ -299,7 +299,7 @@ class TeamClassifier:
             return None
         if n_clusters == 1:
             return np.median(pixels_hs, axis=0).astype(np.float64)
-        kmeans_local = KMeans(n_clusters=2, random_state=42, n_init=10)
+        kmeans_local = KMeans(n_clusters=2, random_state=42, n_init=3)
         kmeans_local.fit(pixels_hs)
         counts = np.bincount(kmeans_local.labels_, minlength=2)
         dominant_idx = int(np.argmax(counts))
@@ -596,7 +596,7 @@ class TacticalRadar:
         cv2.circle(pitch, (self.radar_w - int(11 * self.scale), center_y), spot_r, white, -1)
         return pitch
 
-    def map_to_2d(self, bbox: np.ndarray) -> tuple[int, int] | None:
+    def map_to_2d(self, bbox: np.ndarray, clamp: bool = True) -> tuple[int, int] | None:
         if not self.available_frames:
             return None
 
@@ -651,8 +651,9 @@ class TacticalRadar:
         radar_y = int(round((y_raw + 34.0) * self.scale))
 
         # 4. FAIL-SAFE CLAMP
-        radar_x = max(0, min(self.radar_w, radar_x))
-        radar_y = max(0, min(self.radar_h, radar_y))
+        if clamp:
+            radar_x = max(0, min(self.radar_w, radar_x))
+            radar_y = max(0, min(self.radar_h, radar_y))
 
         return (radar_x, radar_y)
 
@@ -661,6 +662,7 @@ class TacticalRadar:
         bboxes_xyxy: np.ndarray | list[np.ndarray],
         *,
         frame_idx: int | None = None,
+        clamp: bool = True,
     ) -> list[tuple[int, int] | None]:
         """
         Vectorized projection for many bboxes in one frame.
@@ -725,8 +727,9 @@ class TacticalRadar:
                 continue
             radar_x = int(round((x_raw + 52.5) * self.scale))
             radar_y = int(round((y_raw + 34.0) * self.scale))
-            radar_x = max(0, min(self.radar_w, radar_x))
-            radar_y = max(0, min(self.radar_h, radar_y))
+            if clamp:
+                radar_x = max(0, min(self.radar_w, radar_x))
+                radar_y = max(0, min(self.radar_h, radar_y))
             out.append((radar_x, radar_y))
         return out
 
@@ -876,6 +879,29 @@ def main() -> None:
             detections = tracker.update_with_detections(detections)
 
             radar.update_camera_angle(frame_idx)
+
+            # Strict pitch boundary filter: drop sideline personnel
+            radar_pts_unclamped = radar.map_many_to_2d(detections.xyxy, frame_idx=frame_idx, clamp=False)
+            keep_mask = []
+            for i, pt in enumerate(radar_pts_unclamped):
+                cid = int(detections.class_id[i])
+                if cid == CLASS_BALL:
+                    keep_mask.append(True)
+                elif pt is None:
+                    # Only keep ball when projection fails, exclude all other detections
+                    keep_mask.append(cid == CLASS_BALL)
+                else:
+                    rx, ry = pt
+                    # x: -50 to 1100, y: -50 to 730 (buffer from -5m to 110m and -5m to 73m)
+                    if -50 <= rx <= 1100 and -50 <= ry <= 730:
+                        keep_mask.append(True)
+                    else:
+                        keep_mask.append(False)
+
+            if len(keep_mask) > 0:
+                mask = np.array(keep_mask, dtype=bool)
+                detections = detections[mask]
+
             radar_pts: list[tuple[int, int] | None] = [
                 radar.map_to_2d(detections.xyxy[i]) for i in range(len(detections))
             ]

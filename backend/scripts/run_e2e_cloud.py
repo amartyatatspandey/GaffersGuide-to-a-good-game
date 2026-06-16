@@ -239,6 +239,7 @@ def run_cv_tracking_batched(
     batch_size: int = DEFAULT_BATCH_SIZE,
     flow_max_width: int = DEFAULT_FLOW_MAX_WIDTH,
     device: str | None = None,
+    progress_callback: Callable[[str], None] | None = None,
 ) -> tuple[list[TacticalFrame], CVTelemetry, list[TrackingFrameArtifact]]:
     if not MODEL_PATH.is_file():
         raise FileNotFoundError(
@@ -247,16 +248,17 @@ def run_cv_tracking_batched(
 
     selected_device = _infer_device(device)
     LOGGER.info("Cloud beta tracking device: %s", selected_device or "default")
-    use_half = selected_device == "cuda"
+    use_half = selected_device in ("cuda", "mps")
 
     model: YOLO = YOLO(str(MODEL_PATH))
-    if use_half and torch is not None and torch.cuda.is_available():
-        try:
-            model.model.half()
-            LOGGER.info("Cloud beta inference precision: FP16 (CUDA)")
-        except Exception:  # noqa: BLE001
-            use_half = False
-            LOGGER.warning("FP16 model cast failed, falling back to FP32.")
+    if use_half and torch is not None:
+        if selected_device == "cuda" and torch.cuda.is_available():
+            try:
+                model.model.half()
+                LOGGER.info("Cloud beta inference precision: FP16 (CUDA)")
+            except Exception:  # noqa: BLE001
+                use_half = False
+                LOGGER.warning("FP16 model cast failed, falling back to FP32.")
     primary_ball_class_ids = _resolve_primary_ball_class_ids(model)
     tracker = sv.ByteTrack()
     classifier = TeamClassifier()
@@ -269,7 +271,7 @@ def run_cv_tracking_batched(
 
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    homography_json = ensure_homography_json_for_video(video_path)
+    homography_json = ensure_homography_json_for_video(video_path, progress_callback=progress_callback)
     LOGGER.info(
         "Homography JSON: %s (V2 advanced calibrator when auto-generated; H in 1280×720 space).",
         homography_json,
@@ -282,26 +284,52 @@ def run_cv_tracking_batched(
     last_player_radar_by_track: dict[int, tuple[int, int]] = {}
     last_ball_radar: tuple[int, int] | None = None
 
+    frame_step = int(os.getenv("FRAME_STEP", "1"))
+
     try:
         for start_idx, batch_frames in _iter_frame_batches(cap, batch_size=batch_size):
+            LOGGER.info(f"Processing batch starting at frame {start_idx} (batch size: {len(batch_frames)})...")
             kwargs: dict[str, Any] = {"conf": 0.3, "verbose": False}
             if selected_device:
                 kwargs["device"] = selected_device
             if use_half:
                 kwargs["half"] = True
-            try:
-                results: list[Any] = model(batch_frames, **kwargs)
-            except Exception:  # noqa: BLE001
-                if use_half:
-                    LOGGER.warning("FP16 inference failed for batch; retrying FP32.")
-                    kwargs.pop("half", None)
-                    results = model(batch_frames, **kwargs)
-                else:
-                    raise
+            
+            # Determine which frames in this batch require YOLO inference
+            inference_frames = []
+            inference_offsets = []
+            for offset, frame in enumerate(batch_frames):
+                frame_idx = start_idx + offset
+                if (frame_idx - start_idx) % frame_step == 0:
+                    inference_frames.append(frame)
+                    inference_offsets.append(offset)
+
+            results = []
+            if inference_frames:
+                LOGGER.debug(f"Starting YOLO inference on {selected_device or 'cpu'}...")
+                try:
+                    results = model(inference_frames, **kwargs)
+                    LOGGER.debug(f"Inference complete. Received {len(results)} results.")
+                except Exception:  # noqa: BLE001
+                    if use_half:
+                        LOGGER.warning("FP16 inference failed for batch; retrying FP32.")
+                        kwargs.pop("half", None)
+                        results = model(inference_frames, **kwargs)
+                    else:
+                        raise
 
             # Strict chronological tracking updates to preserve ID continuity.
             for offset, frame in enumerate(batch_frames):
                 frame_idx = start_idx + offset
+                is_key_frame = (frame_idx - start_idx) % frame_step == 0
+
+                if frame_idx % 25 == 0:
+                    LOGGER.info(f"Tracking frame {frame_idx}...")
+                    if progress_callback:
+                        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
+                        pct = min(100, int((frame_idx / total) * 100))
+                        progress_callback(f"Tracking Players (Inference: {pct}%)")
+                
                 radar.update_camera_angle(frame_idx)
                 camera_shift = flow_estimator.update(frame)
                 homography_conf = _homography_confidence(radar, frame_idx)
@@ -311,8 +339,38 @@ def run_cv_tracking_batched(
                 else:
                     telemetry.frames_standard_homography += 1
 
-                ball_xy: list[float] | None = None
-                result = results[offset] if offset < len(results) else None
+                if not is_key_frame:
+                    # Store placeholder for non-keyframe (will be filled during interpolation)
+                    frames_out.append(
+                        TacticalFrame(
+                            frame_idx=frame_idx,
+                            players=[],
+                            ball_xy=None,
+                            possession_team_id=None,
+                        )
+                    )
+                    frame_artifacts.append(
+                        TrackingFrameArtifact(
+                            frame_idx=frame_idx,
+                            players=[],
+                            ball_xy=None,
+                            possession_team_id=None,
+                            homography_confidence=float(homography_conf),
+                            used_optical_flow_fallback=use_fallback,
+                            camera_shift_xy=(
+                                float(camera_shift[0]),
+                                float(camera_shift[1]),
+                            ),
+                        )
+                    )
+                    telemetry.total_frames_processed += 1
+                    continue
+
+                ball_xy_centered: list[float] | None = None
+                ball_xy_artifact: list[float] | None = None
+                
+                result_idx = inference_offsets.index(offset) if offset in inference_offsets else -1
+                result = results[result_idx] if (0 <= result_idx < len(results)) else None
                 if result is None:
                     frames_out.append(
                         TacticalFrame(
@@ -340,6 +398,29 @@ def run_cv_tracking_batched(
 
                 detections = sv.Detections.from_ultralytics(result)
                 detections = tracker.update_with_detections(detections)
+
+                # Strict pitch boundary filter: drop sideline personnel
+                radar_pts_unclamped = radar.map_many_to_2d(detections.xyxy, frame_idx=frame_idx, clamp=False)
+                keep_mask = []
+                for i, pt in enumerate(radar_pts_unclamped):
+                    cid = int(detections.class_id[i])
+                    if cid == CLASS_BALL:
+                        keep_mask.append(True)
+                    elif pt is None:
+                        # Only keep ball when projection fails, exclude all other detections
+                        keep_mask.append(cid == CLASS_BALL)
+                    else:
+                        rx, ry = pt
+                        # x: -50 to 1100, y: -50 to 730 (buffer from -5m to 110m and -5m to 73m)
+                        if -50 <= rx <= 1100 and -50 <= ry <= 730:
+                            keep_mask.append(True)
+                        else:
+                            keep_mask.append(False)
+
+                if len(keep_mask) > 0:
+                    mask = np.array(keep_mask, dtype=bool)
+                    detections = detections[mask]
+
                 det_conf = getattr(detections, "confidence", None)
 
                 best_ball_bbox: np.ndarray | None = None
@@ -370,7 +451,8 @@ def run_cv_tracking_batched(
                         )
                     if ball_pt is not None:
                         last_ball_radar = (int(ball_pt[0]), int(ball_pt[1]))
-                        ball_xy = [float(ball_pt[0]), float(ball_pt[1])]
+                        ball_xy_centered = [float(ball_pt[0]) / 10.0 - 52.5, float(ball_pt[1]) / 10.0 - 34.0]
+                        ball_xy_artifact = [float(ball_pt[0]) / 10.0, float(ball_pt[1]) / 10.0]
 
                 # Vectorized projection with strict index-order preservation.
                 radar_pts: list[tuple[int, int] | None] = radar.map_many_to_2d(
@@ -430,16 +512,17 @@ def run_cv_tracking_batched(
                                 int(round(pt_out[0])),
                                 int(round(pt_out[1])),
                             )
+                    pt_meters = [pt_out[0] / 10.0 - 52.5, pt_out[1] / 10.0 - 34.0] if pt_out is not None else None
                     tactical_players.append(
-                        TacticalPlayer(id=row["id"], team=team, radar_pt=pt_out)
+                        TacticalPlayer(id=row["id"], team=team, radar_pt=pt_meters)
                     )
 
-                if ball_xy is not None:
+                if ball_xy_centered is not None:
                     possession_team_id = compute_possession_team_id(
                         TacticalFrame(
                             frame_idx=frame_idx,
                             players=tactical_players,
-                            ball_xy=ball_xy,
+                            ball_xy=ball_xy_centered,
                             possession_team_id=None,
                         )
                     )
@@ -448,7 +531,7 @@ def run_cv_tracking_batched(
                     TacticalFrame(
                         frame_idx=frame_idx,
                         players=tactical_players,
-                        ball_xy=ball_xy,
+                        ball_xy=ball_xy_centered,
                         possession_team_id=possession_team_id,
                     )
                 )
@@ -466,8 +549,8 @@ def run_cv_tracking_batched(
                         {
                             "id": row["id"],
                             "team_id": team_label,
-                            "x_pitch": float(rp[0]) if rp is not None else None,
-                            "y_pitch": float(rp[1]) if rp is not None else None,
+                            "x_pitch": float(rp[0]) / 10.0 if rp is not None else None,
+                            "y_pitch": float(rp[1]) / 10.0 if rp is not None else None,
                             "x_canvas": float((bbox[0] + bbox[2]) / 2.0),
                             "y_canvas": float((bbox[1] + bbox[3]) / 2.0),
                         }
@@ -476,7 +559,7 @@ def run_cv_tracking_batched(
                     TrackingFrameArtifact(
                         frame_idx=frame_idx,
                         players=player_rows,
-                        ball_xy=ball_xy,
+                        ball_xy=ball_xy_artifact,
                         possession_team_id=possession_team_id,
                         homography_confidence=float(homography_conf),
                         used_optical_flow_fallback=use_fallback,
@@ -491,6 +574,10 @@ def run_cv_tracking_batched(
             _clear_device_cache(selected_device)
     finally:
         cap.release()
+
+    if frame_step > 1:
+        from scripts.e2e_shared import interpolate_tracking_data
+        interpolate_tracking_data(frames_out, frame_artifacts, frame_step)
 
     telemetry.total_interpolated_ball_frames = interpolate_ball_positions(
         frames_out, max_gap_frames=BALL_INTERPOLATION_MAX_GAP
@@ -529,9 +616,13 @@ def run_e2e_cloud(
         metrics_output_path = BACKEND_ROOT / "output" / f"{output_prefix}_tactical_metrics.json"
         report_output_path = BACKEND_ROOT / "output" / f"{output_prefix}_report.json"
 
-    # Headless cloud run: ensure no stale overlay is interpreted as new output.
-    if tracking_overlay_path.exists():
-        tracking_overlay_path.unlink()
+    # Headless cloud run: ensure no stale artifacts are interpreted as new output.
+    for p in [tracking_overlay_path, tracking_data_path, metrics_output_path, report_output_path]:
+        if p.exists():
+            try:
+                p.unlink()
+            except Exception:
+                pass
 
     if progress_callback is not None:
         progress_callback("Tracking Players")
@@ -540,6 +631,7 @@ def run_e2e_cloud(
         batch_size=batch_size,
         flow_max_width=flow_max_width,
         device=device,
+        progress_callback=progress_callback,
     )
     _print_step(f"CV Tracking Complete: Processed {len(raw_frames)} frames.")
     telemetry.total_frames_processed = len(raw_frames)

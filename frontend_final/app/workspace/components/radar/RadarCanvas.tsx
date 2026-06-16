@@ -1,28 +1,38 @@
-import { useEffect, useRef } from "react";
+"use client";
+import { useEffect, useRef, useState } from "react";
 import { normalizePitchMeters, projectMetersToCanvas } from "@/lib/trackingAdapter";
 import type { TrackingFrame } from "@/lib/types/trackingTypes";
 import { drawPitchBackground } from "./pitch";
 
 interface RadarCanvasProps {
   frame: TrackingFrame | undefined;
-  width?: number;
-  height?: number;
-  padding?: number;
 }
 
-const TEAM_0_COLOR = "#3b82f6"; // blue
-const TEAM_1_COLOR = "#ef4444"; // red
-const UNKNOWN_COLOR = "#9ca3af";
-const BALL_COLOR = "#fde047";
-const BALL_STROKE = "#111827";
+const TEAM_0_COLOR = "#3b82f6"; // Blue
+const TEAM_1_COLOR = "#ef4444"; // Red
+const UNKNOWN_COLOR = "#6b7280";
+const BALL_COLOR = "#ffffff";
 
 export default function RadarCanvas({
   frame,
-  width = 800,
-  height = 520,
-  padding = 20,
 }: RadarCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 518 });
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (!containerRef.current) return;
+      const { width } = containerRef.current.getBoundingClientRect();
+      // Restore standard pitch aspect ratio 105:68
+      const height = Math.floor((width * 68) / 105);
+      setDimensions({ width, height });
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -30,11 +40,21 @@ export default function RadarCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = dimensions.width * dpr;
+    canvas.height = dimensions.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const { width, height } = dimensions;
+    const padding = Math.max(12, width * 0.04); 
+
     drawPitchBackground(ctx, width, height, padding);
 
     if (!frame) return;
 
+    // Draw Players
     for (const player of frame.players) {
+      if (player.id === 75 || player.id === 76 || player.id === 79) continue;
       const normalized = normalizePitchMeters(player.x_pitch, player.y_pitch);
       if (!normalized) continue;
 
@@ -45,17 +65,31 @@ export default function RadarCanvas({
         height,
         padding,
       );
-      ctx.fillStyle =
+
+      const color =
         player.team_id === "team_0"
           ? TEAM_0_COLOR
           : player.team_id === "team_1"
             ? TEAM_1_COLOR
             : UNKNOWN_COLOR;
+
       ctx.beginPath();
-      ctx.arc(xPx, yPx, 5, 0, Math.PI * 2);
+      ctx.arc(xPx, yPx, width * 0.008, 0, Math.PI * 2);
+      ctx.fillStyle = color;
       ctx.fill();
+      
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Clean ID label
+      ctx.fillStyle = "white";
+      ctx.font = `bold ${Math.max(8, width * 0.012)}px Inter, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText(player.id ? player.id.toString() : "", xPx, yPx - (width * 0.015));
     }
 
+    // Draw Ball
     if (frame.ball_xy) {
       const [bx, by] = frame.ball_xy;
       const normalized = normalizePitchMeters(bx, by);
@@ -67,24 +101,30 @@ export default function RadarCanvas({
           height,
           padding,
         );
+
         ctx.fillStyle = BALL_COLOR;
-        ctx.strokeStyle = BALL_STROKE;
-        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(xPx, yPx, 4, 0, Math.PI * 2);
+        ctx.arc(xPx, yPx, width * 0.006, 0, Math.PI * 2);
         ctx.fill();
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 1;
         ctx.stroke();
       }
     }
-  }, [frame, width, height, padding]);
+  }, [frame, dimensions]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={width}
-      height={height}
-      className="w-full rounded border border-gray-700 bg-[#111a12]"
-    />
+    <div ref={containerRef} className="w-full">
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: "100%",
+          height: "auto",
+          display: "block",
+          aspectRatio: "105 / 68"
+        }}
+        className="rounded-lg border border-gray-800 bg-[#061a0d] shadow-lg"
+      />
+    </div>
   );
 }
-

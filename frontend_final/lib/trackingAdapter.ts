@@ -16,12 +16,19 @@ export function normalizePitchMeters(
   yPitch: number | null,
 ): { xM: number; yM: number } | null {
   if (xPitch == null || yPitch == null) return null;
+  
   let xM = xPitch;
   let yM = yPitch;
-  if (xM > PITCH_LENGTH_M + 1 || yM > PITCH_WIDTH_M + 1) {
+  
+  // If coordinates look like they are in legacy 10x units (e.g. 525 instead of 52.5)
+  if (Math.abs(xM) > PITCH_LENGTH_M + 5 || Math.abs(yM) > PITCH_WIDTH_M + 5) {
     xM = xM / LEGACY_SCALE;
     yM = yM / LEGACY_SCALE;
   }
+
+  // No longer shifting centered coordinates as it caused regressions
+  // with standard 0-105m tracking data.
+
   return {
     xM: clamp(xM, 0, PITCH_LENGTH_M),
     yM: clamp(yM, 0, PITCH_WIDTH_M),

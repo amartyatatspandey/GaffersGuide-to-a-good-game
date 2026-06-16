@@ -34,17 +34,28 @@ class LocalCVRunner:
         progress_callback: Callable[[str], None] | None = None,
         llm_engine: LLMEngine | None = None,
     ) -> Path:
-        # Lazy import keeps cold-start light for API-only flows.
-        from scripts.run_e2e_cloud import run_e2e_cloud
-
         engine: LLMEngine = llm_engine if llm_engine is not None else "cloud"
+        enable_zsl = os.getenv("ENABLE_ZSL", "false").lower() == "true"
+        enable_parallel = os.getenv("USE_PARALLEL", "true").lower() == "true"
 
-        def _run() -> Path:
-            return run_e2e_cloud(
+        if enable_parallel:
+            from services.parallel_pipeline import run_e2e_parallel
+            return await run_e2e_parallel(
                 video_path,
                 output_prefix=job_id,
                 progress_callback=progress_callback,
                 llm_engine=engine,
+                enable_zsl=enable_zsl,
+            )
+
+        def _run() -> Path:
+            from scripts.run_e2e_zsl import run_e2e_with_zsl
+            return run_e2e_with_zsl(
+                video_path,
+                output_prefix=job_id,
+                progress_callback=progress_callback,
+                llm_engine=engine,
+                enable_zsl=enable_zsl,
             )
 
         return await asyncio.to_thread(_run)

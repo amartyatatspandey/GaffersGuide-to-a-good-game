@@ -3,7 +3,12 @@ FastAPI entrypoint for the AI Coaching Engine pipeline.
 
 Run from the ``backend`` directory::
 
-    uvicorn main:app --reload --host 0.0.0.0 --port 8000
+    uvicorn main:app --reload --host 0.0.0.0 --port 8000 \
+        --timeout-keep-alive 300
+
+The extended ``--timeout-keep-alive`` prevents Uvicorn from dropping slow
+chunked-upload connections.  See ``services/chunked_upload.py`` for the
+chunked upload protocol that handles 2–8 GB match videos.
 """
 
 from __future__ import annotations
@@ -37,6 +42,12 @@ from models import (
     ReportEntry,
     ReportsResponse,
 )
+from services.chunked_upload import (
+    cleanup_expired_sessions as _chunked_cleanup,
+    configure_upload_dir as _configure_chunked_upload_dir,
+    register_job_creator as _register_chunked_job_creator,
+    router as chunked_upload_router,
+)
 from services.cv_router import CVEngine, CVRouterFactory
 from services.errors import EngineRoutingError
 from services.beta_job_store import BetaJobRecord, BetaJobStore
@@ -54,11 +65,13 @@ from services.llm_router import (
     stop_ollama_for_app_lifecycle,
 )
 from services.observability import PipelineMetricsRegistry
+from services.report_service import ReportService
 from scripts.rag_coach import run as run_rag_synthesizer
 from scripts.tactical_rule_engine import run_engine
 
 BACKEND_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = BACKEND_ROOT.parent
+JOBS_DIR = BACKEND_ROOT / "output"
 
 load_dotenv(PROJECT_ROOT / ".env")
 load_dotenv(BACKEND_ROOT / ".env")
@@ -99,6 +112,56 @@ app = FastAPI(
     description="Tactical rule engine + RAG + optional LLM coaching advice.",
 )
 
+# ── Chunked upload router for large video files ────────────────────────
+_configure_chunked_upload_dir(BACKEND_ROOT / "data" / "uploads")
+app.include_router(chunked_upload_router)
+
+
+async def _create_job_from_chunked_upload(
+    job_id: str,
+    video_path: Path,
+    filename: str,
+    cv_engine_str: str,
+    llm_engine_str: str,
+    quality_profile: str,
+    chunking_interval: str,
+) -> None:
+    """Callback invoked by ``chunked_upload.complete_upload``.
+
+    Runs *inside* the real ``main`` module so ``_job_store`` is the same dict
+    that the WebSocket endpoint reads from.
+    """
+    typed_cv: CVEngine = cv_engine_str if cv_engine_str in ("local", "cloud") else "local"  # type: ignore[assignment]
+    typed_llm: LLMEngine = llm_engine_str if llm_engine_str in ("local", "cloud") else "local"  # type: ignore[assignment]
+
+    with _job_store_lock:
+        _job_store[job_id] = JobRecord(
+            job_id=job_id,
+            status="pending",
+            current_step="Pending",
+            cv_engine=typed_cv,
+            llm_engine=typed_llm,
+            quality_profile=quality_profile,
+            chunking_interval=chunking_interval,
+        )
+
+    try:
+        from services.diagnostics import log_event
+
+        log_event("JOB_CREATED", f"Job {job_id} initialized (chunked upload)", {
+            "filename": filename,
+            "cv_engine": typed_cv,
+            "llm_engine": typed_llm,
+            "quality_profile": quality_profile,
+        })
+    except Exception:
+        pass
+
+    asyncio.create_task(_run_job(job_id, video_path, typed_cv))
+
+
+_register_chunked_job_creator(_create_job_from_chunked_upload)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ALLOW_ORIGINS", "*").split(","),
@@ -112,11 +175,34 @@ app.add_middleware(
 async def _startup_beta_queue() -> None:
     await _beta_queue.start()
     await start_ollama_for_app_lifecycle()
+    # Clean up stale chunked-upload sessions every hour
+    asyncio.create_task(_chunked_cleanup())
 
 
 @app.on_event("shutdown")
 async def _shutdown_managed_ollama() -> None:
     stop_ollama_for_app_lifecycle()
+
+
+@app.middleware("http")
+async def _auth_middleware(request: Request, call_next):
+    if request.method == "OPTIONS" or request.url.path.startswith("/ws/"):
+        return await call_next(request)
+        
+    api_key = os.getenv("API_KEY")
+    if api_key:
+        req_key = request.headers.get("x-api-key")
+        if not req_key:
+            req_key = request.query_params.get("api_key")
+        if req_key != api_key:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=401, content={"detail": "Invalid or missing API Key"})
+
+    llm_key = request.headers.get("x-llm-api-key")
+    if llm_key:
+        os.environ["LLM_API_KEY"] = llm_key
+            
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -134,9 +220,15 @@ class JobRecord:
     current_step: str
     cv_engine: CVEngine
     llm_engine: LLMEngine
+    quality_profile: str = "balanced"
+    chunking_interval: str = "15-minute intervals"
     result_path: str | None = None
     tracking_overlay_path: str | None = None
     tracking_data_path: str | None = None
+    # ── Event Intelligence Layer artifacts ─────────────────────────────────
+    event_index_path: str | None = None
+    threat_profiles_path: str | None = None
+    # ──────────────────────────────────────────────────────────────────────
     error: str | None = None
 
 
@@ -212,6 +304,11 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
                 rec.tracking_data_path = (
                     str(tracking_path_p) if tracking_path_p.is_file() else None
                 )
+                # ── Event Intelligence Layer artifacts ─────────────────────
+                _event_path = BACKEND_ROOT / "output" / f"{job_id}_events.json"
+                _threat_path = BACKEND_ROOT / "output" / f"{job_id}_threat_profiles.json"
+                rec.event_index_path = str(_event_path) if _event_path.is_file() else None
+                rec.threat_profiles_path = str(_threat_path) if _threat_path.is_file() else None
     except EngineRoutingError as exc:
         LOGGER.exception("Job %s failed with routing error", job_id)
         with _job_store_lock:
@@ -255,6 +352,18 @@ class CoachingAdviceItem(BaseModel):
         default=None,
         description="Populated when the LLM call failed for this item.",
     )
+    confidence_pct: float | None = Field(
+        default=None,
+        description="Detection confidence percentage (0-100).",
+    )
+    confidence_reason: str | None = Field(
+        default=None,
+        description="Human-readable explanation of why this confidence level was assigned.",
+    )
+    summary_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Raw KPI scores and win probability for Match Summary cards.",
+    )
 
 
 class CoachAdviceResponse(BaseModel):
@@ -265,6 +374,8 @@ class CoachAdviceResponse(BaseModel):
         description="Summary of steps executed (rule engine, RAG, LLM).",
     )
     advice_items: list[CoachingAdviceItem]
+    job_id: str | None = None
+    telemetry: dict[str, Any] | None = None
 
 
 @app.get(
@@ -346,6 +457,62 @@ async def list_datasets() -> DatasetsListResponse:
     return DatasetsListResponse(datasets=rows)
 
 
+@app.get("/api/v1/elite/reports", tags=["reports"])
+async def list_persistent_reports():
+    """List all reports saved in backend/data/reports/."""
+    return ReportService.list_reports()
+
+
+@app.get("/api/v1/elite/reports/{report_id}", tags=["reports"])
+async def get_persistent_report(report_id: str):
+    """Retrieve a full tactical report by ID."""
+    report = ReportService.get_report(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return report
+
+
+@app.delete("/api/v1/elite/reports/{report_id}", tags=["reports"])
+async def delete_persistent_report(report_id: str):
+    """Delete a tactical report by ID."""
+    success = ReportService.delete_report(report_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Report not found or could not be deleted")
+    return {"status": "deleted"}
+
+
+@app.post("/api/v1/elite/reports/save", tags=["reports"])
+async def save_persistent_report(report: dict):
+    """Manually save a tactical report to the persistent store."""
+    filename = ReportService.save_report(report)
+    return {"status": "saved", "filename": filename}
+
+
+@app.get("/api/v1/elite/jobs/{job_id}/video/download", tags=["reports"])
+async def download_tactical_video(job_id: str):
+    """Download the annotated tactical radar video."""
+    video_path = BACKEND_ROOT / "output" / f"{job_id}_tracking_overlay.mp4"
+    if not video_path.exists():
+        import asyncio
+        from services.video_renderer import generate_video_overlay
+        success = await asyncio.to_thread(generate_video_overlay, job_id)
+        if not success:
+            # Fallback to test_mp4_tracking_overlay.mp4 if job_id was not explicitly passed
+            fallback_path = BACKEND_ROOT / "output" / "test_mp4_tracking_overlay.mp4"
+            if fallback_path.exists():
+                video_path = fallback_path
+            else:
+                raise HTTPException(status_code=404, detail="Video file not found. Analysis may not have generated a video.")
+                
+    return FileResponse(
+
+        path=video_path,
+        filename=f"GaffersGuide_TacticalRadar_{job_id}.mp4",
+        media_type="video/mp4",
+        headers={"Content-Disposition": f"attachment; filename=GaffersGuide_TacticalRadar_{job_id}.mp4"}
+    )
+
+
 @app.get(
     "/api/v1/meta/pipeline-prerequisites",
     tags=["meta"],
@@ -380,6 +547,8 @@ async def create_job(
     file: UploadFile = File(...),
     cv_engine: CVEngine = Form("cloud"),
     llm_engine: LLMEngine = Form("cloud"),
+    quality_profile: str = Form("balanced"),
+    chunking_interval: str = Form("15-minute intervals"),
 ) -> CreateJobResponse:
     """
     Create a new analytics job by uploading a match video.
@@ -388,16 +557,18 @@ async def create_job(
     published over WebSockets (see `/ws/jobs/{job_id}`).
     """
     filename = file.filename or ""
-    if not filename.lower().endswith(".mp4"):
+    valid_exts = (".mp4", ".mov", ".avi")
+    ext = Path(filename).suffix.lower()
+    if ext not in valid_exts:
         raise HTTPException(
             status_code=400,
-            detail={"message": "Only .mp4 uploads are supported for now."},
+            detail={"message": f"Only {', '.join(valid_exts)} uploads are supported."},
         )
 
     job_id = uuid.uuid4().hex
     upload_dir = BACKEND_ROOT / "data" / "uploads"
     upload_dir.mkdir(parents=True, exist_ok=True)
-    video_path = upload_dir / f"{job_id}.mp4"
+    video_path = upload_dir / f"{job_id}{ext}"
 
     try:
         with video_path.open("wb") as f_out:
@@ -412,7 +583,17 @@ async def create_job(
             current_step="Pending",
             cv_engine=cv_engine,
             llm_engine=llm_engine,
+            quality_profile=quality_profile,
+            chunking_interval=chunking_interval,
         )
+
+    from services.diagnostics import log_event
+    log_event("JOB_CREATED", f"Job {job_id} initialized", {
+        "filename": filename,
+        "cv_engine": cv_engine,
+        "llm_engine": llm_engine,
+        "quality_profile": quality_profile
+    })
 
     asyncio.create_task(_run_job(job_id, video_path, cv_engine))
 
@@ -421,6 +602,8 @@ async def create_job(
         status="pending",
         cv_engine=cv_engine,
         llm_engine=llm_engine,
+        quality_profile=quality_profile,
+        chunking_interval=chunking_interval,
     )
 
 
@@ -433,14 +616,18 @@ async def create_beta_job(
     file: UploadFile = File(...),
     cv_engine: CVEngine = Form("cloud"),
     llm_engine: LLMEngine = Form("cloud"),
+    quality_profile: str = Form("balanced"),
+    chunking_interval: str = Form("15-minute intervals"),
     idempotency_key: str | None = Form(default=None),
 ) -> CreateJobResponse:
     """Queue-backed beta job creation endpoint with optional idempotency key."""
     filename = file.filename or ""
-    if not filename.lower().endswith(".mp4"):
+    valid_exts = (".mp4", ".mov", ".avi")
+    ext = Path(filename).suffix.lower()
+    if ext not in valid_exts:
         raise HTTPException(
             status_code=400,
-            detail={"message": "Only .mp4 uploads are supported for now."},
+            detail={"message": f"Only {', '.join(valid_exts)} uploads are supported."},
         )
 
     if idempotency_key:
@@ -451,12 +638,14 @@ async def create_beta_job(
                 status=existing.status,  # type: ignore[arg-type]
                 cv_engine=existing.cv_engine,  # type: ignore[arg-type]
                 llm_engine=existing.llm_engine,  # type: ignore[arg-type]
+                quality_profile=existing.quality_profile,
+                chunking_interval=existing.chunking_interval,
             )
 
     job_id = uuid.uuid4().hex
     upload_dir = BACKEND_ROOT / "data" / "uploads"
     upload_dir.mkdir(parents=True, exist_ok=True)
-    video_path = upload_dir / f"{job_id}.mp4"
+    video_path = upload_dir / f"{job_id}{ext}"
 
     try:
         with _metrics.timed("beta.upload.write_ms"):
@@ -473,6 +662,8 @@ async def create_beta_job(
             current_step="Pending",
             cv_engine=cv_engine,
             llm_engine=llm_engine,
+            quality_profile=quality_profile,
+            chunking_interval=chunking_interval,
             source_video_path=str(video_path),
             idempotency_key=idempotency_key,
             created_at=now,
@@ -480,7 +671,12 @@ async def create_beta_job(
         )
     )
     await _beta_queue.enqueue(
-        BetaQueueItem(job_id=job_id, video_path=video_path, cv_engine=cv_engine)
+        BetaQueueItem(
+            job_id=job_id, 
+            video_path=video_path, 
+            cv_engine=cv_engine,
+            llm_engine=llm_engine,
+        )
     )
     _metrics.incr("beta.jobs.created")
 
@@ -489,6 +685,8 @@ async def create_beta_job(
         status="pending",
         cv_engine=cv_engine,
         llm_engine=llm_engine,
+        quality_profile=quality_profile,
+        chunking_interval=chunking_interval,
     )
 
 
@@ -575,6 +773,8 @@ async def get_job_artifacts(job_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Job not found.")
 
     report_path_p, overlay_path_p, tracking_path_p = _job_artifact_paths(job_id)
+    event_path_p = BACKEND_ROOT / "output" / f"{job_id}_events.json"
+    threat_path_p = BACKEND_ROOT / "output" / f"{job_id}_threat_profiles.json"
     return {
         "job_id": job_id,
         "status": rec.status,
@@ -589,7 +789,107 @@ async def get_job_artifacts(job_id: str) -> dict[str, Any]:
             if tracking_path_p.is_file()
             else rec.tracking_data_path
         ),
+        # ── Event Intelligence Layer artifacts ─────────────────────────────
+        "event_index_path": str(event_path_p) if event_path_p.is_file() else rec.event_index_path,
+        "threat_profiles_path": str(threat_path_p) if threat_path_p.is_file() else rec.threat_profiles_path,
     }
+
+
+@app.get("/api/v1/jobs/{job_id}/events", tags=["jobs"])
+async def get_job_events(job_id: str) -> dict[str, Any]:
+    """
+    Return the Event Intelligence Layer output for a completed job.
+
+    Response contains:
+      - ``event_stats``: summary counts by category and type
+      - ``threat_profiles``: per-player threat scores and explanations
+      - ``top_threats``: top-3 threat players per team
+    """
+    event_path = BACKEND_ROOT / "output" / f"{job_id}_events.json"
+    threat_path = BACKEND_ROOT / "output" / f"{job_id}_threat_profiles.json"
+
+    if not event_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Event index not found. Job may still be processing or event detection was skipped.",
+        )
+
+    import json as _json
+    with event_path.open(encoding="utf-8") as f:
+        event_data = _json.load(f)
+
+    threat_data: list[dict] = []
+    if threat_path.is_file():
+        with threat_path.open(encoding="utf-8") as f:
+            threat_data = _json.load(f)
+
+    # Build summary stats
+    from collections import Counter as _Counter
+    events = event_data.get("events", [])
+    by_category = dict(_Counter(e.get("category", "unknown") for e in events))
+    by_type = dict(_Counter(e.get("event_type", "unknown") for e in events).most_common(20))
+
+    # Top threats per team
+    team_threats: dict[str, list[dict]] = {}
+    for profile in sorted(threat_data, key=lambda p: p.get("threat_score", 0), reverse=True):
+        tid = profile.get("team_id", "unknown")
+        if tid not in team_threats:
+            team_threats[tid] = []
+        if len(team_threats[tid]) < 3:
+            team_threats[tid].append({
+                "player_id": profile["player_id"],
+                "threat_score": profile["threat_score"],
+                "threat_rank": profile["threat_rank"],
+                "primary_threat_types": profile.get("primary_threat_types", []),
+                "explanation": profile.get("explanation", ""),
+            })
+
+    return {
+        "job_id": job_id,
+        "event_stats": {
+            "total_events": len(events),
+            "by_category": by_category,
+            "by_type": by_type,
+            "players_with_events": len({e.get("player_id") for e in events if e.get("player_id") is not None}),
+        },
+        "threat_profiles": threat_data,
+        "top_threats_by_team": team_threats,
+    }
+
+
+@app.get("/api/v1/jobs/{job_id}/report/enriched", tags=["jobs"])
+async def get_job_report_enriched(job_id: str) -> list[dict[str, Any]]:
+    """
+    Return the enriched tactical coaching cards for a completed job.
+    """
+    enriched_report_path = BACKEND_ROOT / "output" / f"{job_id}_report_enriched.json"
+    if not enriched_report_path.is_file():
+        # Fallback to generating it on the fly if it hasn't been built yet
+        # But only if the original report and events index exist.
+        report_path = BACKEND_ROOT / "output" / f"{job_id}_report.json"
+        event_path = BACKEND_ROOT / "output" / f"{job_id}_events.json"
+        
+        if not report_path.is_file():
+            raise HTTPException(status_code=404, detail="Job report not found. The job may still be processing.")
+        if not event_path.is_file():
+            raise HTTPException(status_code=404, detail="Event index not found. Event detection may have been skipped.")
+            
+        try:
+            from event_layer.enricher import enrich_report
+            await asyncio.to_thread(
+                enrich_report,
+                report_path=report_path,
+                job_id=job_id,
+                output_dir=BACKEND_ROOT / "output",
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to enrich report: {exc}")
+
+    try:
+        with enriched_report_path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load enriched report: {exc}")
 
 
 @app.get("/api/v1/jobs/{job_id}/tracking", tags=["jobs"])
@@ -658,51 +958,108 @@ async def chat(req: ChatRequest) -> ChatResponse:
     Generate follow-up coaching text.
 
     If `job_id` is provided, include the job's report insights as context.
+    When a job is active, the LLM always receives match telemetry — intent detection
+    only modifies the prompt framing, not the context injection.
     """
+    from scripts.llm_router import detect_intent
+    intent = await detect_intent(req.message)
+
     prompt_context = ""
-    selected_llm_engine: LLMEngine = (req.llm_engine or "cloud")
+    selected_llm_engine: LLMEngine = (req.llm_engine or "local")
+
+    evidence_attachment = None
+    if intent in ("evidence_request", "threat_query") and req.job_id:
+        from event_layer.chat_evidence import build_evidence_response
+        evidence_attachment = await asyncio.to_thread(
+            build_evidence_response,
+            message=req.message,
+            job_id=req.job_id,
+            output_dir=BACKEND_ROOT / "output",
+        )
+        if evidence_attachment:
+            clip_lines = []
+            for i, clip in enumerate(evidence_attachment.clips, 1):
+                clip_lines.append(
+                    f"Clip {i}: {clip['label']} (confidence: {clip['confidence_pct']}%) [Frame {clip['start_frame']}-{clip['end_frame']}]"
+                )
+            
+            threat_lines = []
+            for t in evidence_attachment.top_threats:
+                threat_lines.append(
+                    f"Player {t['player_id']} (team: {t['team_id']}) - Threat Score: {t['threat_score']:.1f}/100. Explanation: {t['explanation']}"
+                )
+            
+            evidence_str = "\n".join(clip_lines)
+            threats_str = "\n".join(threat_lines)
+            
+            prompt_context += (
+                f"\n[Retrieved Match Clips & Evidence]\n"
+                f"{evidence_str if evidence_str else 'No direct clip matches found.'}\n"
+                f"\n[Retrieved Player Threat Profiles]\n"
+                f"{threats_str if threats_str else 'No threat profiles found.'}\n"
+            )
+
+    # Inject match telemetry whenever a job is active.
+    # Even general questions get match context so the LLM can ground its response.
     if req.job_id:
         with _job_store_lock:
             rec = _job_store.get(req.job_id)
             job_status = rec.status if rec else None
             report_path = rec.result_path if rec else None
 
-        if not rec or job_status not in ("done", "processing", "error"):
-            raise HTTPException(status_code=404, detail="Job not found.")
-        if req.llm_engine is None:
-            selected_llm_engine = rec.llm_engine
+        if rec and job_status in ("done", "processing", "error"):
+            if req.llm_engine is None:
+                selected_llm_engine = rec.llm_engine  # type: ignore[assignment]
 
-        if not report_path:
-            report_path = str(BACKEND_ROOT / "output" / f"{req.job_id}_report.json")
+            if not report_path:
+                report_path = str(BACKEND_ROOT / "output" / f"{req.job_id}_report.json")
 
-        try:
-            import json
+            try:
+                with Path(report_path).open("r", encoding="utf-8") as f:
+                    report_cards: list[dict[str, Any]] = json.load(f)
+                
+                top = report_cards[:6]
+                lines: list[str] = []
+                for item in top:
+                    team = str(item.get("team", "?"))
+                    flaw = str(item.get("flaw", "?"))
+                    severity = str(item.get("severity", ""))
+                    evidence = str(item.get("evidence", "")).strip()
+                    instruction = str(item.get("tactical_instruction") or "").strip()
+                    lines.append(f"- {team}: {flaw} ({severity}) — {evidence}")
+                    if instruction:
+                        lines.append(f"  Coaching: {instruction[:150]}")
 
-            with Path(report_path).open("r", encoding="utf-8") as f:
-                report_cards: list[dict[str, Any]] = json.load(f)
-        except Exception as exc:  # noqa: BLE001
-            raise HTTPException(
-                status_code=503,
-                detail={
-                    "message": "Failed to read job report for chat context.",
-                    "error": str(exc),
-                },
-            ) from exc
-
-        top = report_cards[:5]
-        lines: list[str] = []
-        for item in top:
-            team = str(item.get("team", "?"))
-            flaw = str(item.get("flaw", "?"))
-            severity = str(item.get("severity", ""))
-            evidence = str(item.get("evidence", "")).strip()
-            lines.append(f"- {team}: {flaw} ({severity}) — {evidence}")
-
-        prompt_context = "Job insights:\n" + "\n".join(lines)
+                if intent == "general":
+                    # For general questions, still anchor to the match but frame as education.
+                    prompt_context = (
+                        f"[Current match analysis available — use for context]\n"
+                        + "\n".join(lines)
+                        + "\n\nThe user is asking a general question. Answer it in the context of this specific match where relevant."
+                        + ("\n" + prompt_context if prompt_context else "")
+                    )
+                elif intent in ("evidence_request", "threat_query"):
+                    prompt_context = (
+                        "Match-specific tactical intelligence:\n"
+                        + "\n".join(lines)
+                        + "\n\nRetrieved match evidence context for this visual request:\n"
+                        + prompt_context
+                    )
+                else:
+                    prompt_context = "Match-specific tactical intelligence:\n" + "\n".join(lines)
+            except Exception:
+                # Fallback if report is missing — continue with intent-only mode
+                if intent == "tactical" or intent in ("evidence_request", "threat_query"):
+                    prompt_context = (
+                        f"[Job {req.job_id[:8]} report not available yet. "
+                        "Answer tactically based on the user's question.]"
+                        + ("\n" + prompt_context if prompt_context else "")
+                    )
 
     full_prompt = build_structured_coaching_prompt(
         user_prompt=req.message,
         context=prompt_context,
+        history=req.history,
     )
 
     try:
@@ -713,7 +1070,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         LOGGER.exception("Chat completion failed")
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    return ChatResponse(reply=reply)
+    return ChatResponse(reply=reply, evidence=evidence_attachment)
 
 
 @app.websocket("/ws/jobs/{job_id}")
@@ -1041,14 +1398,36 @@ async def get_coach_advice(
                         card.get("tactical_instruction")
                     ),
                     llm_error=card.get("llm_error"),
+                    confidence_pct=card.get("confidence_pct"),
+                    confidence_reason=card.get("confidence_reason"),
+                    summary_data=card.get("summary_data"),
                 )
             )
 
-        return CoachAdviceResponse(
+        # Fetch telemetry to include in the report for Radar restoration
+        telemetry_data = None
+        if job_id:
+            tracking_path = JOBS_DIR / f"{job_id}_tracking_data.json"
+            if tracking_path.exists():
+                try:
+                    with open(tracking_path, "r") as f:
+                        telemetry_data = json.load(f)
+                except Exception:
+                    pass
+
+        response = CoachAdviceResponse(
             generated_at=datetime.now(timezone.utc).isoformat(),
             pipeline=pipeline,
             advice_items=advice_items,
+            job_id=job_id,
+            telemetry=telemetry_data
         )
+        
+        # Auto-save report on completion if it's a job
+        if job_id:
+            ReportService.save_report(response.model_dump())
+            
+        return response
 
     try:
         await asyncio.to_thread(run_engine)

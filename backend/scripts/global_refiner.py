@@ -44,19 +44,38 @@ class GlobalRefiner:
         total = end_idx - start_idx + 1
         frame_pos_by_idx = {idx: idx - start_idx for idx in frame_indices}
 
-        tracks: dict[tuple[int, str], np.ndarray] = {}
+        # Pass 1: Find min/max pos for each track
+        track_bounds: dict[tuple[int, str], list[int]] = {}
         for frame in frames:
             pos = frame_pos_by_idx[int(frame.frame_idx)]
             for player in frame.players:
                 if player.id is None:
                     continue
                 key = (int(player.id), str(player.team))
-                if key not in tracks:
-                    arr = np.full((total, 2), np.nan, dtype=np.float64)
-                    tracks[key] = arr
+                if key not in track_bounds:
+                    track_bounds[key] = [pos, pos]
+                else:
+                    track_bounds[key][1] = pos
+
+        # Pass 2: Allocate tight arrays
+        tracks: dict[tuple[int, str], np.ndarray] = {}
+        for key, (start_pos, end_pos) in track_bounds.items():
+            length = end_pos - start_pos + 1
+            arr = np.full((length, 2), np.nan, dtype=np.float64)
+            tracks[key] = arr
+
+        # Pass 3: Fill arrays
+        for frame in frames:
+            pos = frame_pos_by_idx[int(frame.frame_idx)]
+            for player in frame.players:
+                if player.id is None:
+                    continue
+                key = (int(player.id), str(player.team))
                 if player.radar_pt is not None:
-                    tracks[key][pos, 0] = float(player.radar_pt[0])
-                    tracks[key][pos, 1] = float(player.radar_pt[1])
+                    arr = tracks[key]
+                    start_pos = track_bounds[key][0]
+                    arr[pos - start_pos, 0] = float(player.radar_pt[0])
+                    arr[pos - start_pos, 1] = float(player.radar_pt[1])
 
         refined_tracks: dict[tuple[int, str], np.ndarray] = {}
         for key, arr in tracks.items():
@@ -68,19 +87,23 @@ class GlobalRefiner:
             self._smooth_track(healed)
             refined_tracks[key] = healed
 
+        # Pass 4: Build pos -> players map for fast reconstruction
+        pos_to_players = {pos: [] for pos in range(total)}
+        for (player_id, team), arr in refined_tracks.items():
+            start_pos = track_bounds[(player_id, team)][0]
+            valid_mask = ~np.isnan(arr[:, 0]) & ~np.isnan(arr[:, 1])
+            valid_indices = np.flatnonzero(valid_mask)
+            for local_pos in valid_indices:
+                x = arr[local_pos, 0]
+                y = arr[local_pos, 1]
+                pos_to_players[start_pos + local_pos].append(
+                    player_factory(player_id, team, [float(x), float(y)])
+                )
+
         rebuilt: list[object] = []
         for frame in frames:
             pos = frame_pos_by_idx[int(frame.frame_idx)]
-            players_out: list[object] = []
-            for (player_id, team), arr in refined_tracks.items():
-                x = arr[pos, 0]
-                y = arr[pos, 1]
-                if np.isnan(x) or np.isnan(y):
-                    continue
-                players_out.append(
-                    player_factory(player_id, team, [float(x), float(y)])
-                )
-            rebuilt.append(frame_factory(int(frame.frame_idx), players_out))
+            rebuilt.append(frame_factory(int(frame.frame_idx), pos_to_players[pos]))
         return rebuilt
 
     def _nullify_outliers(self, arr: np.ndarray) -> None:

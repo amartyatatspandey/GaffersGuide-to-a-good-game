@@ -1,16 +1,18 @@
 "use client";
 import React, { useState } from 'react';
-import { LayoutDashboard, FileText, Settings, Database, Server, RefreshCw, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings, Database, Server, RefreshCw, Menu, ChevronLeft, ChevronRight, User, Users, BookOpen } from 'lucide-react';
 import { EngineSettingsModal } from './EngineSettingsModal';
+import { ProfileModal } from './ProfileModal';
 
 export function Sidebar({ 
   currentView = 'dashboard', 
   setCurrentView = () => {} 
 }: { 
-  currentView?: 'dashboard' | 'reports', 
-  setCurrentView?: (v: 'dashboard' | 'reports') => void 
+  currentView?: 'dashboard' | 'reports' | 'players' | 'dictionary', 
+  setCurrentView?: (v: 'dashboard' | 'reports' | 'players' | 'dictionary') => void 
 }) {
   const [isEngineSettingsOpen, setIsEngineSettingsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
@@ -40,6 +42,24 @@ export function Sidebar({
               {!isCollapsed && <span className={`text-sm ${currentView === 'dashboard' ? 'font-semibold' : ''}`}>Dashboard</span>}
             </button>
             <button 
+              onClick={() => setCurrentView('players')}
+              title="Player Reports"
+              className={`w-full flex items-center gap-3 py-2.5 transition-colors ${
+                currentView === 'players' ? 'bg-[#111a12] text-gray-100 border-r-2 border-emerald-500' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900/50'
+              } ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
+              <Users size={18} className={currentView === 'players' ? 'text-emerald-500' : ''} />
+              {!isCollapsed && <span className={`text-sm ${currentView === 'players' ? 'font-semibold' : ''}`}>Player Reports</span>}
+            </button>
+            <button 
+              onClick={() => setCurrentView('dictionary')}
+              title="Dictionary"
+              className={`w-full flex items-center gap-3 py-2.5 transition-colors ${
+                currentView === 'dictionary' ? 'bg-[#111a12] text-gray-100 border-r-2 border-emerald-500' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900/50'
+              } ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
+              <BookOpen size={18} className={currentView === 'dictionary' ? 'text-emerald-500' : ''} />
+              {!isCollapsed && <span className={`text-sm ${currentView === 'dictionary' ? 'font-semibold' : ''}`}>Dictionary</span>}
+            </button>
+            <button 
               onClick={() => setCurrentView('reports')}
               title="Reports"
               className={`w-full flex items-center gap-3 py-2.5 transition-colors ${
@@ -47,6 +67,13 @@ export function Sidebar({
               } ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
               <FileText size={18} className={currentView === 'reports' ? 'text-emerald-500' : ''} />
               {!isCollapsed && <span className={`text-sm ${currentView === 'reports' ? 'font-semibold' : ''}`}>Reports</span>}
+            </button>
+            <button 
+              onClick={() => setIsProfileOpen(true)}
+              title="Profile"
+              className={`w-full flex items-center gap-3 py-2.5 text-gray-400 hover:text-gray-200 hover:bg-gray-900/50 transition-colors ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
+              <User size={18} />
+              {!isCollapsed && <span className="text-sm">Profile</span>}
             </button>
             <button 
               onClick={() => setIsEngineSettingsOpen(true)}
@@ -84,6 +111,10 @@ export function Sidebar({
       <EngineSettingsModal 
         isOpen={isEngineSettingsOpen} 
         onClose={() => setIsEngineSettingsOpen(false)} 
+      />
+      <ProfileModal 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
       />
     </>
   );

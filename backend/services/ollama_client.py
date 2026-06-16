@@ -30,7 +30,7 @@ SYSTEM_PROMPT = (
 
 
 def _base_url() -> str:
-    return os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
+    return os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 
 
 def _model_name() -> str:
@@ -38,7 +38,7 @@ def _model_name() -> str:
 
 
 def _timeout_seconds() -> float:
-    return float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
+    return float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "300"))
 
 
 def _env_truthy(name: str) -> bool:
@@ -305,28 +305,51 @@ async def ensure_ollama_available() -> None:
         ) from exc
 
 
-async def generate_local_advice(tracking_data_csv: str) -> str:
+async def generate_local_advice(prompt: str) -> str:
     """
-    Generate tactical advice from local Ollama using a fixed analyst persona.
+    Generate tactical advice from local Ollama using the provided prompt.
     """
     await ensure_ollama_available()
 
     base_url = _base_url()
     model = _model_name()
     timeout_s = _timeout_seconds()
-    combined_text = f"{SYSTEM_PROMPT}\n\nTracking Data:\n{tracking_data_csv}"
+    
+    # If the prompt doesn't look like a full structured prompt, wrap it with the system persona.
+    if "You are an elite" not in prompt:
+        combined_text = f"{SYSTEM_PROMPT}\n\nTracking Data:\n{prompt}"
+    else:
+        combined_text = prompt
 
+    logger.info("Ollama API Request: %s/api/generate (model=%s, timeout=%.1fs)", base_url, model, timeout_s)
     try:
         async with httpx.AsyncClient(timeout=timeout_s) as client:
             res = await client.post(
                 f"{base_url}/api/generate",
-                json={"model": model, "prompt": combined_text, "stream": False},
+                json={
+                    "model": model,
+                    "prompt": combined_text,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.35,
+                        "num_predict": 600,
+                    }
+                },
             )
     except httpx.ConnectError as exc:
+        logger.error("Ollama connection failed: %s", exc)
         raise _offline_error(
             hint="Run `ollama serve` and ensure `llama3` is available.",
         ) from exc
+    except httpx.TimeoutException as exc:
+        logger.error("Ollama request timed out after %.1fs: %s", timeout_s, exc)
+        raise EngineRoutingError(
+            status_code=504,
+            code="LOCAL_LLM_TIMEOUT",
+            message=f"Ollama request timed out after {timeout_s}s.",
+        ) from exc
     except Exception as exc:  # noqa: BLE001
+        logger.exception("Unexpected error calling Ollama")
         raise EngineRoutingError(
             status_code=503,
             code="LOCAL_LLM_UPSTREAM_ERROR",
@@ -334,18 +357,31 @@ async def generate_local_advice(tracking_data_csv: str) -> str:
         ) from exc
 
     if res.status_code >= 400:
+        logger.error("Ollama error response %d: %s", res.status_code, res.text)
         raise EngineRoutingError(
             status_code=503,
             code="LOCAL_LLM_UPSTREAM_ERROR",
             message=f"Ollama error {res.status_code}: {res.text}",
         )
 
-    data = res.json()
-    text = str(data.get("response", "")).strip()
+    try:
+        data = res.json()
+        text = str(data.get("response", "")).strip()
+    except Exception as exc:
+        logger.error("Failed to parse Ollama JSON response: %s", exc)
+        raise EngineRoutingError(
+            status_code=502,
+            code="LOCAL_LLM_BAD_RESPONSE",
+            message="Ollama returned invalid JSON or missing 'response' field.",
+        ) from exc
+
     if not text:
+        logger.warning("Ollama returned an empty response string.")
         raise EngineRoutingError(
             status_code=503,
             code="LOCAL_LLM_EMPTY_RESPONSE",
             message="Ollama returned an empty response.",
         )
+    
+    logger.info("Ollama success: received %d chars of advice.", len(text))
     return text
