@@ -47,7 +47,11 @@ def sn_calibration_root_dir() -> Path:
 
 
 def sn_calibration_resources_dir() -> Path:
-    """SoccerNet DynamicPitchCalibrator weights (directory must exist to auto-run homography)."""
+    bucket_resources = Path("/mnt/gaffers-storage/models")
+
+    if bucket_resources.exists():
+        return bucket_resources
+
     return sn_calibration_root_dir() / "resources"
 
 
