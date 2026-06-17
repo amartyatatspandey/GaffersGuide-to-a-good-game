@@ -18,6 +18,9 @@ RUN pip install --no-cache-dir -r /app/requirements.txt && \
     pip install --no-cache-dir -r /app/backend/requirements.txt
 
 COPY . /app
+RUN mkdir -p /app/backend/references/sn-calibration/resources && \
+    ln -sf /mnt/gaffers-storage/models/soccer_pitch_segmentation.pth \
+    /app/backend/references/sn-calibration/resources/soccer_pitch_segmentation.pth
 
 ENV PYTHONPATH=/app/backend:/app
 
