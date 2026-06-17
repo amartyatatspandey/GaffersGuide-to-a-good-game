@@ -24,5 +24,8 @@ RUN mkdir -p /app/backend/references/sn-calibration/resources && \
 
 ENV PYTHONPATH=/app/backend:/app
 
-# Default command keeps container reusable for batch jobs.
-CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+CMD ["sh", "-c", "\
+mkdir -p /app/backend/references/sn-calibration/resources && \
+ln -sf /mnt/gaffers-storage/models/soccer_pitch_segmentation.pth \
+/app/backend/references/sn-calibration/resources/soccer_pitch_segmentation.pth && \
+uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
