@@ -22,12 +22,13 @@ RUN pip install --no-cache-dir -r /app/requirements.txt && \
 COPY . /app
 
 # Symlink data, output, and model weight directories to the GCS FUSE mount path
-RUN rm -rf /app/backend/data/uploads /app/backend/data/reports /app/backend/output /app/backend/models/pretrained && \
-    mkdir -p /app/backend/data /app/backend/models && \
+RUN rm -rf /app/backend/data/uploads /app/backend/data/reports /app/backend/output /app/backend/models/pretrained /app/backend/references/sn-calibration/resources && \
+    mkdir -p /app/backend/data /app/backend/models /app/backend/references/sn-calibration && \
     ln -s /mnt/gaffers-storage/uploads /app/backend/data/uploads && \
     ln -s /mnt/gaffers-storage/reports /app/backend/data/reports && \
     ln -s /mnt/gaffers-storage/output /app/backend/output && \
-    ln -s /mnt/gaffers-storage/models /app/backend/models/pretrained
+    ln -s /mnt/gaffers-storage/models /app/backend/models/pretrained && \
+    ln -s /mnt/gaffers-storage/models /app/backend/references/sn-calibration/resources
 
 ENV PYTHONPATH=/app/backend:/app
 EXPOSE 8000
