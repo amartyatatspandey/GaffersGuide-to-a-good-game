@@ -47,12 +47,31 @@ def sn_calibration_root_dir() -> Path:
 
 
 def sn_calibration_resources_dir() -> Path:
+    import logging
+
     bucket_resources = Path("/mnt/gaffers-storage/models")
 
+    logging.error(
+        "DEBUG: bucket_resources=%s exists=%s",
+        bucket_resources,
+        bucket_resources.exists(),
+    )
+
     if bucket_resources.exists():
+        logging.error(
+            "DEBUG: sn_calibration_resources_dir returning bucket path %s",
+            bucket_resources,
+        )
         return bucket_resources
 
-    return sn_calibration_root_dir() / "resources"
+    fallback = sn_calibration_root_dir() / "resources"
+
+    logging.error(
+        "DEBUG: sn_calibration_resources_dir returning fallback path %s",
+        fallback,
+    )
+
+    return fallback
 
 
 def resolve_tracking_homography_json_path(video_path: Path) -> Path:

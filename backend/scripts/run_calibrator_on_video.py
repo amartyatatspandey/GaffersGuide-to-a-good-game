@@ -49,6 +49,42 @@ def run(
     if use_advanced_calibration:
         from scripts.advanced_pitch_calibration import AdvancedPitchCalibrator
 
+        logger.error("=== CALIBRATION DEBUG ===")
+        logger.error("weights_dir = %s", weights_dir)
+
+        try:
+            logger.error(
+                "soccer_pitch_segmentation exists = %s",
+                (weights_dir / "soccer_pitch_segmentation.pth").exists(),
+            )
+        except Exception as e:
+            logger.error("soccer_pitch_segmentation check failed: %s", e)
+
+        try:
+            logger.error(
+                "mean.npy exists = %s",
+                (weights_dir / "mean.npy").exists(),
+            )
+        except Exception as e:
+            logger.error("mean.npy check failed: %s", e)
+
+        try:
+            logger.error(
+                "std.npy exists = %s",
+                (weights_dir / "std.npy").exists(),
+            )
+        except Exception as e:
+            logger.error("std.npy check failed: %s", e)
+
+        logger.error("Directory contents:")
+
+        try:
+            for f in weights_dir.iterdir():
+                logger.error("  %s", f)
+        except Exception as e:
+            logger.error("Cannot list directory: %s", e)
+
+        logger.error("========================")
         calibrator = AdvancedPitchCalibrator(weights_dir)
         logger.info("Using AdvancedPitchCalibrator (V2, pitch→1280×720)")
     else:
