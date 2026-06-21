@@ -276,10 +276,41 @@ async def ensure_ollama_available() -> None:
     """
     Preflight-check that local Ollama daemon is reachable.
 
+    On Cloud Run (``K_SERVICE`` is set) this is a no-op unless
+    ``OLLAMA_AUTO_START_IN_CLOUD=1`` is explicitly set — Ollama cannot run
+    on Cloud Run, so callers that accidentally request the local engine on
+    production will get a silent skip rather than a hard crash.
+
     If connection fails and ``ollama`` is not on PATH, raises ``OLLAMA_NOT_INSTALLED``.
     If ``OLLAMA_AUTO_START`` is set (and Cloud Run guard allows), spawns ``ollama serve``
     and retries. Otherwise raises ``OLLAMA_UNAVAILABLE``.
     """
+    import traceback as _traceback
+    _k_service = os.getenv("K_SERVICE", "").strip()
+    _auto_cloud = _env_truthy(OLLAMA_AUTO_START_IN_CLOUD_ENV)
+    logger.error(
+        "ENGINE DEBUG provider=%s quality=%s mode=%s local=%s  [K_SERVICE=%r auto_cloud=%s caller=%s]",
+        "local",
+        "n/a",
+        "ensure_ollama_available",
+        True,
+        _k_service or "(not set)",
+        _auto_cloud,
+        # Grab the immediate caller frame for pinpointing
+        "".join(_traceback.format_stack(limit=5)).replace("\n", " | "),
+    )
+    # ── Cloud Run guard ──────────────────────────────────────────────────────
+    # On Cloud Run there is no local Ollama daemon. Return immediately so the
+    # app does not crash at startup or on API calls that default to "cloud".
+    # Set OLLAMA_AUTO_START_IN_CLOUD=1 only if you are running a sidecar Ollama
+    # container inside the same Cloud Run service (advanced / unusual setup).
+    if _k_service and not _auto_cloud:
+        logger.debug(
+            "ensure_ollama_available: Cloud Run detected without OLLAMA_AUTO_START_IN_CLOUD; "
+            "skipping local Ollama preflight (use cloud LLM engine instead)."
+        )
+        return
+    # ────────────────────────────────────────────────────────────────────────
     base_url = _base_url()
     timeout_s = _timeout_seconds()
     try:

@@ -29,7 +29,7 @@ export default function WorkspacePage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!localStorage.getItem("gaffer-engine-type")) {
-      localStorage.setItem("gaffer-engine-type", "local");
+      localStorage.setItem("gaffer-engine-type", "cloud");
     }
     if (!localStorage.getItem("gaffer-ollama-model")) {
       localStorage.setItem("gaffer-ollama-model", "llama3");

@@ -1122,12 +1122,24 @@ async def run_e2e_parallel(
             prompt_records, reliability_pct, len(metrics), len(raw_frames)
         )
     else:
-        if llm_engine == "local":
+        _is_cloud_run = bool(os.getenv("K_SERVICE", "").strip())
+        LOGGER.info(
+            "LLM ENGINE DEBUG: provider=%s quality=%s mode=%s (cloud_run=%s guard_status=%s)",
+            llm_engine, "n/a", "parallel_pipeline", _is_cloud_run, guard_status,
+        )
+        if llm_engine == "local" and not _is_cloud_run:
+            # Local dev path: use Ollama (must be installed and running locally)
             from scripts.llm_router import ensure_ollama_available
             await ensure_ollama_available()
             from scripts.e2e_llm_local import run_llm_local
             final_cards = await run_llm_local(prompt_records)
         else:
+            # Cloud Run path OR explicit cloud engine: use Gemini/OpenAI
+            if llm_engine == "local" and _is_cloud_run:
+                LOGGER.warning(
+                    "LLM ENGINE DEBUG: llm_engine='local' requested but K_SERVICE is set — "
+                    "overriding to cloud LLM (Ollama is not available on Cloud Run)."
+                )
             final_cards = await run_llm(prompt_records)
 
     # Safety net: inject baseline summary if empty

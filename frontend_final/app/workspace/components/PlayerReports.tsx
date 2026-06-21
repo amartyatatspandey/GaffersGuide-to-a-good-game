@@ -85,7 +85,8 @@ export function PlayerReports({
         body: JSON.stringify({
           message: `show the clips for player ${playerId}`,
           job_id: job.jobId,
-          llm_engine: "local"
+          // NOTE: do NOT hardcode llm_engine here — let backend choose based on environment.
+          // Cloud Run will default to "cloud" (Gemini/OpenAI); local dev defaults to "local" (Ollama).
         }),
       });
 

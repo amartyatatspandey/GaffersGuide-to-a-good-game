@@ -160,7 +160,7 @@ export async function getCoachAdvice(
           adviceLen: items.length,
         });
         // #endregion
-        const richRes = await _coachFetch(coachAdviceUrl(jobId, "local", false));
+        const richRes = await _coachFetch(coachAdviceUrl(jobId, llmEngine, false));
         // #region agent log
         _coachDebug("B", "coach.ts:getCoachAdvice", "enrich_fetch_response", {
           status: richRes.status,
@@ -180,7 +180,7 @@ export async function getCoachAdvice(
           }
         }
         if (richRes.status === 424 || richRes.status === 500) {
-          const resSkip = await _coachFetch(coachAdviceUrl(jobId, "local", true));
+          const resSkip = await _coachFetch(coachAdviceUrl(jobId, llmEngine, true));
           if (resSkip.ok) {
             return (await resSkip.json()) as CoachAdviceResponse;
           }

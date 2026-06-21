@@ -132,7 +132,11 @@ async def _create_job_from_chunked_upload(
     that the WebSocket endpoint reads from.
     """
     typed_cv: CVEngine = cv_engine_str if cv_engine_str in ("local", "cloud") else "local"  # type: ignore[assignment]
-    typed_llm: LLMEngine = llm_engine_str if llm_engine_str in ("local", "cloud") else "local"  # type: ignore[assignment]
+    typed_llm: LLMEngine = llm_engine_str if llm_engine_str in ("local", "cloud") else "cloud"  # type: ignore[assignment]  # BUG FIX: was "local" — Cloud Run must default to cloud
+    LOGGER.info(
+        "LLM ENGINE DEBUG: chunked_upload provider=%s quality=%s mode=%s (raw_str=%r)",
+        typed_llm, "n/a", "chunked_upload", llm_engine_str,
+    )
 
     with _job_store_lock:
         _job_store[job_id] = JobRecord(
@@ -557,6 +561,11 @@ async def create_job(
     published over WebSockets (see `/ws/jobs/{job_id}`).
     """
     filename = file.filename or ""
+    LOGGER.error(
+        "ENGINE DEBUG provider=%s quality=%s mode=%s local=%s  [endpoint=POST /api/v1/jobs cv_engine=%r llm_engine=%r quality=%r]",
+        llm_engine, quality_profile, "create_job", llm_engine == "local",
+        cv_engine, llm_engine, quality_profile,
+    )
     valid_exts = (".mp4", ".mov", ".avi")
     ext = Path(filename).suffix.lower()
     if ext not in valid_exts:
@@ -962,10 +971,21 @@ async def chat(req: ChatRequest) -> ChatResponse:
     only modifies the prompt framing, not the context injection.
     """
     from scripts.llm_router import detect_intent
+    LOGGER.error(
+        "ENGINE DEBUG provider=%s quality=%s mode=%s local=%s  [endpoint=POST /api/v1/chat req.llm_engine=%r req.job_id=%r]",
+        req.llm_engine or "(not sent)", "n/a", "chat_entry", req.llm_engine == "local",
+        req.llm_engine, req.job_id,
+    )
     intent = await detect_intent(req.message)
 
     prompt_context = ""
-    selected_llm_engine: LLMEngine = (req.llm_engine or "local")
+    _is_cloud_run = bool(os.getenv("K_SERVICE", "").strip())
+    # BUG FIX: was `or "local"` — Cloud Run has no Ollama daemon, must default to "cloud"
+    selected_llm_engine: LLMEngine = req.llm_engine or ("cloud" if _is_cloud_run else "local")
+    LOGGER.info(
+        "LLM ENGINE DEBUG: provider=%s quality=%s mode=%s (req_engine=%r cloud_run=%s)",
+        selected_llm_engine, "n/a", "chat", req.llm_engine, _is_cloud_run,
+    )
 
     evidence_attachment = None
     if intent in ("evidence_request", "threat_query") and req.job_id:
@@ -1234,6 +1254,17 @@ async def _refresh_job_report_cards_with_local_llm(
         {"card_count": len(report_cards), "llm_concurrency": llm_concurrency},
     )
     # #endregion
+    # ── Cloud Run guard ──────────────────────────────────────────────────────
+    # On Cloud Run (K_SERVICE is set) there is no local Ollama daemon.
+    # Return cards unchanged so the API does not crash — use cloud LLM engine.
+    from services.ollama_client import OLLAMA_AUTO_START_IN_CLOUD_ENV, _env_truthy
+    if os.getenv("K_SERVICE", "").strip() and not _env_truthy(OLLAMA_AUTO_START_IN_CLOUD_ENV):
+        LOGGER.info(
+            "_refresh_job_report_cards_with_local_llm: Cloud Run detected; "
+            "skipping local Ollama refresh (set OLLAMA_AUTO_START_IN_CLOUD=1 to override)."
+        )
+        return report_cards
+    # ────────────────────────────────────────────────────────────────────────
     await ensure_ollama_available()
     semaphore = asyncio.Semaphore(llm_concurrency)
 
@@ -1349,7 +1380,7 @@ async def get_coach_advice(
             },
         )
         # #endregion
-        if not skip_llm and llm_engine == "local" and needs_local_refresh:
+        if not skip_llm and llm_engine == "local" and needs_local_refresh and not os.getenv("K_SERVICE", "").strip():
             try:
                 report_cards = await _refresh_job_report_cards_with_local_llm(
                     report_cards,
@@ -1449,6 +1480,22 @@ async def get_coach_advice(
 
     pipeline["rag_synthesizer"] = "success"
 
+    # ── Cloud Run safety guard ─────────────────────────────────────────────
+    # On Cloud Run (K_SERVICE or K_REVISION set) there is no local Ollama daemon.
+    # If the request still arrives with llm_engine="local" (e.g. stale frontend
+    # default, cached localStorage value), override silently to "cloud" and skip
+    # the Ollama preflight entirely.  Never call ensure_ollama_available() here.
+    _on_cloud_run = bool(
+        os.getenv("K_SERVICE", "").strip() or os.getenv("K_REVISION", "").strip()
+    )
+    if llm_engine == "local" and _on_cloud_run:
+        LOGGER.warning(
+            "get_coach_advice: llm_engine='local' received but K_SERVICE/K_REVISION is set "
+            "(Cloud Run environment). Overriding to 'cloud' — Ollama is not available on "
+            "Cloud Run. Set OLLAMA_AUTO_START_IN_CLOUD=1 only for sidecar Ollama setups."
+        )
+        llm_engine = "cloud"
+    # ──────────────────────────────────────────────────────────────────────
     if not skip_llm and llm_engine == "local":
         try:
             await ensure_ollama_available()
