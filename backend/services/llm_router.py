@@ -116,7 +116,30 @@ async def _generate_local(prompt: str) -> str:
 
 
 async def get_tactical_advice(tracking_data: str, llm_engine: str = "cloud") -> str:
-    """Factory-style LLM routing for tactical advice generation."""
+    """Factory-style LLM routing for tactical advice generation.
+
+    Last-resort Cloud Run guard: if K_SERVICE or K_REVISION is set (Cloud Run)
+    and the caller somehow requests 'local', the engine is silently overridden to
+    'cloud'. This is the final safety net — no Ollama call can escape to production.
+    """
+    import logging as _logging
+    _router_log = _logging.getLogger(__name__)
+
+    _on_cloud_run = bool(
+        os.getenv("K_SERVICE", "").strip() or os.getenv("K_REVISION", "").strip()
+    )
+    if llm_engine == "local" and _on_cloud_run:
+        _router_log.warning(
+            "get_tactical_advice: llm_engine='local' overridden to 'cloud' "
+            "(K_SERVICE/K_REVISION detected — Ollama not available on Cloud Run)."
+        )
+        llm_engine = "cloud"
+
+    _router_log.info(
+        "ENGINE DEBUG provider=%s quality=%s mode=%s local=%s",
+        llm_engine, "n/a", "get_tactical_advice", llm_engine == "local",
+    )
+
     if llm_engine == "cloud":
         return await _generate_cloud(tracking_data)
     if llm_engine == "local":

@@ -979,9 +979,19 @@ async def chat(req: ChatRequest) -> ChatResponse:
     intent = await detect_intent(req.message)
 
     prompt_context = ""
-    _is_cloud_run = bool(os.getenv("K_SERVICE", "").strip())
-    # BUG FIX: was `or "local"` — Cloud Run has no Ollama daemon, must default to "cloud"
+    _is_cloud_run = bool(
+        os.getenv("K_SERVICE", "").strip() or os.getenv("K_REVISION", "").strip()
+    )
+    # Default: use req.llm_engine if provided, else "cloud" on Cloud Run, "local" locally.
     selected_llm_engine: LLMEngine = req.llm_engine or ("cloud" if _is_cloud_run else "local")
+    # Hard override: if Cloud Run AND "local" somehow arrived (stale localStorage, old client),
+    # switch to "cloud". The `or` above doesn't catch this because "local" is truthy.
+    if selected_llm_engine == "local" and _is_cloud_run:
+        LOGGER.warning(
+            "chat: llm_engine='local' received but K_SERVICE/K_REVISION is set "
+            "(Cloud Run). Overriding to 'cloud' — Ollama is not available on Cloud Run."
+        )
+        selected_llm_engine = "cloud"
     LOGGER.info(
         "LLM ENGINE DEBUG: provider=%s quality=%s mode=%s (req_engine=%r cloud_run=%s)",
         selected_llm_engine, "n/a", "chat", req.llm_engine, _is_cloud_run,

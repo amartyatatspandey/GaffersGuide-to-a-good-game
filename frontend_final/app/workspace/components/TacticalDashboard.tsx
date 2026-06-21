@@ -49,7 +49,7 @@ export default function TacticalDashboard({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error' | 'rendering'>('idle');
-  const [llmEngine, setLlmEngine] = useState<"local" | "cloud">("local");
+  const [llmEngine, setLlmEngine] = useState<"local" | "cloud">("cloud");
   const hasAutoPrompted = useRef(false);
 
   // Filters State
