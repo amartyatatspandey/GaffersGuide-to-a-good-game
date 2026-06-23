@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { LayoutDashboard, FileText, Settings, Database, Server, RefreshCw, Menu, ChevronLeft, ChevronRight, User, Users, BookOpen } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings, Database, Server, RefreshCw, Menu, ChevronLeft, ChevronRight, User, Users, BookOpen, Film, Settings2, Shuffle } from 'lucide-react';
 import { EngineSettingsModal } from './EngineSettingsModal';
 import { ProfileModal } from './ProfileModal';
 
@@ -8,8 +8,8 @@ export function Sidebar({
   currentView = 'dashboard', 
   setCurrentView = () => {} 
 }: { 
-  currentView?: 'dashboard' | 'reports' | 'players' | 'dictionary', 
-  setCurrentView?: (v: 'dashboard' | 'reports' | 'players' | 'dictionary') => void 
+  currentView?: 'dashboard' | 'matches' | 'match_setup' | 'player_mapping' | 'reports' | 'players' | 'dictionary', 
+  setCurrentView?: (v: 'dashboard' | 'matches' | 'match_setup' | 'player_mapping' | 'reports' | 'players' | 'dictionary') => void 
 }) {
   const [isEngineSettingsOpen, setIsEngineSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -40,6 +40,33 @@ export function Sidebar({
               } ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
               <LayoutDashboard size={18} className={currentView === 'dashboard' ? 'text-emerald-500' : ''} />
               {!isCollapsed && <span className={`text-sm ${currentView === 'dashboard' ? 'font-semibold' : ''}`}>Dashboard</span>}
+            </button>
+            <button 
+              onClick={() => setCurrentView('matches')}
+              title="Matches"
+              className={`w-full flex items-center gap-3 py-2.5 transition-colors ${
+                currentView === 'matches' ? 'bg-[#111a12] text-gray-100 border-r-2 border-emerald-500' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900/50'
+              } ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
+              <Film size={18} className={currentView === 'matches' ? 'text-emerald-500' : ''} />
+              {!isCollapsed && <span className={`text-sm ${currentView === 'matches' ? 'font-semibold' : ''}`}>Matches</span>}
+            </button>
+            <button 
+              onClick={() => setCurrentView('match_setup')}
+              title="Match Setup"
+              className={`w-full flex items-center gap-3 py-2.5 transition-colors ${
+                currentView === 'match_setup' ? 'bg-[#111a12] text-gray-100 border-r-2 border-emerald-500' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900/50'
+              } ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
+              <Settings2 size={18} className={currentView === 'match_setup' ? 'text-emerald-500' : ''} />
+              {!isCollapsed && <span className={`text-sm ${currentView === 'match_setup' ? 'font-semibold' : ''}`}>Match Setup</span>}
+            </button>
+            <button 
+              onClick={() => setCurrentView('player_mapping')}
+              title="Player Mapping"
+              className={`w-full flex items-center gap-3 py-2.5 transition-colors ${
+                currentView === 'player_mapping' ? 'bg-[#111a12] text-gray-100 border-r-2 border-emerald-500' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900/50'
+              } ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
+              <Shuffle size={18} className={currentView === 'player_mapping' ? 'text-emerald-500' : ''} />
+              {!isCollapsed && <span className={`text-sm ${currentView === 'player_mapping' ? 'font-semibold' : ''}`}>Player Mapping</span>}
             </button>
             <button 
               onClick={() => setCurrentView('players')}

@@ -143,12 +143,54 @@ export async function deleteReport(reportId: string): Promise<{ status: string }
   return res.json();
 }
 
+export async function listMatches(search?: string, sort?: string): Promise<any[]> {
+  const base = getApiBaseUrl();
+  const searchParam = search ? `search=${encodeURIComponent(search)}` : '';
+  const sortParam = sort ? `sort=${sort}` : '';
+  const params = [searchParam, sortParam].filter(Boolean).join('&');
+  const url = `${base}/api/v1/matches${params ? `?${params}` : ''}`;
+  
+  const res = await fetch(url, { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch matches');
+  return res.json();
+}
+
+export async function deleteMatch(matchId: string): Promise<{ status: string }> {
+  const base = getApiBaseUrl();
+  const res = await fetch(`${base}/api/v1/matches/${matchId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete match');
+  return res.json();
+}
+
+export async function reanalyzeMatch(matchId: string): Promise<{ status: string; job_id: string }> {
+  const base = getApiBaseUrl();
+  const res = await fetch(`${base}/api/v1/matches/${matchId}/reanalyze`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to start reanalysis');
+  return res.json();
+}
+
+
 export async function getJobEvents(jobId: string): Promise<any> {
   const base = getApiBaseUrl();
   const res = await fetch(`${base}/api/v1/jobs/${jobId}/events`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('Failed to fetch job events');
+  return res.json();
+}
+
+export async function getTacticalTimeline(jobId: string): Promise<any[]> {
+  const base = getApiBaseUrl();
+  const res = await fetch(`${base}/api/v1/jobs/${jobId}/timeline`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to fetch tactical timeline');
   return res.json();
 }
 

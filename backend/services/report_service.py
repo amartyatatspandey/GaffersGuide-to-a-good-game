@@ -100,14 +100,40 @@ class ReportService:
     @staticmethod
     def get_report(report_id: str) -> Optional[dict]:
         """
-        Retrieves a full report by its ID (filename stem).
+        Retrieves a full report by its ID (filename stem) with fallback checks.
         """
+        # 1. Try direct match
         file_path = REPORTS_DIR / f"{report_id}.json"
-        if not file_path.exists():
-            return None
-            
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        if file_path.exists():
+            with open(file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+                
+        # 2. Try prefix/suffix pattern search in reports directory
+        if REPORTS_DIR.exists():
+            for p in REPORTS_DIR.iterdir():
+                if p.is_file() and p.suffix == ".json":
+                    if p.stem == report_id or f"report_{report_id}_" in p.name:
+                        with open(p, "r", encoding="utf-8") as f:
+                            return json.load(f)
+
+        # 3. Try fallback to outputs directory
+        output_path = BACKEND_ROOT / "output" / f"{report_id}_report.json"
+        if output_path.exists():
+            with open(output_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+
+        # 4. Try fallback to enriched output format
+        output_enriched = BACKEND_ROOT / "output" / f"{report_id}_report_enriched.json"
+        if output_enriched.exists():
+            with open(output_enriched, "r", encoding="utf-8") as f:
+                cards = json.load(f)
+                return {
+                    "job_id": report_id,
+                    "video_title": "Analyzed Match",
+                    "advice_items": cards
+                }
+
+        return None
 
     @staticmethod
     def delete_report(report_id: str) -> bool:

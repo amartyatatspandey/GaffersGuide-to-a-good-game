@@ -177,6 +177,11 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def _startup_beta_queue() -> None:
+    try:
+        from services.db_service import DatabaseService
+        DatabaseService.init_db()
+    except Exception as db_err:
+        LOGGER.error("Failed to initialize database on startup: %s", db_err)
     await _beta_queue.start()
     await start_ollama_for_app_lifecycle()
     # Clean up stale chunked-upload sessions every hour
@@ -279,6 +284,11 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
         if rec:
             rec.status = "processing"
             rec.current_step = "Tracking Players"
+    try:
+        from services.db_service import DatabaseService
+        DatabaseService.update_match_status(job_id, "processing")
+    except Exception as db_err:
+        LOGGER.error("DB Error: %s", db_err)
 
     with _job_store_lock:
         rec_for_llm = _job_store.get(job_id)
@@ -313,6 +323,37 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
                 _threat_path = BACKEND_ROOT / "output" / f"{job_id}_threat_profiles.json"
                 rec.event_index_path = str(_event_path) if _event_path.is_file() else None
                 rec.threat_profiles_path = str(_threat_path) if _threat_path.is_file() else None
+
+        try:
+            from services.db_service import DatabaseService
+            DatabaseService.update_match_status(job_id, "done")
+            
+            # Seed cached metrics
+            import json as _json
+            if Path(report_path).is_file():
+                with open(report_path, "r", encoding="utf-8") as f_rep:
+                    rep_data = _json.load(f_rep)
+                
+                summary_card = {}
+                for item in (rep_data.get("advice_items") or []):
+                    if item and item.get("flaw") == "Match Summary":
+                        summary_card = item
+                        break
+                
+                sum_data = summary_card.get("summary_data") or {}
+                metrics = {
+                    "tactical_power_red": sum_data.get("team_0", {}).get("tactical_power", 0.0),
+                    "tactical_power_blue": sum_data.get("team_1", {}).get("tactical_power", 0.0),
+                    "compactness_red": sum_data.get("team_0", {}).get("compactness", 0.0),
+                    "compactness_blue": sum_data.get("team_1", {}).get("compactness", 0.0),
+                    "transition_speed_red": sum_data.get("team_0", {}).get("transition_speed", 0.0),
+                    "transition_speed_blue": sum_data.get("team_1", {}).get("transition_speed", 0.0),
+                    "flaw_count": len(rep_data.get("advice_items") or []) - 1
+                }
+                DatabaseService.update_match_metrics(job_id, metrics)
+        except Exception as db_err:
+            LOGGER.error("DB Error updating metrics for %s: %s", job_id, db_err)
+
     except EngineRoutingError as exc:
         LOGGER.exception("Job %s failed with routing error", job_id)
         with _job_store_lock:
@@ -321,6 +362,11 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
                 rec.status = "error"
                 rec.current_step = "Error"
                 rec.error = f"{exc.code}: {exc.message}"
+        try:
+            from services.db_service import DatabaseService
+            DatabaseService.update_match_status(job_id, "failed", error=f"{exc.code}: {exc.message}")
+        except Exception as db_err:
+            LOGGER.error("DB Error: %s", db_err)
     except Exception as exc:  # noqa: BLE001
         LOGGER.exception("Job %s failed", job_id)
         with _job_store_lock:
@@ -329,6 +375,11 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
                 rec.status = "error"
                 rec.current_step = "Error"
                 rec.error = str(exc)
+        try:
+            from services.db_service import DatabaseService
+            DatabaseService.update_match_status(job_id, "failed", error=str(exc))
+        except Exception as db_err:
+            LOGGER.error("DB Error: %s", db_err)
 
 
 class CoachingAdviceItem(BaseModel):
@@ -596,6 +647,20 @@ async def create_job(
             chunking_interval=chunking_interval,
         )
 
+    try:
+        from services.db_service import DatabaseService
+        DatabaseService.create_match(
+            match_id=job_id,
+            name=filename,
+            video_filename=video_path.name,
+            cv_engine=cv_engine,
+            llm_engine=llm_engine,
+            quality_profile=quality_profile,
+            chunking_interval=chunking_interval
+        )
+    except Exception as db_err:
+        LOGGER.error("DB Error creating match %s: %s", job_id, db_err)
+
     from services.diagnostics import log_event
     log_event("JOB_CREATED", f"Job {job_id} initialized", {
         "filename": filename,
@@ -802,6 +867,41 @@ async def get_job_artifacts(job_id: str) -> dict[str, Any]:
         "event_index_path": str(event_path_p) if event_path_p.is_file() else rec.event_index_path,
         "threat_profiles_path": str(threat_path_p) if threat_path_p.is_file() else rec.threat_profiles_path,
     }
+
+
+@app.get("/api/v1/jobs/{job_id}/report/pdf", tags=["jobs"])
+async def download_report_pdf(job_id: str):
+    """Generate and return a professional 7-page PDF Tactical Coaching Report."""
+    try:
+        from fastapi.responses import StreamingResponse
+        from services.pdf_service import PDFService
+        from services.db_service import DatabaseService
+        
+        # Resolve match name
+        match_name = f"Match_{job_id[:8]}"
+        conn = DatabaseService.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM matches WHERE id = ?", (job_id,))
+            row = cursor.fetchone()
+            if row:
+                match_name = row["name"]
+        except Exception:
+            pass
+        finally:
+            conn.close()
+            
+        pdf_buffer = await asyncio.to_thread(PDFService.generate_report_pdf, job_id, match_name)
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=GaffersGuide_TacticalReport_{job_id}.pdf"
+            }
+        )
+    except Exception as exc:
+        LOGGER.exception("Failed to generate PDF for job %s", job_id)
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.get("/api/v1/jobs/{job_id}/events", tags=["jobs"])
@@ -1566,3 +1666,120 @@ async def get_coach_advice(
         pipeline=pipeline,
         advice_items=advice_items,
     )
+
+
+# ── Match History & Archive Endpoints ──────────────────────────────────────────
+
+@app.get("/api/v1/jobs/{job_id}/timeline", tags=["matches"])
+async def get_tactical_timeline(job_id: str):
+    """Generates and returns the segmented tactical timeline for a completed job."""
+    try:
+        from services.timeline_service import TimelineService
+        segments = TimelineService.generate_timeline(job_id)
+        if not segments:
+            raise HTTPException(status_code=404, detail="Timeline not found or metrics file missing. Ensure job is completed.")
+        return segments
+    except HTTPException:
+        raise
+    except Exception as err:
+        LOGGER.error("Error generating timeline for job %s: %s", job_id, err)
+        raise HTTPException(status_code=500, detail=str(err))
+
+
+@app.get("/api/v1/matches", tags=["matches"])
+async def list_matches(search: str = None, sort: str = "newest"):
+    """Returns paginated, searchable, sorted matches from SQLite database."""
+    try:
+        from services.db_service import DatabaseService
+        return DatabaseService.list_matches(search=search, sort_by=sort)
+    except Exception as db_err:
+        LOGGER.error("DB Error listing matches: %s", db_err)
+        raise HTTPException(status_code=500, detail=str(db_err))
+
+
+@app.delete("/api/v1/matches/{match_id}", tags=["matches"])
+async def delete_match(match_id: str):
+    """Deletes a match record and unlinks all associated files on disk."""
+    try:
+        from services.db_service import DatabaseService
+        success = DatabaseService.delete_match(match_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Match not found")
+
+        # Unlink output files on disk
+        report_p, overlay_p, tracking_p = _job_artifact_paths(match_id)
+        for p in (report_p, overlay_p, tracking_p):
+            if p.is_file():
+                try:
+                    p.unlink()
+                except Exception:
+                    pass
+
+        # Unlink other event files
+        for suffix in ("_events.json", "_threat_profiles.json", "_report_enriched.json"):
+            p = BACKEND_ROOT / "output" / f"{match_id}{suffix}"
+            if p.is_file():
+                try:
+                    p.unlink()
+                except Exception:
+                    pass
+
+        return {"status": "deleted"}
+    except HTTPException:
+        raise
+    except Exception as db_err:
+        LOGGER.error("DB Error deleting match %s: %s", match_id, db_err)
+        raise HTTPException(status_code=500, detail=str(db_err))
+
+
+@app.post("/api/v1/matches/{match_id}/reanalyze", tags=["matches"])
+async def reanalyze_match(match_id: str):
+    """Re-runs the analysis pipeline using preserved video uploads."""
+    try:
+        from services.db_service import DatabaseService
+        conn = DatabaseService.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM matches WHERE id = ?", (match_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Match not found")
+            match = dict(row)
+        finally:
+            conn.close()
+
+        video_filename = match["video_filename"]
+        # Find video path in uploads or main data directory
+        video_path = BACKEND_ROOT / "data" / "uploads" / video_filename
+        if not video_path.is_file():
+            video_path = BACKEND_ROOT / "data" / video_filename
+            if not video_path.is_file():
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Source video file '{video_filename}' not found. Cannot re-analyze."
+                )
+
+        # Reset database status
+        DatabaseService.update_match_status(match_id, "pending")
+
+        # Sync memory store
+        with _job_store_lock:
+            _job_store[match_id] = JobRecord(
+                job_id=match_id,
+                status="pending",
+                current_step="Pending",
+                cv_engine=match["cv_engine"],
+                llm_engine=match["llm_engine"],
+                quality_profile=match["quality_profile"],
+                chunking_interval=match["chunking_interval"],
+            )
+
+        # Trigger parallel CV pipeline execution task
+        asyncio.create_task(_run_job(match_id, video_path, match["cv_engine"]))
+        return {"status": "reanalysis_started", "job_id": match_id}
+    except HTTPException:
+        raise
+    except Exception as db_err:
+        LOGGER.error("DB Error starting reanalysis for match %s: %s", match_id, db_err)
+        raise HTTPException(status_code=500, detail=str(db_err))
+

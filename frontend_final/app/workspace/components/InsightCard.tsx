@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useStreamingText } from '@/hooks/useStreamingText';
 import { Zap, TrendingUp, Shield, Activity, Film, Play, User, Clock } from 'lucide-react';
+import { resolvePlayerLabel, resolveTeamLabel, type JobPlayerMappings } from '@/lib/playerMappingUtils';
 
 const EVENT_NAME_LOOKUP: Record<string, string> = {
   // Movement
@@ -61,6 +62,7 @@ interface InsightCardProps {
   onPlayClip?: (startTimeS: number) => void;
   useAltNames?: boolean;
   dictionary?: Record<string, string>;
+  savedMappings?: JobPlayerMappings | null;
 }
 
 export function InsightCard({
@@ -75,6 +77,7 @@ export function InsightCard({
   onPlayClip,
   useAltNames = false,
   dictionary = {},
+  savedMappings = null,
 }: InsightCardProps) {
   const [activeTeam, setActiveTeam] = useState<'blue' | 'red'>('blue');
   const currentData = activeTeam === 'blue' ? blueTeam : redTeam;
@@ -159,13 +162,13 @@ export function InsightCard({
                 onClick={() => setActiveTeam('blue')}
                 className={`px-3 py-1 text-[10px] font-bold uppercase rounded ${activeTeam === 'blue' ? 'bg-blue-600/30 text-blue-400' : 'text-gray-500'}`}
               >
-                {useAltNames && dictionary["team_1"] ? dictionary["team_1"] : "Blue"}
+                {useAltNames && dictionary["team_1"] ? dictionary["team_1"] : (savedMappings?.team_b_name ?? "Blue")}
               </button>
               <button 
                 onClick={() => setActiveTeam('red')}
                 className={`px-3 py-1 text-[10px] font-bold uppercase rounded ${activeTeam === 'red' ? 'bg-red-600/30 text-red-400' : 'text-gray-500'}`}
               >
-                {useAltNames && dictionary["team_0"] ? dictionary["team_0"] : "Red"}
+                {useAltNames && dictionary["team_0"] ? dictionary["team_0"] : (savedMappings?.team_a_name ?? "Red")}
               </button>
             </div>
           </div>
@@ -233,10 +236,13 @@ export function InsightCard({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${threat.team_id === 'team_0' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                            P{threat.player_id}
+                            {savedMappings?.mappings?.[String(threat.player_id)]
+                              ? `#${savedMappings.mappings[String(threat.player_id)].number}`
+                              : `P${threat.player_id}`}
                           </div>
                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
-                            {useAltNames && dictionary[`P${threat.player_id}`] ? `${dictionary[`P${threat.player_id}`]} (${useAltNames && dictionary[threat.team_id] ? dictionary[threat.team_id] : (threat.team_id === 'team_0' ? 'Red' : 'Blue')})` : (threat.team_id === 'team_0' ? 'Red Team' : 'Blue Team')}
+                            {resolvePlayerLabel(threat.player_id, { savedMappings, useAltNames, dictionary })}
+                            {' '}({resolveTeamLabel(threat.team_id, { savedMappings, useAltNames, dictionary, short: true })})
                           </span>
                         </div>
                         <span className="text-[11px] font-mono font-bold text-emerald-400">

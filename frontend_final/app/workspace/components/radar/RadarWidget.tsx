@@ -4,16 +4,19 @@ import { adaptTrackingPayload, buildFrameLookup } from "@/lib/trackingAdapter";
 import type { TrackingFrame, TrackingPayload } from "@/lib/types/trackingTypes";
 import RadarCanvas from "./RadarCanvas";
 import { getApiBaseUrl, getAuthHeaders } from "@/lib/apiBase";
+import { loadJobMappings } from "@/lib/playerMappingUtils";
 
 interface RadarWidgetProps {
   videoRef: RefObject<HTMLVideoElement | null>;
   trackingData: TrackingPayload | null;
+  jobId?: string | null;
   onFrameChange?: (frameIndex: number, frame: TrackingFrame | undefined) => void;
 }
 
 export default function RadarWidget({
   videoRef,
   trackingData,
+  jobId = null,
   onFrameChange,
 }: RadarWidgetProps) {
   const adaptedTracking = useMemo(
@@ -33,6 +36,7 @@ export default function RadarWidget({
     }
     return Math.max(0, n - 1);
   }, [adaptedTracking, lookup]);
+  const savedMappings = useMemo(() => loadJobMappings(jobId), [jobId]);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [syncFps, setSyncFps] = useState(30);
 
@@ -103,7 +107,7 @@ export default function RadarWidget({
   return (
     <div data-testid="tactical-radar" className="rounded-lg border border-gray-800 bg-[#0a0f0a] p-3 shadow-sm">
       <h2 className="mb-2 text-sm font-semibold text-gray-200">Tactical Radar</h2>
-      <RadarCanvas frame={frame} />
+      <RadarCanvas frame={frame} savedMappings={savedMappings} />
       <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
         <span>Frame {currentFrame}</span>
         <span>Sync FPS {syncFps.toFixed(2)}</span>

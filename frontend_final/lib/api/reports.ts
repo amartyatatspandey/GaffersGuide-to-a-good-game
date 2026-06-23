@@ -96,3 +96,12 @@ export async function deleteSavedReport(reportId: string) {
   }
 }
 
+export async function downloadPdfReport(jobId: string): Promise<Blob> {
+  const base = getApiBaseUrl();
+  const response = await fetch(`${base}/api/v1/jobs/${jobId}/report/pdf`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to download PDF report");
+  return response.blob();
+}
+

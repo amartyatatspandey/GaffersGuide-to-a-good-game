@@ -7,6 +7,10 @@ import TacticalDashboard from './components/TacticalDashboard';
 import { ReportsArchive } from './components/ReportsArchive';
 import { DictionaryTab } from './components/DictionaryTab';
 import { PlayerReports } from './components/PlayerReports';
+import { MatchesHub } from './components/MatchesHub';
+import { MatchSetup } from './components/MatchSetup';
+import { PlayerMapping } from './components/PlayerMapping';
+import { buildLibraryEntry, upsertMatch } from '@/lib/matchLibrary';
 
 import { getTracking } from '@/lib/api/jobs';
 import { getCoachAdvice, getEnrichedReport } from '@/lib/api/coach';
@@ -15,7 +19,7 @@ import { debugSessionLog } from '@/lib/debugSessionLog';
 
 export default function WorkspacePage() {
   const [ingestionComplete, setIngestionComplete] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'reports' | 'players' | 'dictionary'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'matches' | 'match_setup' | 'player_mapping' | 'reports' | 'players' | 'dictionary'>('dashboard');
   const [activeJob, setActiveJob] = useState<{ jobId: string; file: File; tracking: any; isHistorical?: boolean } | null>(null);
   const [coachAdvice, setCoachAdvice] = useState<CoachAdviceResponse | null>(null);
   const [coachError, setCoachError] = useState<string | null>(null);
@@ -178,6 +182,23 @@ export default function WorkspacePage() {
     coachAdvice?.advice_items?.length,
   ]);
 
+  // Auto-save completed analyses to local match library
+  useEffect(() => {
+    if (activeJob && coachAdvice && coachAdvice.advice_items && coachAdvice.advice_items.length > 0) {
+      try {
+        const entry = buildLibraryEntry(
+          activeJob.jobId,
+          activeJob.file?.name || '',
+          coachAdvice,
+          activeJob.tracking
+        );
+        upsertMatch(entry);
+      } catch (e) {
+        console.error('[Workspace] Auto-save to match library failed:', e);
+      }
+    }
+  }, [coachAdvice, activeJob]);
+
   const handleOpenReport = (report: any) => {
     // Transform persistent report into active job state
     setActiveJob({
@@ -217,6 +238,15 @@ export default function WorkspacePage() {
               dictionary={dictionary} 
               onPlayClip={handlePlayClipAndRedirect} 
               onAskAI={handleAskAIAndRedirect} 
+            />
+          ) : currentView === 'match_setup' ? (
+            <MatchSetup />
+          ) : currentView === 'player_mapping' ? (
+            <PlayerMapping job={activeJob} />
+          ) : currentView === 'matches' ? (
+            <MatchesHub 
+              onOpenMatch={handleOpenReport} 
+              onViewPlayers={() => setCurrentView('players')} 
             />
           ) : !ingestionComplete ? (
             <Hopper onComplete={handleIngestionComplete} />

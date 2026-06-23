@@ -1,5 +1,6 @@
 import type { ChangeEvent } from "react";
 import { RefObject, useCallback, useEffect, useState, useMemo, useRef } from "react";
+import { loadJobMappings, resolvePlayerLabel } from "@/lib/playerMappingUtils";
 
 function formatClock(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -34,6 +35,8 @@ export default function VideoHUD({
   useAltNames = false,
   dictionary = {},
 }: VideoHUDProps) {
+  // ── Player identity mappings ────────────────────────────────────────
+  const savedMappings = useMemo(() => loadJobMappings(jobId), [jobId]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -823,7 +826,7 @@ export default function VideoHUD({
                               fontSize="8px"
                               fontWeight="bold"
                             >
-                              {useAltNames && dictionary[`P${p.id}`] ? dictionary[`P${p.id}`] : `PLAYER ${p.id}`}
+                              {resolvePlayerLabel(p.id, { savedMappings, useAltNames, dictionary, includeNumber: false }).toUpperCase()}
                             </text>
                             
                             {/* Speed Label */}

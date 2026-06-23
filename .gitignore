@@ -1,4 +1,11 @@
-# --- Project reference material (already present) ---
+# Next.js build files
+frontend_final/.next/
+
+# Local database
+gaffer.db
+
+# Generated reports
+report_*.json# --- Project reference material (already present) ---
 references/
 
 # --- Python ---
@@ -83,3 +90,8 @@ calibration_data.json
 
 # --- Local duplicate / scratch frontend tree (large node_modules) ---
 Gaffers-Guide_ULTIMATE-frontend_dev/
+# Generated analysis reports
+backend/data/reports/
+frontend_final/.next/
+backend/data/reports/
+gaffer.db

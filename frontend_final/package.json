@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "electron": "electron .",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://127.0.0.1:3000 && cross-env ELECTRON_START_URL=http://127.0.0.1:3000/workspace electron .\"",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on tcp:127.0.0.1:3000 && cross-env ELECTRON_START_URL=http://127.0.0.1:3000/workspace electron .\"",
     "electron:build": "electron-builder"
   },
   "dependencies": {

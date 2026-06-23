@@ -3,9 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { normalizePitchMeters, projectMetersToCanvas } from "@/lib/trackingAdapter";
 import type { TrackingFrame } from "@/lib/types/trackingTypes";
 import { drawPitchBackground } from "./pitch";
+import type { JobPlayerMappings } from "@/lib/playerMappingUtils";
 
 interface RadarCanvasProps {
   frame: TrackingFrame | undefined;
+  savedMappings?: JobPlayerMappings | null;
 }
 
 const TEAM_0_COLOR = "#3b82f6"; // Blue
@@ -15,6 +17,7 @@ const BALL_COLOR = "#ffffff";
 
 export default function RadarCanvas({
   frame,
+  savedMappings = null,
 }: RadarCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -82,11 +85,13 @@ export default function RadarCanvas({
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Clean ID label
+      // Mapped label: jersey number if available, otherwise raw ID
+      const mappedEntry = savedMappings?.mappings?.[String(player.id)];
+      const label = mappedEntry ? `#${mappedEntry.number}` : (player.id ? player.id.toString() : "");
       ctx.fillStyle = "white";
       ctx.font = `bold ${Math.max(8, width * 0.012)}px Inter, sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillText(player.id ? player.id.toString() : "", xPx, yPx - (width * 0.015));
+      ctx.fillText(label, xPx, yPx - (width * 0.015));
     }
 
     // Draw Ball
@@ -111,7 +116,7 @@ export default function RadarCanvas({
         ctx.stroke();
       }
     }
-  }, [frame, dimensions]);
+  }, [frame, dimensions, savedMappings]);
 
   return (
     <div ref={containerRef} className="w-full">

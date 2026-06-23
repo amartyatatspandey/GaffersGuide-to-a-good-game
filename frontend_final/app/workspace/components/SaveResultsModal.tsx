@@ -6,8 +6,9 @@ interface SaveResultsModalProps {
   onClose: () => void;
   onSaveBoth: () => void;
   onSaveReportOnly: () => void;
+  onDownloadPdf: () => void;
   isSaving: boolean;
-  saveStatus: 'idle' | 'success' | 'error' | 'rendering';
+  saveStatus: 'idle' | 'success' | 'error' | 'rendering' | 'compiling_pdf';
 }
 
 export function SaveResultsModal({
@@ -15,6 +16,7 @@ export function SaveResultsModal({
   onClose,
   onSaveBoth,
   onSaveReportOnly,
+  onDownloadPdf,
   isSaving,
   saveStatus
 }: SaveResultsModalProps) {
@@ -51,6 +53,12 @@ export function SaveResultsModal({
               <p className="font-bold tracking-widest uppercase text-sm">Rendering Tactical Video...</p>
               <p className="text-xs text-gray-500 text-center max-w-xs">Stitching radar overlay onto your match footage. This may take 30–60 seconds.</p>
             </div>
+          ) : saveStatus === 'compiling_pdf' ? (
+            <div className="flex flex-col items-center justify-center py-8 text-emerald-500 space-y-4">
+              <Loader2 size={48} className="animate-spin" />
+              <p className="font-bold tracking-widest uppercase text-sm">Compiling PDF Report...</p>
+              <p className="text-xs text-gray-500 text-center max-w-xs">Generating 7-page tactical analysis and plotting vector positions. This may take a few seconds.</p>
+            </div>
           ) : (
             <>
               {/* Option 1: Save Both */}
@@ -83,6 +91,23 @@ export function SaveResultsModal({
                   <h3 className="font-bold text-gray-300 group-hover:text-white">Save Report Only</h3>
                   <p className="text-xs text-gray-500 mt-1 flex items-center gap-2">
                     <FileText size={12} /> Text data only
+                  </p>
+                </div>
+              </button>
+
+              {/* Option 3: Download PDF Coaching Report */}
+              <button
+                disabled={isSaving}
+                onClick={onDownloadPdf}
+                className="w-full flex items-center gap-4 p-4 rounded-xl border border-gray-800 bg-[#111a12] hover:bg-gray-900 hover:border-gray-700 transition-all group text-left disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <div className="p-3 rounded-full bg-gray-800 text-gray-400 group-hover:text-white transition-colors">
+                  <FileText size={24} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-300 group-hover:text-white">Download PDF Report</h3>
+                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                    <Download size={12} /> Compile 7-page vector coaching PDF
                   </p>
                 </div>
               </button>

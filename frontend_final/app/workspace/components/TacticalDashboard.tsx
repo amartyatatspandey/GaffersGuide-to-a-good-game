@@ -16,14 +16,17 @@ import {
   ChevronRight,
   Maximize2,
   Play,
-  Film
+  Film,
+  Award
 } from "lucide-react";
 import VideoHUD from "./VideoHUD";
 import RadarWidget from "./radar/RadarWidget";
 import { InsightCard } from "./InsightCard";
-import { saveTacticalReport } from "@/lib/api/reports";
+import { saveTacticalReport, downloadPdfReport } from "@/lib/api/reports";
 import { getApiBaseUrl, getAuthHeaders } from "@/lib/apiBase";
 import { SaveResultsModal } from "./SaveResultsModal";
+import { getTacticalTimeline } from "@/lib/api/jobs";
+import { loadJobMappings, resolvePlayerLabel, resolveTeamLabel } from "@/lib/playerMappingUtils";
 
 export default function TacticalDashboard({ 
   job, 
@@ -48,13 +51,42 @@ export default function TacticalDashboard({
   const [isTyping, setIsTyping] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error' | 'rendering'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error' | 'rendering' | 'compiling_pdf'>('idle');
   const [llmEngine, setLlmEngine] = useState<"local" | "cloud">("cloud");
+  const [reportMode, setReportMode] = useState<'timeline' | 'executive'>('timeline');
   const hasAutoPrompted = useRef(false);
+
+  // Tactical Timeline States
+  const [tacticalTimeline, setTacticalTimeline] = useState<any[]>([]);
+  const [activeSegmentIdx, setActiveSegmentIdx] = useState<number | null>(null);
+  const [loadingTimeline, setLoadingTimeline] = useState(false);
+
+  useEffect(() => {
+    if (!job?.jobId) return;
+    setLoadingTimeline(true);
+    getTacticalTimeline(job.jobId)
+      .then(data => {
+        setTacticalTimeline(data);
+        if (data.length > 0) {
+          setActiveSegmentIdx(0);
+        } else {
+          setActiveSegmentIdx(null);
+        }
+      })
+      .catch(err => {
+        console.error("Failed to load tactical timeline:", err);
+      })
+      .finally(() => {
+        setLoadingTimeline(false);
+      });
+  }, [job?.jobId]);
 
   // Filters State
   const [filterType, setFilterType] = useState<'category' | 'player' | null>(null);
   const [filterVal, setFilterVal] = useState<string | null>(null);
+
+  // Player identity mappings (from PlayerMapping page stored in localStorage)
+  const savedMappings = useMemo(() => loadJobMappings(job?.jobId), [job?.jobId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -156,6 +188,102 @@ export default function TacticalDashboard({
     if (summaryItem.summary_data?.team_0) return summaryItem.summary_data;
     return parseEvidenceMetrics(summaryItem.evidence || '');
   }, [coachAdvice]);
+
+  const parseAllMetrics = (evidence: string) => {
+    const parsed = {
+      team_0: {
+        tactical_power: 0,
+        win_prob: 0,
+        compactness: 0,
+        press_resistance: 0,
+        width_utilization: 0,
+        line_staggering: 0,
+        transition_speed: 0,
+      },
+      team_1: {
+        tactical_power: 0,
+        win_prob: 0,
+        compactness: 0,
+        press_resistance: 0,
+        width_utilization: 0,
+        line_staggering: 0,
+        transition_speed: 0,
+      }
+    };
+
+    if (!evidence) return parsed;
+
+    const matchVal = (regex: RegExp) => {
+      const match = evidence.match(regex);
+      return match ? [parseFloat(match[1]), parseFloat(match[2])] : null;
+    };
+
+    const tp = matchVal(/Tactical Power:\s*(?:Red|team_0)?\s*([\d.]+)\s*vs\s*(?:Blue|team_1)?\s*([\d.]+)/i) ||
+               matchVal(/Tactical Power:\s*([\d.]+)\s*\/\s*([\d.]+)/i);
+    if (tp) {
+      parsed.team_0.tactical_power = tp[0];
+      parsed.team_1.tactical_power = tp[1];
+    }
+
+    const wp = matchVal(/Win Probability:\s*(?:Red|team_0)?\s*([\d.]+)%?\s*\|?\s*(?:Blue|team_1)?\s*([\d.]+)%/i) ||
+               matchVal(/Win Probability:\s*(?:Red|team_0)?\s*([\d.]+)%?\s*vs\s*(?:Blue|team_1)?\s*([\d.]+)%/i);
+    if (wp) {
+      parsed.team_0.win_prob = wp[0];
+      parsed.team_1.win_prob = wp[1];
+    }
+
+    const cp = matchVal(/Compactness:\s*(?:Red|team_0)?\s*([\d.]+)\s*[\/\s]\s*(?:Blue|team_1)?\s*([\d.]+)/i);
+    if (cp) {
+      parsed.team_0.compactness = cp[0];
+      parsed.team_1.compactness = cp[1];
+    }
+
+    const pr = matchVal(/Press Resistance:\s*(?:Red|team_0)?\s*([\d.]+)\s*[\/\s]\s*(?:Blue|team_1)?\s*([\d.]+)/i);
+    if (pr) {
+      parsed.team_0.press_resistance = pr[0];
+      parsed.team_1.press_resistance = pr[1];
+    }
+
+    const wu = matchVal(/Width Utilization:\s*(?:Red|team_0)?\s*([\d.]+)\s*[\/\s]\s*(?:Blue|team_1)?\s*([\d.]+)/i);
+    if (wu) {
+      parsed.team_0.width_utilization = wu[0];
+      parsed.team_1.width_utilization = wu[1];
+    }
+
+    const ls = matchVal(/Line Staggering:\s*(?:Red|team_0)?\s*([\d.]+)\s*[\/\s]\s*(?:Blue|team_1)?\s*([\d.]+)/i);
+    if (ls) {
+      parsed.team_0.line_staggering = ls[0];
+      parsed.team_1.line_staggering = ls[1];
+    }
+
+    const ts = matchVal(/Transition Speed:\s*(?:Red|team_0)?\s*([\d.]+)\s*[\/\s]\s*(?:Blue|team_1)?\s*([\d.]+)/i);
+    if (ts) {
+      parsed.team_0.transition_speed = ts[0];
+      parsed.team_1.transition_speed = ts[1];
+    }
+
+    return parsed;
+  };
+
+  const summaryItem = useMemo(() => {
+    return coachAdvice?.advice_items?.find((i: any) => i.flaw === 'Match Summary');
+  }, [coachAdvice]);
+
+  const parsedAllMetrics = useMemo(() => {
+    if (!summaryItem) return null;
+    return parseAllMetrics(summaryItem.evidence || '');
+  }, [summaryItem]);
+
+  const threatContext = useMemo(() => {
+    const found = coachAdvice?.advice_items?.find((i: any) => i.threat_context?.top_threats?.length > 0);
+    if (found) return found.threat_context;
+    return null;
+  }, [coachAdvice]);
+
+  const formatBoldText = (text: string) => {
+    const parts = text.split(/\*\*(.*?)\*\*/g);
+    return parts.map((part, i) => i % 2 === 1 ? <strong key={i} className="text-white font-bold">{part}</strong> : part);
+  };
 
   const timeline = useMemo(() => {
     if (!coachAdvice?.advice_items) return [];
@@ -271,6 +399,35 @@ export default function TacticalDashboard({
         setIsModalOpen(false);
       }, 2000);
     } catch (err) {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!job?.jobId) return;
+    setIsSaving(true);
+    setSaveStatus('compiling_pdf');
+    try {
+      const blob = await downloadPdfReport(job.jobId);
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.setAttribute("download", `GaffersGuide_TacticalReport_${job.jobId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+
+      setSaveStatus('success');
+      setTimeout(() => {
+        setSaveStatus('idle');
+        setIsModalOpen(false);
+      }, 2000);
+    } catch (err) {
+      console.error('PDF download failed:', err);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } finally {
@@ -411,7 +568,7 @@ export default function TacticalDashboard({
               })}
 
               {[1, 2, 3, 4, 5, 6, 7, 8].map(pid => {
-                const playerLabel = useAltNames && dictionary[`P${pid}`] ? dictionary[`P${pid}`] : `P${pid}`;
+                const playerLabel = resolvePlayerLabel(pid, { savedMappings, useAltNames, dictionary });
                 const isSelected = filterType === 'player' && filterVal === pid.toString();
                 return (
                   <button
@@ -489,7 +646,7 @@ export default function TacticalDashboard({
             <span className="text-[10px] font-mono text-emerald-500/50">105m x 68m</span>
           </div>
           <div className="flex-1 min-h-0">
-             <RadarWidget videoRef={videoRef} trackingData={job?.tracking ?? null} />
+             <RadarWidget videoRef={videoRef} trackingData={job?.tracking ?? null} jobId={job?.jobId ?? null} />
           </div>
         </div>
       </div>
@@ -544,30 +701,748 @@ export default function TacticalDashboard({
       {/* SECTION 3: REPORT SECTIONS */}
       <div className="px-4 pb-8">
         <div className="bg-[#0a0f0a] border border-gray-900 rounded-2xl p-8 shadow-2xl">
-          <div className="mb-6 flex items-center justify-between border-b border-gray-900 pb-4">
-            <h2 className="text-xl font-bold tracking-tight text-white">Match Intelligence Report</h2>
-            <div className="text-[10px] font-mono text-gray-600 uppercase tracking-widest">Pipeline Analysis Active</div>
+          <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-900 pb-4 gap-4">
+            <h2 className="text-xl font-bold tracking-tight text-white">Match Analysis</h2>
+            <div className="flex bg-black/40 border border-gray-900 rounded-xl p-0.5">
+              <button
+                onClick={() => setReportMode('timeline')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
+                  reportMode === 'timeline'
+                    ? 'bg-emerald-500 text-black'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                Detailed Timeline
+              </button>
+              <button
+                onClick={() => setReportMode('executive')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
+                  reportMode === 'executive'
+                    ? 'bg-emerald-500 text-black'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                Executive Report
+              </button>
+            </div>
           </div>
-          
-          {activeSlide ? (
-            <InsightCard
-              key={activeIndex}
-              title={activeSlide.title}
-              minute={activeSlide.minute}
-              blueTeam={activeSlide.blueTeam}
-              redTeam={activeSlide.redTeam}
-              metrics={activeSlide.metrics}
-              evidenceClips={activeSlide.evidenceClips}
-              threatContext={activeSlide.threatContext}
-              eventCountSummary={activeSlide.eventCountSummary}
-              onPlayClip={handlePlayClip}
-              useAltNames={useAltNames}
-              dictionary={dictionary}
-            />
+
+          {reportMode === 'timeline' ? (
+            <>
+              {/* Tactical Timeline Horizontal Bar */}
+              {tacticalTimeline && tacticalTimeline.length > 0 && (
+                <div className="mb-8 bg-black/40 border border-gray-900/60 rounded-2xl p-4">
+                  <div className="text-[10px] font-bold font-mono uppercase tracking-[0.2em] text-gray-500 mb-3 flex items-center gap-1.5">
+                    <Clock size={12} className="text-emerald-500" />
+                    Match Tactical Timeline (Segmented Phases)
+                  </div>
+                  <div className="flex w-full items-stretch gap-2.5 overflow-x-auto pb-1.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-gray-800">
+                    {tacticalTimeline.map((seg: any, sIdx: number) => {
+                      const isActive = activeSegmentIdx === sIdx;
+                      return (
+                        <button
+                          key={sIdx}
+                          onClick={() => setActiveSegmentIdx(sIdx)}
+                          className={`flex-1 min-w-[140px] p-3.5 rounded-xl border text-left transition-all ${
+                            isActive
+                              ? "bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.05)]"
+                              : "bg-black/20 border-gray-900/80 hover:border-gray-850 hover:bg-gray-900/20"
+                          }`}
+                        >
+                          <div className="text-[9px] font-mono text-gray-500 font-bold uppercase mb-1 flex justify-between items-center">
+                            <span>{seg.label}</span>
+                            {isActive && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                          </div>
+                          <div className="text-xs font-bold text-gray-200 truncate">{seg.team_0.phase}</div>
+                          <div className="text-[9px] text-gray-500 font-mono mt-0.5 truncate">vs {seg.team_1.phase}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Selected Segment Details */}
+              {activeSegmentIdx !== null && tacticalTimeline[activeSegmentIdx] && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6 bg-black/30 border border-gray-900 rounded-2xl mb-8 animate-fade-in">
+                  {/* Col 1: Tactical Explanation */}
+                  <div className="space-y-4">
+                    <div className="text-[10px] font-bold font-mono uppercase tracking-widest text-emerald-500">
+                      Segment Tactical Overview
+                    </div>
+                    
+                    {/* Red Team Phase */}
+                    <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-red-400 font-mono">
+                          {resolveTeamLabel('team_0', { savedMappings, useAltNames, dictionary }).toUpperCase()}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-red-500/10 text-[9px] font-bold font-mono text-red-400">
+                          {tacticalTimeline[activeSegmentIdx].team_0.phase}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 leading-relaxed">
+                        {tacticalTimeline[activeSegmentIdx].team_0.explanation}
+                      </p>
+                      {tacticalTimeline[activeSegmentIdx].team_0.philosophy_quote && (
+                        <div className="border-t border-red-500/10 pt-2 mt-2">
+                          <p className="text-[10px] italic text-gray-500">
+                            "{tacticalTimeline[activeSegmentIdx].team_0.philosophy_quote}"
+                          </p>
+                          <p className="text-[8px] font-mono text-red-400/60 mt-0.5 text-right">
+                            — {tacticalTimeline[activeSegmentIdx].team_0.philosophy_author}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Blue Team Phase */}
+                    <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-4 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-blue-400 font-mono">
+                          {resolveTeamLabel('team_1', { savedMappings, useAltNames, dictionary }).toUpperCase()}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-blue-500/10 text-[9px] font-bold font-mono text-blue-400">
+                          {tacticalTimeline[activeSegmentIdx].team_1.phase}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 leading-relaxed">
+                        {tacticalTimeline[activeSegmentIdx].team_1.explanation}
+                      </p>
+                      {tacticalTimeline[activeSegmentIdx].team_1.philosophy_quote && (
+                        <div className="border-t border-blue-500/10 pt-2 mt-2">
+                          <p className="text-[10px] italic text-gray-500">
+                            "{tacticalTimeline[activeSegmentIdx].team_1.philosophy_quote}"
+                          </p>
+                          <p className="text-[8px] font-mono text-blue-400/60 mt-0.5 text-right">
+                            — {tacticalTimeline[activeSegmentIdx].team_1.philosophy_author}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Col 2: Segment Metrics */}
+                  <div className="space-y-4">
+                    <div className="text-[10px] font-bold font-mono uppercase tracking-widest text-emerald-500">
+                      Segment Average Metrics
+                    </div>
+                    <div className="bg-black/40 border border-gray-900 rounded-xl p-4 space-y-4">
+                      {/* Tactical Power */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-[10px] font-mono">
+                          <span className="text-gray-500">TACTICAL POWER</span>
+                          <span className="text-gray-300">
+                            {resolveTeamLabel('team_0', { savedMappings, short: true })} <span className="text-emerald-400 font-bold">{tacticalTimeline[activeSegmentIdx].team_0.metrics.tactical_power.toFixed(1)}</span> / {resolveTeamLabel('team_1', { savedMappings, short: true })} <span className="text-emerald-400 font-bold">{tacticalTimeline[activeSegmentIdx].team_1.metrics.tactical_power.toFixed(1)}</span>
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-gray-950 rounded-full flex overflow-hidden">
+                          <div className="bg-red-500 h-full" style={{ width: `${(tacticalTimeline[activeSegmentIdx].team_0.metrics.tactical_power / (tacticalTimeline[activeSegmentIdx].team_0.metrics.tactical_power + tacticalTimeline[activeSegmentIdx].team_1.metrics.tactical_power)) * 100}%` }} />
+                          <div className="bg-blue-500 h-full" style={{ width: `${(tacticalTimeline[activeSegmentIdx].team_1.metrics.tactical_power / (tacticalTimeline[activeSegmentIdx].team_0.metrics.tactical_power + tacticalTimeline[activeSegmentIdx].team_1.metrics.tactical_power)) * 100}%` }} />
+                        </div>
+                      </div>
+
+                      {/* Compactness */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-[10px] font-mono">
+                          <span className="text-gray-500">SHAPE COMPACTNESS</span>
+                          <span className="text-gray-300">
+                            {resolveTeamLabel('team_0', { savedMappings, short: true })} <span className="font-bold">{Math.round(tacticalTimeline[activeSegmentIdx].team_0.metrics.compactness)}%</span> / {resolveTeamLabel('team_1', { savedMappings, short: true })} <span className="font-bold">{Math.round(tacticalTimeline[activeSegmentIdx].team_1.metrics.compactness)}%</span>
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-gray-950 rounded-full flex gap-1">
+                          <div className="bg-red-500/80 h-full rounded-full" style={{ width: `${tacticalTimeline[activeSegmentIdx].team_0.metrics.compactness}%` }} />
+                          <div className="bg-blue-500/80 h-full rounded-full" style={{ width: `${tacticalTimeline[activeSegmentIdx].team_1.metrics.compactness}%`, marginLeft: 'auto' }} />
+                        </div>
+                      </div>
+
+                      {/* Transition Speed */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-[10px] font-mono">
+                          <span className="text-gray-500">TRANSITION SPEED</span>
+                          <span className="text-gray-300">
+                            {resolveTeamLabel('team_0', { savedMappings, short: true })} <span className="font-bold">{Math.round(tacticalTimeline[activeSegmentIdx].team_0.metrics.transition_speed)}</span> / {resolveTeamLabel('team_1', { savedMappings, short: true })} <span className="font-bold">{Math.round(tacticalTimeline[activeSegmentIdx].team_1.metrics.transition_speed)}</span>
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-gray-950 rounded-full flex gap-1">
+                          <div className="bg-red-500/80 h-full rounded-full" style={{ width: `${tacticalTimeline[activeSegmentIdx].team_0.metrics.transition_speed}%` }} />
+                          <div className="bg-blue-500/80 h-full rounded-full" style={{ width: `${tacticalTimeline[activeSegmentIdx].team_1.metrics.transition_speed}%`, marginLeft: 'auto' }} />
+                        </div>
+                      </div>
+
+                      {/* Defensive Shape */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-[10px] font-mono">
+                          <span className="text-gray-500">DEFENSIVE SOLIDITY</span>
+                          <span className="text-gray-300">
+                            {resolveTeamLabel('team_0', { savedMappings, short: true })} <span className="font-bold">{Math.round(tacticalTimeline[activeSegmentIdx].team_0.metrics.defensive_shape)}%</span> / {resolveTeamLabel('team_1', { savedMappings, short: true })} <span className="font-bold">{Math.round(tacticalTimeline[activeSegmentIdx].team_1.metrics.defensive_shape)}%</span>
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-gray-950 rounded-full flex gap-1">
+                          <div className="bg-red-500/80 h-full rounded-full" style={{ width: `${tacticalTimeline[activeSegmentIdx].team_0.metrics.defensive_shape}%` }} />
+                          <div className="bg-blue-500/80 h-full rounded-full" style={{ width: `${tacticalTimeline[activeSegmentIdx].team_1.metrics.defensive_shape}%`, marginLeft: 'auto' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Col 3: Key Events */}
+                  <div className="space-y-4">
+                    <div className="text-[10px] font-bold font-mono uppercase tracking-widest text-emerald-500">
+                      Key Segment Moments (Events)
+                    </div>
+                    <div className="max-h-[280px] overflow-y-auto space-y-2 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-gray-800 pr-1">
+                      {tacticalTimeline[activeSegmentIdx].key_events.length === 0 ? (
+                        <div className="text-xs text-gray-600 italic font-mono py-8 text-center bg-black/20 border border-gray-900/60 rounded-xl">
+                          No key events registered in this segment.
+                        </div>
+                      ) : (
+                        tacticalTimeline[activeSegmentIdx].key_events.map((evt: any, eIdx: number) => (
+                          <button
+                            key={eIdx}
+                            onClick={(e) => { e.stopPropagation(); handlePlayClip(evt.start_time_s); }}
+                            className="w-full text-left p-3 rounded-xl bg-black/40 border border-gray-900 hover:border-emerald-500/30 hover:bg-[#111a12]/20 transition-all flex items-center justify-between group"
+                          >
+                            <div className="flex-1 min-w-0 pr-3">
+                              <div className="text-xs font-bold text-gray-200 truncate group-hover:text-emerald-400 transition-colors">
+                                {evt.event_name}
+                              </div>
+                              <p className="text-[10px] text-gray-500 mt-1 leading-relaxed font-sans line-clamp-2">
+                                {evt.description}
+                              </p>
+                              <div className="flex items-center gap-2 mt-2 text-[9px] font-mono text-gray-600">
+                                <span className="flex items-center gap-1">
+                                  <Clock size={10} /> 
+                                  {Math.floor(evt.start_time_s / 60)}:{(Math.floor(evt.start_time_s % 60)).toString().padStart(2, '0')}
+                                </span>
+                                <span className="bg-emerald-500/5 text-emerald-500/50 px-1.5 py-0.25 rounded">
+                                  {evt.confidence_pct}% Match
+                                </span>
+                              </div>
+                            </div>
+                            <div className="h-6 w-6 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-500/20 group-hover:scale-105 transition-all shrink-0">
+                              <Play size={10} fill="currentColor" />
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeSlide ? (
+                <InsightCard
+                  key={activeIndex}
+                  title={activeSlide.title}
+                  minute={activeSlide.minute}
+                  blueTeam={activeSlide.blueTeam}
+                  redTeam={activeSlide.redTeam}
+                  metrics={activeSlide.metrics}
+                  evidenceClips={activeSlide.evidenceClips}
+                  threatContext={activeSlide.threatContext}
+                  eventCountSummary={activeSlide.eventCountSummary}
+                  onPlayClip={handlePlayClip}
+                  useAltNames={useAltNames}
+                  dictionary={dictionary}
+                  savedMappings={savedMappings}
+                />
+              ) : (
+                <div className="h-48 flex flex-col items-center justify-center gap-2 text-gray-500 text-sm italic font-mono animate-pulse">
+                  <Loader2 className="animate-spin text-emerald-500" size={24} />
+                  <span>Synchronizing tactical debrief...</span>
+                </div>
+              )}
+            </>
           ) : (
-            <div className="h-48 flex flex-col items-center justify-center gap-2 text-gray-500 text-sm italic font-mono animate-pulse">
-              <Loader2 className="animate-spin text-emerald-500" size={24} />
-              <span>Synchronizing tactical debrief...</span>
+            <div className="space-y-8 text-gray-300 font-sans animate-fade-in">
+              
+              {/* 1. MATCH SUMMARY */}
+              <div className="bg-black/30 border border-gray-900 rounded-2xl p-6 space-y-6">
+                <div className="flex items-center justify-between border-b border-gray-900/60 pb-3">
+                  <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
+                    <Award size={18} className="text-emerald-500" />
+                    1. Match Summary & Performance Matrix
+                  </h3>
+                  <span className="text-[10px] font-mono text-gray-600 uppercase tracking-wider">Overall Match Indicators</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-gray-900/60 text-gray-500">
+                        <th className="py-2.5">Key Performance Indicator</th>
+                        <th className="py-2.5 text-red-400">{resolveTeamLabel('team_0', { savedMappings, useAltNames, dictionary })}</th>
+                        <th className="py-2.5 text-blue-400">{resolveTeamLabel('team_1', { savedMappings, useAltNames, dictionary })}</th>
+                        <th className="py-2.5 text-emerald-400">Differential Advantage</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-900/40 text-gray-300">
+                      {[
+                        { label: 'Tactical Power (TPI)', key: 'tactical_power', unit: '' },
+                        { label: 'Win Probability', key: 'win_prob', unit: '%' },
+                        { label: 'Shape Compactness', key: 'compactness', unit: '%' },
+                        { label: 'Press Resistance', key: 'press_resistance', unit: '' },
+                        { label: 'Width Utilization', key: 'width_utilization', unit: '' },
+                        { label: 'Line Staggering', key: 'line_staggering', unit: '' },
+                        { label: 'Transition Speed', key: 'transition_speed', unit: '' }
+                      ].map((row, rIdx) => {
+                        const summaryMetrics = parsedAllMetrics || {
+                          team_0: { tactical_power: 0, win_prob: 0, compactness: 0, press_resistance: 0, width_utilization: 0, line_staggering: 0, transition_speed: 0 },
+                          team_1: { tactical_power: 0, win_prob: 0, compactness: 0, press_resistance: 0, width_utilization: 0, line_staggering: 0, transition_speed: 0 }
+                        };
+                        const val0 = summaryMetrics.team_0[row.key as keyof typeof summaryMetrics.team_0] || 0;
+                        const val1 = summaryMetrics.team_1[row.key as keyof typeof summaryMetrics.team_1] || 0;
+                        const diff = val0 - val1;
+                        let advantageText = 'Balanced';
+                        let advantageColor = 'text-gray-500';
+
+                        if (diff > 0.05) {
+                          advantageText = `${resolveTeamLabel('team_0', { savedMappings, short: true })} (+${diff.toFixed(1)}${row.unit})`;
+                          advantageColor = 'text-red-400';
+                        } else if (diff < -0.05) {
+                          advantageText = `${resolveTeamLabel('team_1', { savedMappings, short: true })} (+${Math.abs(diff).toFixed(1)}${row.unit})`;
+                          advantageColor = 'text-blue-400';
+                        }
+
+                        return (
+                          <tr key={rIdx} className="hover:bg-white/[0.01] transition-colors">
+                            <td className="py-3 font-semibold text-gray-400">{row.label}</td>
+                            <td className="py-3 text-red-400 font-bold">{val0.toFixed(1)}{row.unit}</td>
+                            <td className="py-3 text-blue-400 font-bold">{val1.toFixed(1)}{row.unit}</td>
+                            <td className={`py-3 font-bold ${advantageColor}`}>{advantageText}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {summaryItem && (
+                  <div className="bg-[#111a12]/30 border border-emerald-500/10 rounded-xl p-5 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/40" />
+                    <h4 className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest font-bold mb-2">Tactical Summary Verdict</h4>
+                    <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
+                      {summaryItem.tactical_instruction || summaryItem.evidence}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 2 & 3. STRENGTHS & WEAKNESSES */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* 2. TACTICAL STRENGTHS */}
+                <div className="bg-black/30 border border-gray-900 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-900 pb-3">
+                    <h3 className="text-base font-bold text-emerald-400 flex items-center gap-2">
+                      <TrendingUp size={16} />
+                      2. Tactical Strengths
+                    </h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Team A Strengths */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider font-mono">
+                        {resolveTeamLabel('team_0', { savedMappings, useAltNames, dictionary })}
+                      </h4>
+                      <ul className="space-y-2 text-xs text-gray-400">
+                        {(() => {
+                          const summaryMetrics = parsedAllMetrics || {
+                            team_0: { tactical_power: 0, win_prob: 0, compactness: 0, press_resistance: 0, width_utilization: 0, line_staggering: 0, transition_speed: 0 },
+                            team_1: { tactical_power: 0, win_prob: 0, compactness: 0, press_resistance: 0, width_utilization: 0, line_staggering: 0, transition_speed: 0 }
+                          };
+                          return Object.entries({
+                            tactical_power: 'Tactical Power Intensity',
+                            win_prob: 'Win Probability Advantage',
+                            compactness: 'Defensive Shape Compactness',
+                            press_resistance: 'Press Resistance / Build-up Stability',
+                            width_utilization: 'Attacking Width Utilization',
+                            line_staggering: 'Depth Line Staggering',
+                            transition_speed: 'Offensive Transition Velocity'
+                          }).map(([key, label]) => {
+                            const val0 = summaryMetrics.team_0[key as keyof typeof summaryMetrics.team_0] || 0;
+                            const val1 = summaryMetrics.team_1[key as keyof typeof summaryMetrics.team_1] || 0;
+                            if (val0 > val1) {
+                              return (
+                                <li key={key} className="flex items-start gap-2 bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-2">
+                                  <span className="text-emerald-400 font-bold">✓</span>
+                                  <div>
+                                    <span className="text-gray-300 font-bold">{label}</span>: Higher efficiency recorded ({val0.toFixed(1)} vs {val1.toFixed(1)}).
+                                  </div>
+                                </li>
+                              );
+                            }
+                            return null;
+                          });
+                        })()}
+                      </ul>
+                    </div>
+
+                    {/* Team B Strengths */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider font-mono">
+                        {resolveTeamLabel('team_1', { savedMappings, useAltNames, dictionary })}
+                      </h4>
+                      <ul className="space-y-2 text-xs text-gray-400">
+                        {(() => {
+                          const summaryMetrics = parsedAllMetrics || {
+                            team_0: { tactical_power: 0, win_prob: 0, compactness: 0, press_resistance: 0, width_utilization: 0, line_staggering: 0, transition_speed: 0 },
+                            team_1: { tactical_power: 0, win_prob: 0, compactness: 0, press_resistance: 0, width_utilization: 0, line_staggering: 0, transition_speed: 0 }
+                          };
+                          return Object.entries({
+                            tactical_power: 'Tactical Power Intensity',
+                            win_prob: 'Win Probability Advantage',
+                            compactness: 'Defensive Shape Compactness',
+                            press_resistance: 'Press Resistance / Build-up Stability',
+                            width_utilization: 'Attacking Width Utilization',
+                            line_staggering: 'Depth Line Staggering',
+                            transition_speed: 'Offensive Transition Velocity'
+                          }).map(([key, label]) => {
+                            const val0 = summaryMetrics.team_0[key as keyof typeof summaryMetrics.team_0] || 0;
+                            const val1 = summaryMetrics.team_1[key as keyof typeof summaryMetrics.team_1] || 0;
+                            if (val1 > val0) {
+                              return (
+                                <li key={key} className="flex items-start gap-2 bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-2">
+                                  <span className="text-emerald-400 font-bold">✓</span>
+                                  <div>
+                                    <span className="text-gray-300 font-bold">{label}</span>: Higher efficiency recorded ({val1.toFixed(1)} vs {val0.toFixed(1)}).
+                                  </div>
+                                </li>
+                              );
+                            }
+                            return null;
+                          });
+                        })()}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. TACTICAL WEAKNESSES */}
+                <div className="bg-black/30 border border-gray-900 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-900 pb-3">
+                    <h3 className="text-base font-bold text-red-400 flex items-center gap-2">
+                      <Shield size={16} />
+                      3. Tactical Weaknesses
+                    </h3>
+                  </div>
+
+                  <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-gray-800">
+                    {coachAdvice?.advice_items?.filter((i: any) => i.flaw !== 'Match Summary').length === 0 ? (
+                      <div className="text-xs text-gray-500 italic text-center py-10 font-mono">
+                        No tactical weaknesses identified.
+                      </div>
+                    ) : (
+                      coachAdvice?.advice_items?.filter((i: any) => i.flaw !== 'Match Summary').map((item: any, idx: number) => {
+                        const isRedTeam = item.team === 'team_0';
+                        return (
+                          <div key={idx} className="bg-red-500/5 border border-red-500/10 rounded-xl p-3.5 space-y-1">
+                            <div className="flex justify-between items-center text-[10px] font-mono">
+                              <span className={`font-bold ${isRedTeam ? 'text-red-400' : 'text-blue-400'}`}>
+                                {resolveTeamLabel(item.team, { savedMappings, useAltNames, dictionary }).toUpperCase()}
+                              </span>
+                              <span className="px-1.5 py-0.25 rounded bg-red-500/10 text-red-400 font-bold">
+                                {item.severity || 'Medium'}
+                              </span>
+                            </div>
+                            <h4 className="text-xs font-bold text-gray-200">{item.flaw}</h4>
+                            <p className="text-[11px] text-gray-400 leading-relaxed">
+                              {item.evidence}
+                            </p>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* 4. KEY PLAYERS */}
+              <div className="bg-black/30 border border-gray-900 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-900 pb-3">
+                  <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
+                    <User size={18} className="text-emerald-500" />
+                    4. Key Players & Tactical Threats
+                  </h3>
+                </div>
+
+                {threatContext?.top_threats && threatContext.top_threats.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {threatContext.top_threats.map((threat: any, idx: number) => {
+                      const isTeam0 = threat.team_id === 'team_0';
+                      return (
+                        <div key={idx} className="bg-black/40 border border-gray-900 rounded-xl p-4 flex flex-col justify-between min-h-[120px]">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isTeam0 ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                  {savedMappings?.mappings?.[String(threat.player_id)]
+                                    ? `#${savedMappings.mappings[String(threat.player_id)].number}`
+                                    : `P${threat.player_id}`}
+                                </div>
+                                <span className="text-xs font-bold text-gray-300">
+                                  {resolvePlayerLabel(threat.player_id, { savedMappings, useAltNames, dictionary })}
+                                </span>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+                                Threat: {threat.threat_score.toFixed(1)}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-400 leading-normal mb-3">
+                              {threat.explanation}
+                            </p>
+                          </div>
+                          <div className="text-[9px] font-mono text-gray-600 uppercase tracking-wider">
+                            Team: {resolveTeamLabel(threat.team_id, { savedMappings, useAltNames, dictionary })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500 italic text-center py-8 font-mono bg-black/20 border border-gray-900/60 rounded-xl">
+                    No key tactical threat players registered in telemetry logs.
+                  </div>
+                )}
+              </div>
+
+              {/* 5. TRANSITION ANALYSIS */}
+              <div className="bg-black/30 border border-gray-900 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-900 pb-3">
+                  <h3 className="text-lg font-bold text-gray-200 flex items-center gap-2">
+                    <Zap size={18} className="text-emerald-500" />
+                    5. Transition Analysis
+                  </h3>
+                </div>
+
+                {(() => {
+                  const summaryMetrics = parsedAllMetrics || {
+                    team_0: { tactical_power: 0, win_prob: 0, compactness: 0, press_resistance: 0, width_utilization: 0, line_staggering: 0, transition_speed: 0 },
+                    team_1: { tactical_power: 0, win_prob: 0, compactness: 0, press_resistance: 0, width_utilization: 0, line_staggering: 0, transition_speed: 0 }
+                  };
+                  return (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="bg-black/40 border border-gray-900 rounded-xl p-4 space-y-4">
+                        <h4 className="text-xs font-bold text-gray-400 font-mono uppercase tracking-wider">Transition Velocities</h4>
+                        <div className="space-y-4">
+                          {/* Team A */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[11px] font-mono text-gray-400">
+                              <span>{resolveTeamLabel('team_0', { savedMappings, useAltNames, dictionary })}</span>
+                              <span className="font-bold text-red-400">{summaryMetrics.team_0.transition_speed.toFixed(1)}</span>
+                            </div>
+                            <div className="h-2 bg-gray-950 rounded-full overflow-hidden">
+                              <div className="bg-red-500 h-full rounded-full" style={{ width: `${summaryMetrics.team_0.transition_speed}%` }} />
+                            </div>
+                          </div>
+
+                          {/* Team B */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[11px] font-mono text-gray-400">
+                              <span>{resolveTeamLabel('team_1', { savedMappings, useAltNames, dictionary })}</span>
+                              <span className="font-bold text-blue-400">{summaryMetrics.team_1.transition_speed.toFixed(1)}</span>
+                            </div>
+                            <div className="h-2 bg-gray-950 rounded-full overflow-hidden">
+                              <div className="bg-blue-500 h-full rounded-full" style={{ width: `${summaryMetrics.team_1.transition_speed}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-black/40 border border-gray-900 rounded-xl p-4 flex flex-col justify-center">
+                        <p className="text-xs text-gray-400 leading-relaxed font-sans">
+                          Possession shifts trigger vertical telemetry scans monitoring counter-attack patterns. 
+                          Higher values reflect prompt defensive block recovery and swift positional redistribution.
+                        </p>
+                        {coachAdvice?.advice_items?.find((i: any) => i.flaw?.toLowerCase().includes('transition') || i.flaw?.toLowerCase().includes('counter')) && (
+                          <div className="mt-3 bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-2.5 text-[11px] text-emerald-400/80">
+                            <strong>Insight:</strong> {coachAdvice.advice_items.find((i: any) => i.flaw?.toLowerCase().includes('transition') || i.flaw?.toLowerCase().includes('counter')).evidence}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* 6 & 7. DEFENSIVE & ATTACKING SHAPE */}
+              {(() => {
+                const summaryMetrics = parsedAllMetrics || {
+                  team_0: { tactical_power: 0, win_prob: 0, compactness: 0, press_resistance: 0, width_utilization: 0, line_staggering: 0, transition_speed: 0 },
+                  team_1: { tactical_power: 0, win_prob: 0, compactness: 0, press_resistance: 0, width_utilization: 0, line_staggering: 0, transition_speed: 0 }
+                };
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    {/* 6. DEFENSIVE SHAPE */}
+                    <div className="bg-black/30 border border-gray-900 rounded-2xl p-6 space-y-4">
+                      <div className="flex items-center justify-between border-b border-gray-900 pb-3">
+                        <h3 className="text-base font-bold text-gray-200 flex items-center gap-2">
+                          <Shield size={16} className="text-emerald-500" />
+                          6. Defensive Shape & Compactness
+                        </h3>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px] font-mono text-gray-400">
+                            <span>SHAPE COMPACTNESS</span>
+                            <span>
+                              {resolveTeamLabel('team_0', { savedMappings, short: true })} <span className="font-bold">{summaryMetrics.team_0.compactness}%</span> / {resolveTeamLabel('team_1', { savedMappings, short: true })} <span className="font-bold">{summaryMetrics.team_1.compactness}%</span>
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-950 rounded-full flex gap-0.5">
+                            <div className="bg-red-500 h-full rounded-l-full" style={{ width: `${summaryMetrics.team_0.compactness}%` }} />
+                            <div className="bg-blue-500 h-full rounded-r-full" style={{ width: `${summaryMetrics.team_1.compactness}%`, marginLeft: 'auto' }} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px] font-mono text-gray-400">
+                            <span>LINE STAGGERING (DEPTH DISCIPLINE)</span>
+                            <span>
+                              {resolveTeamLabel('team_0', { savedMappings, short: true })} <span className="font-bold">{summaryMetrics.team_0.line_staggering}%</span> / {resolveTeamLabel('team_1', { savedMappings, short: true })} <span className="font-bold">{summaryMetrics.team_1.line_staggering}%</span>
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-950 rounded-full flex gap-0.5">
+                            <div className="bg-red-500 h-full rounded-l-full" style={{ width: `${summaryMetrics.team_0.line_staggering}%` }} />
+                            <div className="bg-blue-500 h-full rounded-r-full" style={{ width: `${summaryMetrics.team_1.line_staggering}%`, marginLeft: 'auto' }} />
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-gray-500 leading-normal">
+                          Compactness represents the spatial layout density of players in defensive phases. High staggering shows mature horizontal and vertical line coordination preventing vertical passes.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 7. ATTACKING SHAPE */}
+                    <div className="bg-black/30 border border-gray-900 rounded-2xl p-6 space-y-4">
+                      <div className="flex items-center justify-between border-b border-gray-900 pb-3">
+                        <h3 className="text-base font-bold text-gray-200 flex items-center gap-2">
+                          <Maximize2 size={16} className="text-emerald-500" />
+                          7. Attacking Shape & Width
+                        </h3>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px] font-mono text-gray-400">
+                            <span>WIDTH UTILIZATION (WING OCCUPATION)</span>
+                            <span>
+                              {resolveTeamLabel('team_0', { savedMappings, short: true })} <span className="font-bold">{summaryMetrics.team_0.width_utilization}%</span> / {resolveTeamLabel('team_1', { savedMappings, short: true })} <span className="font-bold">{summaryMetrics.team_1.width_utilization}%</span>
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-950 rounded-full flex gap-0.5">
+                            <div className="bg-red-500 h-full rounded-l-full" style={{ width: `${summaryMetrics.team_0.width_utilization}%` }} />
+                            <div className="bg-blue-500 h-full rounded-r-full" style={{ width: `${summaryMetrics.team_1.width_utilization}%`, marginLeft: 'auto' }} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px] font-mono text-gray-400">
+                            <span>PRESS RESISTANCE (BUILD-UP STABILITY)</span>
+                            <span>
+                              {resolveTeamLabel('team_0', { savedMappings, short: true })} <span className="font-bold">{summaryMetrics.team_0.press_resistance}%</span> / {resolveTeamLabel('team_1', { savedMappings, short: true })} <span className="font-bold">{summaryMetrics.team_1.press_resistance}%</span>
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-950 rounded-full flex gap-0.5">
+                            <div className="bg-red-500 h-full rounded-l-full" style={{ width: `${summaryMetrics.team_0.press_resistance}%` }} />
+                            <div className="bg-blue-500 h-full rounded-r-full" style={{ width: `${summaryMetrics.team_1.press_resistance}%`, marginLeft: 'auto' }} />
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-gray-500 leading-normal">
+                          Attacking shape is measured by wing channel occupancy (Width) and structural stability under pressing traps (Press Resistance). Proper stagger values prevent turnover risk.
+                        </p>
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })()}
+
+              {/* 8. RECOMMENDED ADJUSTMENTS */}
+              <div className="bg-[#111a12]/20 border border-emerald-500/10 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-emerald-500/10 pb-3 border-b">
+                  <h3 className="text-lg font-bold text-emerald-400 flex items-center gap-2">
+                    <CheckCircle size={18} />
+                    8. Recommended Coaching Adjustments
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Team A Recommendations */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider font-mono">
+                      {resolveTeamLabel('team_0', { savedMappings, useAltNames, dictionary })} Recommendations
+                    </h4>
+                    <div className="space-y-2">
+                      {(() => {
+                        const recs: string[] = [];
+                        coachAdvice?.advice_items?.forEach((item: any) => {
+                          if (item.team === 'team_0' || item.team === 'global') {
+                            const steps = item.tactical_instruction_steps || [];
+                            steps.forEach((s: string) => {
+                              if (s.includes('**') && s.length > 20 && !s.includes('Red Team') && !s.includes('Summary')) {
+                                recs.push(s);
+                              }
+                            });
+                          }
+                        });
+
+                        if (recs.length === 0) {
+                          return <p className="text-xs text-gray-500 italic font-mono">No specific adjustments required.</p>;
+                        }
+
+                        return recs.slice(0, 5).map((rec, rIdx) => (
+                          <div key={rIdx} className="bg-black/30 border border-gray-900 rounded-xl p-3.5 text-xs leading-relaxed text-gray-300">
+                            <span className="font-bold text-emerald-400 font-mono mr-1.5">{rIdx + 1}.</span>
+                            <span>{formatBoldText(rec)}</span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Team B Recommendations */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider font-mono">
+                      {resolveTeamLabel('team_1', { savedMappings, useAltNames, dictionary })} Recommendations
+                    </h4>
+                    <div className="space-y-2">
+                      {(() => {
+                        const recs: string[] = [];
+                        coachAdvice?.advice_items?.forEach((item: any) => {
+                          if (item.team === 'team_1' || item.team === 'global') {
+                            const steps = item.tactical_instruction_steps || [];
+                            steps.forEach((s: string) => {
+                              if (s.includes('**') && s.length > 20 && !s.includes('Blue Team') && !s.includes('Summary')) {
+                                recs.push(s);
+                              }
+                            });
+                          }
+                        });
+
+                        if (recs.length === 0) {
+                          return <p className="text-xs text-gray-500 italic font-mono">No specific adjustments required.</p>;
+                        }
+
+                        return recs.slice(0, 5).map((rec, rIdx) => (
+                          <div key={rIdx} className="bg-black/30 border border-gray-900 rounded-xl p-3.5 text-xs leading-relaxed text-gray-300">
+                            <span className="font-bold text-emerald-400 font-mono mr-1.5">{rIdx + 1}.</span>
+                            <span>{formatBoldText(rec)}</span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
         </div>
@@ -660,10 +1535,13 @@ export default function TacticalDashboard({
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                       <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${threat.team_id === 'team_0' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                                        P{threat.player_id}
+                                        {savedMappings?.mappings?.[String(threat.player_id)]
+                                          ? `#${savedMappings.mappings[String(threat.player_id)].number}`
+                                          : `P${threat.player_id}`}
                                       </div>
                                       <span className="text-xs font-bold text-gray-300 uppercase">
-                                        {threat.team_id === 'team_0' ? 'Red Team' : 'Blue Team'}
+                                        {resolvePlayerLabel(threat.player_id, { savedMappings, useAltNames, dictionary })}
+                                        {' · '}{resolveTeamLabel(threat.team_id, { savedMappings, useAltNames, dictionary, short: true })}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1">
@@ -728,6 +1606,7 @@ export default function TacticalDashboard({
         onClose={() => setIsModalOpen(false)}
         onSaveBoth={handleSaveBoth}
         onSaveReportOnly={handleSaveReportOnly}
+        onDownloadPdf={handleDownloadPdf}
         isSaving={isSaving}
         saveStatus={saveStatus}
       />
