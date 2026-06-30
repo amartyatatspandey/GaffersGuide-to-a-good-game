@@ -6,6 +6,8 @@ import {
   Zap, Activity, MapPin, Clock, TrendingUp, Sparkles,
   ChevronDown, ChevronUp, Check, X
 } from 'lucide-react';
+import { getApiBaseUrl, getAuthHeaders } from '../../../lib/apiBase';
+
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -221,6 +223,34 @@ export function PlayerMapping({ job }: PlayerMappingProps) {
     }
 
     if (job?.jobId) {
+      const apiBase = getApiBaseUrl();
+      const headers = getAuthHeaders();
+      fetch(`${apiBase}/api/v1/player-mappings/${job.jobId}`, { headers })
+        .then(res => {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
+        .then(data => {
+          if (data && data.mappings && Object.keys(data.mappings).length > 0) {
+            const rawMappings: Record<string, string> = {};
+            Object.entries(data.mappings).forEach(([pid, player]: [string, any]) => {
+              rawMappings[pid] = player.id;
+            });
+            setMappings(rawMappings);
+            if (data.setup_id) setSelectedSetupId(data.setup_id);
+          } else {
+            // Fallback if no server mapping exists yet
+            loadLocalMappings();
+          }
+        })
+        .catch(err => {
+          console.error("Failed to fetch player mappings from backend, falling back to local storage", err);
+          loadLocalMappings();
+        });
+    }
+
+    function loadLocalMappings() {
+      if (!job?.jobId) return;
       const mappingsStr = localStorage.getItem('gaffer-player-mappings');
       if (mappingsStr) {
         try {
@@ -238,6 +268,7 @@ export function PlayerMapping({ job }: PlayerMappingProps) {
       }
     }
   }, [job?.jobId]);
+
 
   // ── Compute rich tracked player stats ──────────────────────────────────
   const trackedPlayers = useMemo((): TrackedPlayerStats[] => {
@@ -417,11 +448,32 @@ export function PlayerMapping({ job }: PlayerMappingProps) {
       mappings: finalMappings,
     };
     try {
+      // 1. Save to local storage
       const all = JSON.parse(localStorage.getItem('gaffer-player-mappings') || '{}');
       all[job.jobId] = payload;
       localStorage.setItem('gaffer-player-mappings', JSON.stringify(all));
-      setSaveSuccess('Mappings saved successfully!');
-      setTimeout(() => setSaveSuccess(null), 3000);
+
+      // 2. Sync to backend
+      const apiBase = getApiBaseUrl();
+      const headers = getAuthHeaders();
+      fetch(`${apiBase}/api/v1/player-mappings/${job.jobId}`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        setSaveSuccess('Mappings synced successfully to server!');
+        setTimeout(() => setSaveSuccess(null), 3000);
+      })
+      .catch(err => {
+        console.error("Failed to sync mappings to server", err);
+        setSaveSuccess('Saved locally (offline).');
+        setTimeout(() => setSaveSuccess(null), 3000);
+      });
     } catch (e) {
       console.error(e);
       setSaveSuccess('Failed to save mappings.');
@@ -435,9 +487,22 @@ export function PlayerMapping({ job }: PlayerMappingProps) {
         const all = JSON.parse(localStorage.getItem('gaffer-player-mappings') || '{}');
         delete all[job.jobId];
         localStorage.setItem('gaffer-player-mappings', JSON.stringify(all));
+
+        // Sync clear to backend
+        const apiBase = getApiBaseUrl();
+        const headers = getAuthHeaders();
+        fetch(`${apiBase}/api/v1/player-mappings/${job.jobId}`, {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ setup_id: '', team_a_name: '', team_b_name: '', mappings: {} })
+        }).catch(err => console.error("Failed to sync cleared mappings to server", err));
       } catch (e) { console.error(e); }
     }
   }, [job?.jobId]);
+
 
   const mappedCount = Object.values(mappings).filter(Boolean).length;
   const totalTracked = trackedPlayers.length;

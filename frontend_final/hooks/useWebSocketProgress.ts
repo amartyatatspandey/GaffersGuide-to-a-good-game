@@ -48,7 +48,16 @@ export function useWebSocketProgress() {
     const connectWs = (reconnectAttempts = 0) => {
       if (isUnmounted.current) return;
 
-      const wsUrl = `${getWsBaseUrl()}/ws/jobs/${jobId}`;
+      const supabaseToken = typeof window !== 'undefined' ? localStorage.getItem("gaffer-supabase-token") : null;
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+      
+      let wsUrl = `${getWsBaseUrl()}/ws/jobs/${jobId}`;
+      if (supabaseToken) {
+        wsUrl += `?token=${encodeURIComponent(supabaseToken)}`;
+      } else if (apiKey) {
+        wsUrl += `?api_key=${encodeURIComponent(apiKey)}`;
+      }
+
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 

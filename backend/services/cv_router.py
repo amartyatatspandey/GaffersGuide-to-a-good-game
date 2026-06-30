@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
+import tempfile
 from pathlib import Path
-from typing import Callable, Literal, Protocol
+from typing import Callable, Literal, Optional, Protocol
 
 import httpx
 
 from services.errors import EngineRoutingError
 from services.llm_router import LLMEngine
+
+LOGGER = logging.getLogger(__name__)
 
 CVEngine = Literal["local", "cloud"]
 
@@ -20,6 +24,7 @@ class CVRunner(Protocol):
         *,
         job_id: str,
         video_path: Path,
+        gcs_blob_name: str = "",
         progress_callback: Callable[[str], None] | None = None,
         llm_engine: LLMEngine | None = None,
     ) -> Path: ...
@@ -31,6 +36,7 @@ class LocalCVRunner:
         *,
         job_id: str,
         video_path: Path,
+        gcs_blob_name: str = "",
         progress_callback: Callable[[str], None] | None = None,
         llm_engine: LLMEngine | None = None,
     ) -> Path:
@@ -38,27 +44,58 @@ class LocalCVRunner:
         enable_zsl = os.getenv("ENABLE_ZSL", "false").lower() == "true"
         enable_parallel = os.getenv("USE_PARALLEL", "true").lower() == "true"
 
-        if enable_parallel:
-            from services.parallel_pipeline import run_e2e_parallel
-            return await run_e2e_parallel(
-                video_path,
-                output_prefix=job_id,
-                progress_callback=progress_callback,
-                llm_engine=engine,
-                enable_zsl=enable_zsl,
-            )
+        # ── GCS download if local file is absent ──────────────────────
+        # This happens when the upload was handled by a different Cloud Run
+        # instance (or when the local /tmp file was cleaned up after GCS upload).
+        local_video_was_downloaded = False
+        if not video_path.is_file() and gcs_blob_name:
+            try:
+                from services import gcs_service  # local import avoids circular deps
+                tmp_path = Path("/tmp") / f"{job_id}{video_path.suffix or '.mp4'}"
+                LOGGER.info(
+                    "Local video not found — downloading from GCS: %s → %s",
+                    gcs_blob_name, tmp_path,
+                )
+                gcs_service.download_file(gcs_blob_name, tmp_path)
+                video_path = tmp_path
+                local_video_was_downloaded = True
+            except Exception as gcs_err:  # noqa: BLE001
+                raise EngineRoutingError(
+                    status_code=503,
+                    code="GCS_DOWNLOAD_FAILED",
+                    message=f"Cannot retrieve video from GCS ({gcs_blob_name}): {gcs_err}",
+                ) from gcs_err
 
-        def _run() -> Path:
-            from scripts.run_e2e_zsl import run_e2e_with_zsl
-            return run_e2e_with_zsl(
-                video_path,
-                output_prefix=job_id,
-                progress_callback=progress_callback,
-                llm_engine=engine,
-                enable_zsl=enable_zsl,
-            )
+        try:
+            if enable_parallel:
+                from services.parallel_pipeline import run_e2e_parallel
+                return await run_e2e_parallel(
+                    video_path,
+                    output_prefix=job_id,
+                    progress_callback=progress_callback,
+                    llm_engine=engine,
+                    enable_zsl=enable_zsl,
+                )
 
-        return await asyncio.to_thread(_run)
+            def _run() -> Path:
+                from scripts.run_e2e_zsl import run_e2e_with_zsl
+                return run_e2e_with_zsl(
+                    video_path,
+                    output_prefix=job_id,
+                    progress_callback=progress_callback,
+                    llm_engine=engine,
+                    enable_zsl=enable_zsl,
+                )
+
+            return await asyncio.to_thread(_run)
+
+        finally:
+            # ── Cleanup local temp video after processing ─────────────
+            # Only delete files we downloaded from GCS (not files the user
+            # deliberately placed on disk for local dev runs).
+            if local_video_was_downloaded and video_path.exists():
+                video_path.unlink(missing_ok=True)
+                LOGGER.debug("Cleaned up downloaded temp video: %s", video_path)
 
 
 class CloudCVRunner:
@@ -67,6 +104,7 @@ class CloudCVRunner:
         *,
         job_id: str,
         video_path: Path,
+        gcs_blob_name: str = "",
         progress_callback: Callable[[str], None] | None = None,
         llm_engine: LLMEngine | None = None,
     ) -> Path:

@@ -1,9 +1,11 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Shield, BarChart3, Target, Award, Edit2, Check, Loader2 } from 'lucide-react';
+import { X, User, Shield, BarChart3, Target, Award, Edit2, Check, Loader2, LogOut } from 'lucide-react';
 import { listReports } from '@/lib/api/jobs';
+import { useAuth } from '@/components/AuthProvider';
 
 export function ProfileModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+  const { user, signOut } = useAuth();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -19,6 +21,10 @@ export function ProfileModal({ isOpen, onClose }: { isOpen: boolean, onClose: ()
     if (savedName) {
       setUserName(savedName);
       setLicenseId(generateLicenseFrom(savedName));
+    } else if (user) {
+      const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Head Coach';
+      setUserName(name);
+      setLicenseId(generateLicenseFrom(name));
     }
 
     // Fetch real stats
@@ -34,7 +40,7 @@ export function ProfileModal({ isOpen, onClose }: { isOpen: boolean, onClose: ()
       }
     }
     fetchStats();
-  }, [isOpen]);
+  }, [isOpen, user]);
 
   useEffect(() => {
     if (isEditingName && nameInputRef.current) {
@@ -147,6 +153,11 @@ export function ProfileModal({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                         )}
                     </div>
                     <p className="text-emerald-500 font-mono text-xs uppercase tracking-widest mt-1">Tactical Analysis License: {licenseId}</p>
+                    {user && (
+                      <p className="text-gray-500 font-mono text-[10px] lowercase tracking-wide mt-1.5 border-t border-gray-900/40 pt-1">
+                        coach_session: <span className="text-emerald-500/70">{user.email}</span> ({user.app_metadata?.provider || 'email'})
+                      </p>
+                    )}
                 </div>
                 
                 <div className="text-right">
@@ -230,6 +241,20 @@ export function ProfileModal({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                     <h4 className="text-sm font-bold text-gray-200">System Architect</h4>
                     <p className="text-xs text-gray-400 mt-1">Successfully integrated the Zero-Shot Learning branch.</p>
                 </div>
+            </div>
+
+            {/* Sign Out */}
+            <div className="mt-6 pt-4 border-t border-gray-900/60 flex justify-between items-center">
+              <span className="text-[10px] text-gray-600 font-mono">GAFFER'S GUIDE SECURITY PROTOCOL</span>
+              <button
+                onClick={async () => {
+                  await signOut();
+                  onClose();
+                }}
+                className="px-4 py-2 bg-red-950/20 hover:bg-red-900/30 text-red-400 border border-red-950/50 hover:border-red-500/30 rounded-lg text-xs font-bold font-mono transition-all active:scale-98 cursor-pointer flex items-center gap-2"
+              >
+                <LogOut size={14} /> SIGN_OUT_SESSION
+              </button>
             </div>
         </div>
       </div>

@@ -14,13 +14,16 @@ trap "echo 'Shutting down...'; kill 0; exit" SIGINT SIGTERM EXIT
 # Start the Backend in the background
 echo "-> Starting FastAPI Backend..."
 cd "$DIR/backend"
-if [ -f "../.venv/bin/activate" ]; then
-    source ../.venv/bin/activate
-elif [ -f "../venv/bin/activate" ]; then
-    source ../venv/bin/activate
-fi
 export PYTHONPATH="$DIR/backend:$DIR/src"
-uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
+if [ -x "../.venv/bin/python3.12" ]; then
+    ../.venv/bin/python3.12 -m uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
+elif [ -x "../.venv/bin/python" ]; then
+    ../.venv/bin/python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
+elif [ -x "../venv/bin/python" ]; then
+    ../venv/bin/python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
+else
+    uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
+fi
 
 # Wait a few seconds for the backend to start
 sleep 3

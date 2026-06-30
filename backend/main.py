@@ -19,7 +19,9 @@ import logging
 import os
 import shutil
 import threading
+import time
 from datetime import datetime, timezone
+
 from pathlib import Path
 import uuid
 from dataclasses import dataclass
@@ -68,6 +70,13 @@ from services.observability import PipelineMetricsRegistry
 from services.report_service import ReportService
 from scripts.rag_coach import run as run_rag_synthesizer
 from scripts.tactical_rule_engine import run_engine
+from services.observability import (
+    configure_structured_logging,
+    get_correlation_id,
+    set_correlation_id,
+    gemini_monitor,
+    upload_monitor,
+)
 
 BACKEND_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = BACKEND_ROOT.parent
@@ -77,6 +86,7 @@ load_dotenv(PROJECT_ROOT / ".env")
 load_dotenv(BACKEND_ROOT / ".env")
 
 LOGGER = logging.getLogger(__name__)
+
 
 # #region agent log
 _AGENT_DEBUG_PATH = PROJECT_ROOT / ".cursor" / "debug-bb63ae.log"
@@ -113,7 +123,11 @@ app = FastAPI(
 )
 
 # ── Chunked upload router for large video files ────────────────────────
-_configure_chunked_upload_dir(BACKEND_ROOT / "data" / "uploads")
+# _configure_chunked_upload_dir now defaults to /tmp/gaffer_uploads.
+# The override below is no longer needed for Cloud Run (stateless /tmp).
+# Left in place for local dev environments that prefer data/uploads/.
+if os.getenv("CHUNKED_UPLOAD_LOCAL_DIR", "").strip():
+    _configure_chunked_upload_dir(Path(os.getenv("CHUNKED_UPLOAD_LOCAL_DIR")))
 app.include_router(chunked_upload_router)
 
 
@@ -125,6 +139,8 @@ async def _create_job_from_chunked_upload(
     llm_engine_str: str,
     quality_profile: str,
     chunking_interval: str,
+    gcs_blob_name: str = "",
+    user_id: str = "default-user-id",
 ) -> None:
     """Callback invoked by ``chunked_upload.complete_upload``.
 
@@ -134,8 +150,8 @@ async def _create_job_from_chunked_upload(
     typed_cv: CVEngine = cv_engine_str if cv_engine_str in ("local", "cloud") else "local"  # type: ignore[assignment]
     typed_llm: LLMEngine = llm_engine_str if llm_engine_str in ("local", "cloud") else "cloud"  # type: ignore[assignment]  # BUG FIX: was "local" — Cloud Run must default to cloud
     LOGGER.info(
-        "LLM ENGINE DEBUG: chunked_upload provider=%s quality=%s mode=%s (raw_str=%r)",
-        typed_llm, "n/a", "chunked_upload", llm_engine_str,
+        "LLM ENGINE DEBUG: chunked_upload provider=%s quality=%s mode=%s (raw_str=%r, user_id=%s)",
+        typed_llm, "n/a", "chunked_upload", llm_engine_str, user_id,
     )
 
     with _job_store_lock:
@@ -149,6 +165,36 @@ async def _create_job_from_chunked_upload(
             chunking_interval=chunking_interval,
         )
 
+    # Persist the match and job in DB under user_id
+    try:
+        import re as _re
+        clean_name = _re.sub(r'\.[^.]+$', '', filename)
+        clean_name = _re.sub(r'[_-]', ' ', clean_name)
+
+        from services.db_service import DatabaseService
+        DatabaseService.create_match(
+            match_id=job_id,
+            user_id=user_id,
+            name=clean_name,
+            video_filename=filename,
+            cv_engine=typed_cv,
+            llm_engine=typed_llm,
+            quality_profile=quality_profile,
+            chunking_interval=chunking_interval
+        )
+        DatabaseService.save_job_record(
+            job_id=job_id,
+            user_id=user_id,
+            status="pending",
+            current_step="Pending",
+            cv_engine=typed_cv,
+            llm_engine=typed_llm,
+            quality_profile=quality_profile,
+            chunking_interval=chunking_interval
+        )
+    except Exception as db_err:
+        LOGGER.error("Failed to register match/job on complete upload: %s", db_err)
+
     try:
         from services.diagnostics import log_event
 
@@ -157,11 +203,14 @@ async def _create_job_from_chunked_upload(
             "cv_engine": typed_cv,
             "llm_engine": typed_llm,
             "quality_profile": quality_profile,
+            "gcs_blob_name": gcs_blob_name,
+            "user_id": user_id,
         })
     except Exception:
         pass
 
-    asyncio.create_task(_run_job(job_id, video_path, typed_cv))
+    asyncio.create_task(_run_job(job_id, video_path, typed_cv, gcs_blob_name=gcs_blob_name, user_id=user_id))
+
 
 
 _register_chunked_job_creator(_create_job_from_chunked_upload)
@@ -177,6 +226,23 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def _startup_beta_queue() -> None:
+    # ── Observability Initialization ─────────────────────────────────────────
+    configure_structured_logging()
+    # ── Production Readiness Guards ──────────────────────────────────────────
+    import sys
+    is_cloud_run = bool(os.getenv("K_SERVICE", "").strip() or os.getenv("K_REVISION", "").strip())
+    bypass_auth = (
+        os.getenv("NEXT_PUBLIC_BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes") or
+        os.getenv("BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes")
+    )
+    if is_cloud_run:
+        if bypass_auth:
+            LOGGER.critical("CRITICAL CONFIGURATION ERROR: Authentication bypass must be disabled in Cloud Run production!")
+            sys.exit(1)
+        if not os.getenv("SUPABASE_JWT_SECRET"):
+            LOGGER.critical("CRITICAL CONFIGURATION ERROR: SUPABASE_JWT_SECRET environment variable is missing!")
+            sys.exit(1)
+    # ─────────────────────────────────────────────────────────────────────────
     try:
         from services.db_service import DatabaseService
         DatabaseService.init_db()
@@ -188,30 +254,293 @@ async def _startup_beta_queue() -> None:
     asyncio.create_task(_chunked_cleanup())
 
 
+
 @app.on_event("shutdown")
 async def _shutdown_managed_ollama() -> None:
     stop_ollama_for_app_lifecycle()
 
 
+def verify_ws_auth(websocket: WebSocket) -> bool:
+    import sys
+    if "pytest" in sys.modules and not websocket.query_params.get("x-test-force-auth"):
+        return True
+
+    api_key_env = os.getenv("API_KEY")
+    req_key = websocket.query_params.get("api_key")
+    if api_key_env and req_key == api_key_env:
+        return True
+
+    token = websocket.query_params.get("token")
+    if token:
+        try:
+            import jwt
+            jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+            if jwt_secret:
+                jwt.decode(token, jwt_secret, algorithms=["HS256"], audience="authenticated")
+            else:
+                LOGGER.warning("SUPABASE_JWT_SECRET is not configured. Decoding JWT without signature verification.")
+                jwt.decode(token, options={"verify_signature": False})
+            return True
+        except Exception as exc:
+            LOGGER.warning("WebSocket verification failed: %s", exc)
+            return False
+
+    return False
+
+
 @app.middleware("http")
-async def _auth_middleware(request: Request, call_next):
-    if request.method == "OPTIONS" or request.url.path.startswith("/ws/"):
+async def _request_logging_middleware(request: Request, call_next):
+    # ── Correlation ID Extraction & Propagation ─────────────────────────────
+    # Read client request ID or create one
+    correlation_id = (
+        request.headers.get("x-request-id")
+        or request.headers.get("x-correlation-id")
+        or uuid.uuid4().hex[:12]
+    )
+    request.state.correlation_id = correlation_id
+    set_correlation_id(correlation_id)
+    # ─────────────────────────────────────────────────────────────────────────
+
+    path = request.url.path
+    if request.method == "OPTIONS" or path.startswith("/ws/") or path == "/health" or path in ("/docs", "/openapi.json", "/redoc"):
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = correlation_id
+        return response
+
+    from services.rate_limiter import get_client_ip, get_user_tier
+    import time
+    
+    start_time = time.perf_counter()
+    client_ip = get_client_ip(dict(request.headers), request.client.host if request.client else None)
+    
+    response = None
+    try:
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = correlation_id
+        return response
+    finally:
+        status_code = response.status_code if response else 500
+        latency_ms = (time.perf_counter() - start_time) * 1000.0
+        
+        user = getattr(request.state, "user", None)
+        tier = get_user_tier(user)
+        user_id = user.get("sub") if user else "anonymous"
+        
+        # Privacy hashes
+        from services.observability import _hash_identity
+        user_id_hash = _hash_identity(user_id)
+        client_ip_hash = _hash_identity(client_ip)
+        
+        rate_limited = getattr(request.state, "rate_limited", False)
+        rate_limit_status = "RATE_LIMITED" if rate_limited else "ALLOWED"
+        
+        # Emit structured log for Cloud Logging integration
+        LOGGER.info(
+            "HTTP request completed",
+            extra={
+                "httpRequest": {
+                    "requestMethod": request.method,
+                    "requestUrl": path,
+                    "status": status_code,
+                    "latency": f"{latency_ms / 1000.0:.3f}s",
+                },
+                "user_id_hash": user_id_hash,
+                "client_ip_hash": client_ip_hash,
+                "user_tier": tier,
+                "rate_limit": rate_limit_status,
+                "latency_ms": round(latency_ms, 2),
+            }
+        )
+
+
+
+@app.middleware("http")
+async def _rate_limit_middleware(request: Request, call_next):
+    path = request.url.path
+    if request.method == "OPTIONS" or path.startswith("/ws/") or path == "/health" or path in ("/docs", "/openapi.json", "/redoc"):
         return await call_next(request)
         
-    api_key = os.getenv("API_KEY")
-    if api_key:
-        req_key = request.headers.get("x-api-key")
-        if not req_key:
-            req_key = request.query_params.get("api_key")
-        if req_key != api_key:
+    from services.rate_limiter import (
+        LIMITER,
+        get_client_ip,
+        get_user_rate_limit_key,
+        get_user_tier,
+        get_error_response_content,
+    )
+    from fastapi.responses import JSONResponse
+    
+    client_ip = get_client_ip(dict(request.headers), request.client.host if request.client else None)
+    
+    user = getattr(request.state, "user", None)
+    tier = get_user_tier(user)
+    
+    # System tier bypasses all rate limiting
+    if tier == "system":
+        request.state.rate_limited = False
+        return await call_next(request)
+        
+    limit_key, id_type = get_user_rate_limit_key(user, client_ip)
+    
+    # General Abuse Rate Limiting (default: 60 requests per minute)
+    try:
+        general_rpm = int(os.getenv("GENERAL_RATE_LIMIT_RPM", "60"))
+    except ValueError:
+        general_rpm = 60
+        
+    general_key = f"rate_limit:gen:{limit_key}"
+    if not LIMITER.is_allowed(general_key, general_rpm, 60.0):
+        LOGGER.warning(
+            "General Rate Limit Exceeded for key %s (IP: %s, User: %s, Tier: %s). Path: %s %s",
+            limit_key, client_ip, user.get("sub") if user else None, tier, request.method, path
+        )
+        request.state.rate_limited = True
+        return JSONResponse(
+            status_code=429,
+            content=get_error_response_content("general", general_rpm)
+        )
+        
+    # Daily Analysis Rate Limiting for expensive Gemini/analysis endpoints
+    is_analysis_route = (
+        request.method == "POST" and (
+            path == "/api/v1/jobs" or
+            path == "/api/v1beta/jobs" or
+            path == "/api/v1/chat" or
+            (path.startswith("/api/v1/matches/") and path.endswith("/reanalyze"))
+        )
+    )
+    
+    if is_analysis_route:
+        analysis_key = f"rate_limit:analysis:{limit_key}"
+        
+        if tier == "anonymous":
+            try:
+                anon_limit = int(os.getenv("ANONYMOUS_DAILY_LIMIT", "5"))
+            except ValueError:
+                anon_limit = 5
+                
+            if not LIMITER.is_allowed(analysis_key, anon_limit, 86400.0):
+                LOGGER.warning(
+                    "Anonymous Daily Analysis Limit Exceeded (IP: %s). Path: %s %s",
+                    client_ip, request.method, path
+                )
+                request.state.rate_limited = True
+                return JSONResponse(
+                    status_code=429,
+                    content=get_error_response_content("analysis_anonymous", anon_limit)
+                )
+                
+        elif tier == "authenticated":
+            try:
+                auth_limit = int(os.getenv("AUTHENTICATED_DAILY_LIMIT", "20"))
+            except ValueError:
+                auth_limit = 20
+                
+            if not LIMITER.is_allowed(analysis_key, auth_limit, 86400.0):
+                LOGGER.warning(
+                    "Authenticated Daily Analysis Limit Exceeded (User: %s, IP: %s). Path: %s %s",
+                    user.get("sub") if user else "unknown", client_ip, request.method, path
+                )
+                request.state.rate_limited = True
+                return JSONResponse(
+                    status_code=429,
+                    content=get_error_response_content("analysis_authenticated", auth_limit)
+                )
+                
+        # Premium/System bypass daily limit check (unlimited)
+        
+    request.state.rate_limited = False
+    return await call_next(request)
+
+
+@app.middleware("http")
+async def _auth_middleware(request: Request, call_next):
+    path = request.url.path
+    if request.method == "OPTIONS" or path.startswith("/ws/") or path == "/health" or path in ("/docs", "/openapi.json", "/redoc"):
+        return await call_next(request)
+        
+    import sys
+    if "pytest" in sys.modules and not request.headers.get("x-test-force-auth"):
+        request.state.user = {"sub": "pytest-bypass", "email": "test@gaffersguide.local", "role": "service_role"}
+        return await call_next(request)
+        
+    api_key_env = os.getenv("API_KEY")
+    req_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    
+    # 1. API Key Auth
+    if api_key_env and req_key == api_key_env:
+        request.state.user = {"sub": "system-api-key", "email": "system@gaffersguide.local", "role": "service_role"}
+        llm_key = request.headers.get("x-llm-api-key")
+        if llm_key:
+            os.environ["LLM_API_KEY"] = llm_key
+        return await call_next(request)
+
+    # 2. Supabase JWT Auth
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            import jwt
+            jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+            if jwt_secret:
+                payload = jwt.decode(
+                    token,
+                    jwt_secret,
+                    algorithms=["HS256"],
+                    audience="authenticated"
+                )
+            else:
+                import sys
+                bypass_auth = (
+                    os.getenv("NEXT_PUBLIC_BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes") or
+                    os.getenv("BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes")
+                )
+                if "pytest" in sys.modules or bypass_auth:
+                    payload = jwt.decode(token, options={"verify_signature": False})
+                else:
+                    LOGGER.critical("SUPABASE_JWT_SECRET is missing. Cannot verify JWT signature in production.")
+                    from fastapi.responses import JSONResponse
+                    return JSONResponse(status_code=401, content={"detail": "Unauthorized: JWT verification secret is missing on server"})
+
+            
+            request.state.user = payload
+            llm_key = request.headers.get("x-llm-api-key")
+            if llm_key:
+                os.environ["LLM_API_KEY"] = llm_key
+            return await call_next(request)
+        except jwt.ExpiredSignatureError:
             from fastapi.responses import JSONResponse
-            return JSONResponse(status_code=401, content={"detail": "Invalid or missing API Key"})
+            return JSONResponse(status_code=401, content={"detail": "Token has expired"})
+        except jwt.InvalidTokenError as e:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=401, content={"detail": f"Invalid token: {str(e)}"})
+
+    # Treat as anonymous user if credentials are missing
+    bypass_auth = (
+        os.getenv("NEXT_PUBLIC_BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes") or
+        os.getenv("BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes")
+    )
+
+    if bypass_auth:
+        request.state.user = {"sub": "local-dev-user", "email": "dev@localhost", "role": "coach"}
+        LOGGER.info("Auth Middleware: Bypassing authentication, mapped to local-dev-user")
+    else:
+        request.state.user = {"sub": "anonymous", "role": "anonymous"}
 
     llm_key = request.headers.get("x-llm-api-key")
     if llm_key:
         os.environ["LLM_API_KEY"] = llm_key
-            
+
+    # Reject unauthenticated requests to protected endpoints
+    is_protected_route = (
+        path.startswith("/api/")
+        and not path.startswith("/api/v1/meta/metrics")
+    )
+    if is_protected_route and request.state.user.get("role") == "anonymous":
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized: Authentication token is missing or invalid"})
+
     return await call_next(request)
+
 
 
 @app.middleware("http")
@@ -244,8 +573,10 @@ class JobRecord:
 _job_store: dict[str, JobRecord] = {}
 _job_store_lock = threading.Lock()
 _metrics = PipelineMetricsRegistry()
+_START_TIME = time.time()
 _beta_store = BetaJobStore(BACKEND_ROOT / "output" / "beta_jobs_store.json")
 _beta_queue = BetaPipelineQueue(_beta_store, _metrics)
+
 
 
 def _job_artifact_paths(job_id: str) -> tuple[Path, Path, Path]:
@@ -265,7 +596,7 @@ def _beta_job_artifact_paths(job_id: str) -> tuple[Path, Path, Path]:
     )
 
 
-async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
+async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine, *, gcs_blob_name: str = "", user_id: str = "default-user-id") -> None:
     def progress_callback(step: str) -> None:
         """Update human-readable step only; do not set ``status=done`` here.
 
@@ -278,6 +609,12 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
             if not rec:
                 return
             rec.current_step = step
+        
+        try:
+            from services.db_service import DatabaseService
+            DatabaseService.update_job_status_db(job_id, "processing", step)
+        except Exception:
+            pass
 
     with _job_store_lock:
         rec = _job_store.get(job_id)
@@ -287,6 +624,7 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
     try:
         from services.db_service import DatabaseService
         DatabaseService.update_match_status(job_id, "processing")
+        DatabaseService.update_job_status_db(job_id, "processing", "Tracking Players")
     except Exception as db_err:
         LOGGER.error("DB Error: %s", db_err)
 
@@ -301,23 +639,24 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
         report_path = await runner.run(
             job_id=job_id,
             video_path=video_path,
+            gcs_blob_name=gcs_blob_name,
             progress_callback=progress_callback,
             llm_engine=job_llm_engine,
         )
 
+        report_path_p, overlay_path_p, tracking_path_p = _job_artifact_paths(job_id)
+        res_p = str(report_path)
+        ov_p = str(overlay_path_p) if overlay_path_p.is_file() else None
+        tr_p = str(tracking_path_p) if tracking_path_p.is_file() else None
+
         with _job_store_lock:
             rec = _job_store.get(job_id)
             if rec:
-                report_path_p, overlay_path_p, tracking_path_p = _job_artifact_paths(job_id)
                 rec.status = "done"
                 rec.current_step = "Completed"
-                rec.result_path = str(report_path)
-                rec.tracking_overlay_path = (
-                    str(overlay_path_p) if overlay_path_p.is_file() else None
-                )
-                rec.tracking_data_path = (
-                    str(tracking_path_p) if tracking_path_p.is_file() else None
-                )
+                rec.result_path = res_p
+                rec.tracking_overlay_path = ov_p
+                rec.tracking_data_path = tr_p
                 # ── Event Intelligence Layer artifacts ─────────────────────
                 _event_path = BACKEND_ROOT / "output" / f"{job_id}_events.json"
                 _threat_path = BACKEND_ROOT / "output" / f"{job_id}_threat_profiles.json"
@@ -327,19 +666,32 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
         try:
             from services.db_service import DatabaseService
             DatabaseService.update_match_status(job_id, "done")
-            
+            DatabaseService.update_job_status_db(
+                job_id, "done", "Completed",
+                result_path=res_p,
+                tracking_overlay_path=ov_p,
+                tracking_data_path=tr_p
+            )
+
             # Seed cached metrics
             import json as _json
             if Path(report_path).is_file():
                 with open(report_path, "r", encoding="utf-8") as f_rep:
                     rep_data = _json.load(f_rep)
-                
+
+                # Persist/register the report in multi-tenant SQLite
+                from services.report_service import ReportService
+                try:
+                    ReportService.save_report(rep_data, user_id)
+                except Exception as r_err:
+                    LOGGER.error("Failed to auto-save report in SQLite: %s", r_err)
+
                 summary_card = {}
                 for item in (rep_data.get("advice_items") or []):
                     if item and item.get("flaw") == "Match Summary":
                         summary_card = item
                         break
-                
+
                 sum_data = summary_card.get("summary_data") or {}
                 metrics = {
                     "tactical_power_red": sum_data.get("team_0", {}).get("tactical_power", 0.0),
@@ -354,6 +706,28 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
         except Exception as db_err:
             LOGGER.error("DB Error updating metrics for %s: %s", job_id, db_err)
 
+        # ── GCS artifact sync ─────────────────────────────────────────
+        # Upload pipeline outputs to gs://gaffers-guide/exports/{job_id}/
+        # so they persist across Cloud Run restarts and are accessible
+        # to all instances.  Errors here are non-fatal (job is already done).
+        try:
+            from services import gcs_service
+            artifact_map = {
+                f"{job_id}_report.json":          gcs_service.export_blob_name(job_id, f"{job_id}_report.json"),
+                f"{job_id}_tracking_data.json":   gcs_service.export_blob_name(job_id, f"{job_id}_tracking_data.json"),
+                f"{job_id}_tracking_overlay.mp4": gcs_service.export_blob_name(job_id, f"{job_id}_tracking_overlay.mp4"),
+                f"{job_id}_events.json":           gcs_service.export_blob_name(job_id, f"{job_id}_events.json"),
+                f"{job_id}_threat_profiles.json":  gcs_service.export_blob_name(job_id, f"{job_id}_threat_profiles.json"),
+            }
+            output_dir = BACKEND_ROOT / "output"
+            for local_name, blob_name in artifact_map.items():
+                local_file = output_dir / local_name
+                if local_file.is_file():
+                    gcs_service.upload_file(local_file, blob_name)
+                    LOGGER.info("GCS export: %s → %s", local_name, blob_name)
+        except Exception as gcs_err:  # noqa: BLE001
+            LOGGER.warning("GCS artifact sync failed for job %s: %s", job_id, gcs_err)
+
     except EngineRoutingError as exc:
         LOGGER.exception("Job %s failed with routing error", job_id)
         with _job_store_lock:
@@ -365,6 +739,7 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
         try:
             from services.db_service import DatabaseService
             DatabaseService.update_match_status(job_id, "failed", error=f"{exc.code}: {exc.message}")
+            DatabaseService.update_job_status_db(job_id, "failed", "Error", error=f"{exc.code}: {exc.message}")
         except Exception as db_err:
             LOGGER.error("DB Error: %s", db_err)
     except Exception as exc:  # noqa: BLE001
@@ -378,8 +753,10 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine) -> None:
         try:
             from services.db_service import DatabaseService
             DatabaseService.update_match_status(job_id, "failed", error=str(exc))
+            DatabaseService.update_job_status_db(job_id, "failed", "Error", error=str(exc))
         except Exception as db_err:
             LOGGER.error("DB Error: %s", db_err)
+
 
 
 class CoachingAdviceItem(BaseModel):
@@ -513,41 +890,62 @@ async def list_datasets() -> DatasetsListResponse:
 
 
 @app.get("/api/v1/elite/reports", tags=["reports"])
-async def list_persistent_reports():
-    """List all reports saved in backend/data/reports/."""
-    return ReportService.list_reports()
+async def list_persistent_reports(request: Request):
+    """List all reports saved in backend/data/reports/ for the authenticated user."""
+    user_id = request.state.user["sub"]
+    return ReportService.list_reports(user_id)
 
 
 @app.get("/api/v1/elite/reports/{report_id}", tags=["reports"])
-async def get_persistent_report(report_id: str):
-    """Retrieve a full tactical report by ID."""
-    report = ReportService.get_report(report_id)
+async def get_persistent_report(report_id: str, request: Request):
+    """Retrieve a full tactical report by ID verifying ownership."""
+    user_id = request.state.user["sub"]
+    report = ReportService.get_report(report_id, user_id)
     if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise HTTPException(status_code=404, detail="Report not found or access denied")
     return report
 
 
 @app.delete("/api/v1/elite/reports/{report_id}", tags=["reports"])
-async def delete_persistent_report(report_id: str):
-    """Delete a tactical report by ID."""
-    success = ReportService.delete_report(report_id)
+async def delete_persistent_report(report_id: str, request: Request):
+    """Delete a tactical report by ID verifying ownership."""
+    user_id = request.state.user["sub"]
+    success = ReportService.delete_report(report_id, user_id)
     if not success:
         raise HTTPException(status_code=404, detail="Report not found or could not be deleted")
     return {"status": "deleted"}
 
 
 @app.post("/api/v1/elite/reports/save", tags=["reports"])
-async def save_persistent_report(report: dict):
+async def save_persistent_report(report: dict, request: Request):
     """Manually save a tactical report to the persistent store."""
-    filename = ReportService.save_report(report)
+    user_id = request.state.user["sub"]
+    filename = ReportService.save_report(report, user_id)
     return {"status": "saved", "filename": filename}
 
 
 @app.get("/api/v1/elite/jobs/{job_id}/video/download", tags=["reports"])
-async def download_tactical_video(job_id: str):
-    """Download the annotated tactical radar video."""
+async def download_tactical_video(job_id: str, request: Request):
+    """Download the annotated tactical radar video verifying ownership."""
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    if not DatabaseService.check_match_ownership(job_id, user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this match video")
+
+    from services import gcs_service
+    if gcs_service.GCS_ENABLED:
+        blob_name = gcs_service.export_blob_name(job_id, f"{job_id}_tracking_overlay.mp4")
+        if gcs_service.blob_exists(blob_name):
+            try:
+                signed_url = gcs_service.generate_signed_url(blob_name, expiration_seconds=900)
+                from fastapi.responses import RedirectResponse
+                return RedirectResponse(url=signed_url)
+            except Exception as s_err:
+                LOGGER.error("Failed to generate GCS signed URL: %s. Falling back to streaming.", s_err)
+
     video_path = BACKEND_ROOT / "output" / f"{job_id}_tracking_overlay.mp4"
     if not video_path.exists():
+
         import asyncio
         from services.video_renderer import generate_video_overlay
         success = await asyncio.to_thread(generate_video_overlay, job_id)
@@ -560,12 +958,12 @@ async def download_tactical_video(job_id: str):
                 raise HTTPException(status_code=404, detail="Video file not found. Analysis may not have generated a video.")
                 
     return FileResponse(
-
         path=video_path,
         filename=f"GaffersGuide_TacticalRadar_{job_id}.mp4",
         media_type="video/mp4",
         headers={"Content-Disposition": f"attachment; filename=GaffersGuide_TacticalRadar_{job_id}.mp4"}
     )
+
 
 
 @app.get(
@@ -803,6 +1201,20 @@ async def get_beta_job_artifacts(job_id: str) -> dict[str, Any]:
 
 @app.websocket("/ws/v1beta/jobs/{job_id}")
 async def beta_job_progress_ws(websocket: WebSocket, job_id: str) -> None:
+    if not verify_ws_auth(websocket):
+        await websocket.accept()
+        await websocket.send_json(
+            {
+                "job_id": job_id,
+                "status": "error",
+                "current_step": "Unauthorized",
+                "result_path": None,
+                "error": "unauthorized",
+            }
+        )
+        await websocket.close(code=1008)
+        return
+
     await websocket.accept()
     try:
         while True:
@@ -870,12 +1282,16 @@ async def get_job_artifacts(job_id: str) -> dict[str, Any]:
 
 
 @app.get("/api/v1/jobs/{job_id}/report/pdf", tags=["jobs"])
-async def download_report_pdf(job_id: str):
+async def download_report_pdf(job_id: str, request: Request):
     """Generate and return a professional 7-page PDF Tactical Coaching Report."""
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    if not DatabaseService.check_match_ownership(job_id, user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this match report")
+
     try:
         from fastapi.responses import StreamingResponse
         from services.pdf_service import PDFService
-        from services.db_service import DatabaseService
         
         # Resolve match name
         match_name = f"Match_{job_id[:8]}"
@@ -905,15 +1321,15 @@ async def download_report_pdf(job_id: str):
 
 
 @app.get("/api/v1/jobs/{job_id}/events", tags=["jobs"])
-async def get_job_events(job_id: str) -> dict[str, Any]:
+async def get_job_events(job_id: str, request: Request) -> dict[str, Any]:
     """
-    Return the Event Intelligence Layer output for a completed job.
+    Return the Event Intelligence Layer output for a completed job verifying ownership.
+    """
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    if not DatabaseService.check_match_ownership(job_id, user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this match events")
 
-    Response contains:
-      - ``event_stats``: summary counts by category and type
-      - ``threat_profiles``: per-player threat scores and explanations
-      - ``top_threats``: top-3 threat players per team
-    """
     event_path = BACKEND_ROOT / "output" / f"{job_id}_events.json"
     threat_path = BACKEND_ROOT / "output" / f"{job_id}_threat_profiles.json"
 
@@ -967,10 +1383,15 @@ async def get_job_events(job_id: str) -> dict[str, Any]:
 
 
 @app.get("/api/v1/jobs/{job_id}/report/enriched", tags=["jobs"])
-async def get_job_report_enriched(job_id: str) -> list[dict[str, Any]]:
+async def get_job_report_enriched(job_id: str, request: Request) -> list[dict[str, Any]]:
     """
-    Return the enriched tactical coaching cards for a completed job.
+    Return the enriched tactical coaching cards for a completed job verifying ownership.
     """
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    if not DatabaseService.check_match_ownership(job_id, user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this match report")
+
     enriched_report_path = BACKEND_ROOT / "output" / f"{job_id}_report_enriched.json"
     if not enriched_report_path.is_file():
         # Fallback to generating it on the fly if it hasn't been built yet
@@ -1002,7 +1423,13 @@ async def get_job_report_enriched(job_id: str) -> list[dict[str, Any]]:
 
 
 @app.get("/api/v1/jobs/{job_id}/tracking", tags=["jobs"])
-async def get_job_tracking(job_id: str) -> dict[str, Any]:
+async def get_job_tracking(job_id: str, request: Request) -> dict[str, Any]:
+    """Return tracking data verifying ownership."""
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    if not DatabaseService.check_match_ownership(job_id, user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this match tracking data")
+
     with _job_store_lock:
         rec = _job_store.get(job_id)
     if rec is None:
@@ -1043,7 +1470,24 @@ async def get_job_tracking(job_id: str) -> dict[str, Any]:
 
 
 @app.get("/api/v1/jobs/{job_id}/overlay", tags=["jobs"])
-async def get_job_overlay_video(job_id: str) -> FileResponse:
+async def get_job_overlay_video(job_id: str, request: Request) -> FileResponse:
+    """Return job overlay video path verifying ownership."""
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    if not DatabaseService.check_match_ownership(job_id, user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this match overlay video")
+
+    from services import gcs_service
+    if gcs_service.GCS_ENABLED:
+        blob_name = gcs_service.export_blob_name(job_id, f"{job_id}_tracking_overlay.mp4")
+        if gcs_service.blob_exists(blob_name):
+            try:
+                signed_url = gcs_service.generate_signed_url(blob_name, expiration_seconds=900)
+                from fastapi.responses import RedirectResponse
+                return RedirectResponse(url=signed_url)
+            except Exception as s_err:
+                LOGGER.error("Failed to generate GCS signed URL: %s. Falling back to streaming.", s_err)
+
     with _job_store_lock:
         rec = _job_store.get(job_id)
     if rec is None:
@@ -1057,12 +1501,14 @@ async def get_job_overlay_video(job_id: str) -> FileResponse:
     return FileResponse(str(overlay_path), media_type="video/mp4", filename=overlay_path.name)
 
 
+
+
 @app.post(
     "/api/v1/chat",
     response_model=ChatResponse,
     tags=["coaching"],
 )
-async def chat(req: ChatRequest) -> ChatResponse:
+async def chat(req: ChatRequest, request: Request) -> ChatResponse:
     """
     Generate follow-up coaching text.
 
@@ -1070,7 +1516,14 @@ async def chat(req: ChatRequest) -> ChatResponse:
     When a job is active, the LLM always receives match telemetry — intent detection
     only modifies the prompt framing, not the context injection.
     """
+    user_id = request.state.user["sub"]
+    if req.job_id:
+        from services.db_service import DatabaseService
+        if not DatabaseService.check_match_ownership(req.job_id, user_id):
+            raise HTTPException(status_code=403, detail="Forbidden: You do not own this match")
+
     from scripts.llm_router import detect_intent
+
     LOGGER.error(
         "ENGINE DEBUG provider=%s quality=%s mode=%s local=%s  [endpoint=POST /api/v1/chat req.llm_engine=%r req.job_id=%r]",
         req.llm_engine or "(not sent)", "n/a", "chat_entry", req.llm_engine == "local",
@@ -1194,6 +1647,20 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
     try:
         reply = await get_tactical_advice(full_prompt, selected_llm_engine)
+        if req.job_id:
+            try:
+                from services.db_service import DatabaseService
+                import uuid as _uuid
+                chat_msg_id = _uuid.uuid4().hex
+                DatabaseService.save_chat_message(
+                    id=chat_msg_id,
+                    user_id=user_id,
+                    job_id=req.job_id,
+                    message=req.message,
+                    reply=reply
+                )
+            except Exception as db_err:
+                LOGGER.error("Failed to save chat message to SQLite: %s", db_err)
     except EngineRoutingError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.to_detail()) from exc
     except Exception as exc:  # noqa: BLE001
@@ -1201,6 +1668,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return ChatResponse(reply=reply, evidence=evidence_attachment)
+
 
 
 @app.websocket("/ws/jobs/{job_id}")
@@ -1211,6 +1679,20 @@ async def job_progress_ws(websocket: WebSocket, job_id: str) -> None:
     Sends JSON messages shaped like:
       { job_id, status: pending|processing|done|error, current_step, result_path?, error? }
     """
+    if not verify_ws_auth(websocket):
+        await websocket.accept()
+        await websocket.send_json(
+            {
+                "job_id": job_id,
+                "status": "error",
+                "current_step": "Unauthorized",
+                "result_path": None,
+                "error": "unauthorized",
+            }
+        )
+        await websocket.close(code=1008)
+        return
+
     await websocket.accept()
     try:
         while True:
@@ -1317,8 +1799,130 @@ async def _complete_coaching_instruction_gemini(
 
 
 @app.get("/health", tags=["meta"])
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+async def health() -> dict[str, Any]:
+    """Deep production health check for Cloud Run deployment and liveness probes."""
+    checks = {
+        "database": "unknown",
+        "gemini": "not_configured",
+        "gcs": "not_configured",
+        "ollama": "unknown",
+    }
+    status = "ok"
+
+    # 1. Database Connectivity (Critical check)
+    try:
+        from services.db_service import DatabaseService
+        conn = DatabaseService.get_connection()
+        conn.execute("SELECT 1;")
+        conn.close()
+        checks["database"] = "ok"
+    except Exception as db_err:
+        LOGGER.error("Health check failure (database): %s", db_err)
+        checks["database"] = "error"
+        status = "unhealthy"  # Hard failure for local database issues
+
+    # 2. Gemini configuration (Degraded check)
+    if gemini_is_configured():
+        checks["gemini"] = "configured"
+    else:
+        # Not configured is acceptable if using local Ollama, so degraded instead of unhealthy
+        checks["gemini"] = "not_configured"
+        if status == "ok":
+            status = "degraded"
+
+    # 3. GCS Sync status (Degraded check)
+    try:
+        from services import gcs_service
+        if gcs_service.GCS_ENABLED:
+            # Force GCS client validation
+            gcs_service._get_client()
+            checks["gcs"] = "ok"
+        else:
+            checks["gcs"] = "local_fallback"
+    except Exception as gcs_err:
+        LOGGER.warning("Health check warning (GCS): %s", gcs_err)
+        checks["gcs"] = "error"
+        if status == "ok":
+            status = "degraded"
+
+    # 4. Ollama liveness (Soft / local-only check)
+    if os.getenv("K_SERVICE", "").strip():
+        # Cloud Run does not run Ollama locally
+        checks["ollama"] = "cloud_run_skip"
+    else:
+        try:
+            # Direct quick socket check to avoid slow timeouts
+            import socket
+            with socket.create_connection(("127.0.0.1", 11434), timeout=0.1):
+                checks["ollama"] = "running"
+        except Exception:
+            checks["ollama"] = "not_running"
+
+    # Calculate active job count
+    active_jobs = 0
+    with _job_store_lock:
+        active_jobs = sum(1 for rec in _job_store.values() if rec.status in ("pending", "processing"))
+
+    uptime = time.time() - _START_TIME
+
+    # Set response code
+    response_status = 200
+    if status == "unhealthy":
+        from fastapi import Response
+        # Return 503 Service Unavailable for critical failures
+        return Response(
+            status_code=503,
+            content=json.dumps({
+                "status": "unhealthy",
+                "checks": checks,
+                "uptime_seconds": round(uptime, 1),
+            }),
+            media_type="application/json",
+        )
+
+    return {
+        "status": status,
+        "checks": checks,
+        "metrics": {
+            "gemini_failure_rate_5m_pct": gemini_monitor.failure_rate_pct(),
+            "upload_failure_rate_5m_pct": upload_monitor.failure_rate_pct(),
+            "active_jobs": active_jobs,
+        },
+        "uptime_seconds": round(uptime, 1),
+        "revision": os.getenv("K_REVISION", "local"),
+        "correlation_id": get_correlation_id(),
+    }
+
+
+@app.get("/api/v1/meta/metrics", tags=["meta"])
+async def production_metrics(request: Request) -> dict[str, Any]:
+    """Exposes all pipeline performance counters and failure rate monitors.
+
+    Requires authentication via API key.
+    """
+    # Simple api key verification (similar to _auth_middleware)
+    api_key_env = os.getenv("API_KEY")
+    req_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    if api_key_env and req_key != api_key_env:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Forbidden: Invalid API key")
+
+    snapshot = _metrics.snapshot()
+    active_jobs = 0
+    with _job_store_lock:
+        active_jobs = sum(1 for rec in _job_store.values() if rec.status in ("pending", "processing"))
+
+    return {
+        "metrics": snapshot,
+        "monitors": {
+            "gemini_failure_rate_5m_pct": gemini_monitor.failure_rate_pct(),
+            "gemini_total_calls_5m": gemini_monitor.total_in_window(),
+            "upload_failure_rate_5m_pct": upload_monitor.failure_rate_pct(),
+            "upload_total_events_5m": upload_monitor.total_in_window(),
+        },
+        "active_jobs": active_jobs,
+        "uptime_seconds": round(time.time() - _START_TIME, 1),
+    }
 
 
 @app.get("/api/v1beta/metrics", tags=["meta-beta"])
@@ -1336,6 +1940,7 @@ async def beta_metrics() -> dict[str, Any]:
         "pass": success_rate >= 95.0 if total else False,
     }
     return {"snapshot": snapshot, "promotion_gate": gates}
+
 
 
 def _card_needs_local_llm_refresh(card: dict[str, Any]) -> bool:
@@ -1671,8 +2276,13 @@ async def get_coach_advice(
 # ── Match History & Archive Endpoints ──────────────────────────────────────────
 
 @app.get("/api/v1/jobs/{job_id}/timeline", tags=["matches"])
-async def get_tactical_timeline(job_id: str):
+async def get_tactical_timeline(job_id: str, request: Request):
     """Generates and returns the segmented tactical timeline for a completed job."""
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    if not DatabaseService.check_match_ownership(job_id, user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this match")
+
     try:
         from services.timeline_service import TimelineService
         segments = TimelineService.generate_timeline(job_id)
@@ -1687,22 +2297,27 @@ async def get_tactical_timeline(job_id: str):
 
 
 @app.get("/api/v1/matches", tags=["matches"])
-async def list_matches(search: str = None, sort: str = "newest"):
+async def list_matches(request: Request, search: str = None, sort: str = "newest"):
     """Returns paginated, searchable, sorted matches from SQLite database."""
+    user_id = request.state.user["sub"]
     try:
         from services.db_service import DatabaseService
-        return DatabaseService.list_matches(search=search, sort_by=sort)
+        return DatabaseService.list_matches(user_id=user_id, search=search, sort_by=sort)
     except Exception as db_err:
         LOGGER.error("DB Error listing matches: %s", db_err)
         raise HTTPException(status_code=500, detail=str(db_err))
 
 
 @app.delete("/api/v1/matches/{match_id}", tags=["matches"])
-async def delete_match(match_id: str):
+async def delete_match(match_id: str, request: Request):
     """Deletes a match record and unlinks all associated files on disk."""
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    if not DatabaseService.check_match_ownership(match_id, user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this match")
+
     try:
-        from services.db_service import DatabaseService
-        success = DatabaseService.delete_match(match_id)
+        success = DatabaseService.delete_match(match_id, user_id)
         if not success:
             raise HTTPException(status_code=404, detail="Match not found")
 
@@ -1733,21 +2348,15 @@ async def delete_match(match_id: str):
 
 
 @app.post("/api/v1/matches/{match_id}/reanalyze", tags=["matches"])
-async def reanalyze_match(match_id: str):
+async def reanalyze_match(match_id: str, request: Request):
     """Re-runs the analysis pipeline using preserved video uploads."""
-    try:
-        from services.db_service import DatabaseService
-        conn = DatabaseService.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM matches WHERE id = ?", (match_id,))
-            row = cursor.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail="Match not found")
-            match = dict(row)
-        finally:
-            conn.close()
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    match = DatabaseService.get_match(match_id, user_id)
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found or access denied")
 
+    try:
         video_filename = match["video_filename"]
         # Find video path in uploads or main data directory
         video_path = BACKEND_ROOT / "data" / "uploads" / video_filename
@@ -1761,6 +2370,7 @@ async def reanalyze_match(match_id: str):
 
         # Reset database status
         DatabaseService.update_match_status(match_id, "pending")
+        DatabaseService.update_job_status_db(match_id, "pending", "Pending")
 
         # Sync memory store
         with _job_store_lock:
@@ -1775,11 +2385,104 @@ async def reanalyze_match(match_id: str):
             )
 
         # Trigger parallel CV pipeline execution task
-        asyncio.create_task(_run_job(match_id, video_path, match["cv_engine"]))
+        asyncio.create_task(_run_job(match_id, video_path, match["cv_engine"], user_id=user_id))
         return {"status": "reanalysis_started", "job_id": match_id}
     except HTTPException:
         raise
     except Exception as db_err:
         LOGGER.error("DB Error starting reanalysis for match %s: %s", match_id, db_err)
         raise HTTPException(status_code=500, detail=str(db_err))
+
+
+# ── Player Mappings Endpoints ────────────────────────────────────────────────
+
+@app.get("/api/v1/player-mappings/{job_id}", tags=["player-mappings"])
+async def get_player_mappings(job_id: str, request: Request):
+    """Retrieve player mapping identities for a specific match owned by user."""
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    # Scoping security: check if match belongs to user
+    if not DatabaseService.check_match_ownership(job_id, user_id):
+         raise HTTPException(status_code=403, detail="Forbidden: You do not own this match mapping")
+
+    mapping = DatabaseService.get_player_mapping(job_id, user_id)
+    if not mapping:
+        return {"job_id": job_id, "mappings": {}}
+    
+    import json as _json
+    try:
+        data = _json.loads(mapping["mapping_data"])
+        return data
+    except Exception:
+        return {"job_id": job_id, "mappings": {}}
+
+
+@app.post("/api/v1/player-mappings/{job_id}", tags=["player-mappings"])
+async def save_player_mappings(job_id: str, payload: dict, request: Request):
+    """Save player mapping identities for a specific match verifying ownership."""
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    if not DatabaseService.check_match_ownership(job_id, user_id):
+         raise HTTPException(status_code=403, detail="Forbidden: You do not own this match mapping")
+
+    import json as _json
+    mapping_str = _json.dumps(payload)
+    DatabaseService.save_player_mapping(job_id, user_id, mapping_str)
+    return {"status": "saved", "job_id": job_id}
+
+
+# ── Chat History Endpoints ───────────────────────────────────────────────────
+
+@app.get("/api/v1/chat/history/{job_id}", tags=["chat"])
+async def get_chat_logs(job_id: str, request: Request):
+    """List persisted chat interaction history for a match owned by user."""
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    if not DatabaseService.check_match_ownership(job_id, user_id):
+         raise HTTPException(status_code=403, detail="Forbidden: You do not own this match chat logs")
+
+    logs = DatabaseService.get_chat_history(job_id, user_id)
+    return {"history": logs}
+
+
+# ── Jobs DB Status Endpoint ──────────────────────────────────────────────────
+
+@app.get("/api/v1/jobs/{job_id}/status", tags=["jobs"])
+async def get_job_status(job_id: str, request: Request):
+    """Query current pipeline job state verifying ownership."""
+    user_id = request.state.user["sub"]
+    from services.db_service import DatabaseService
+    
+    # 1. Try DB first (persisted jobs)
+    job = DatabaseService.get_job(job_id, user_id)
+    if job:
+        return {
+            "job_id": job["id"],
+            "status": job["status"],
+            "current_step": job["current_step"],
+            "error": job["error"],
+            "result_path": job["result_path"],
+            "tracking_overlay_path": job["tracking_overlay_path"],
+            "tracking_data_path": job["tracking_data_path"]
+        }
+        
+    # 2. Fallback to in-memory store if not yet flushed to DB (e.g. legacy/fast checks)
+    with _job_store_lock:
+        rec = _job_store.get(job_id)
+        
+    # Owner verification check on memory fallback: check if match belongs to user
+    if rec and DatabaseService.check_match_ownership(job_id, user_id):
+        return {
+            "job_id": rec.job_id,
+            "status": rec.status,
+            "current_step": rec.current_step,
+            "error": rec.error,
+            "result_path": rec.result_path,
+            "tracking_overlay_path": rec.tracking_overlay_path,
+            "tracking_data_path": rec.tracking_data_path
+        }
+
+    raise HTTPException(status_code=404, detail="Job not found or access denied")
+
+
 

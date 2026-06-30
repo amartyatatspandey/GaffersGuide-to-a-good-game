@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Barlow, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/AuthProvider";
 
 const barlow = Barlow({
   variable: "--font-barlow",
@@ -28,8 +29,11 @@ export default function RootLayout({
       <body className="bg-pitch text-chalk min-h-screen flex flex-col font-sans selection:bg-neon/30 selection:text-neon relative">
         {/* Fixed background grid */}
         <div className="fixed inset-0 pointer-events-none z-[-1] bg-grid opacity-50"></div>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

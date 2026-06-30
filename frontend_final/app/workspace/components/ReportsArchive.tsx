@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
 import { 
   Database, Search, FolderOpen, Calendar, ArrowRight, Loader2, 
   Trash2, Film, RefreshCw, AlertTriangle, Zap, ShieldAlert, Award
@@ -15,19 +16,10 @@ export function ReportsArchive({ onOpenReport }: { onOpenReport: (report: any) =
   const [downloadingVideo, setDownloadingVideo] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadMatches();
-    
-    // Poll list if any match is in processing or pending status
-    const interval = setInterval(() => {
-      const activeJobs = matches.some(m => m.status === 'processing' || m.status === 'pending');
-      if (activeJobs) {
-        loadMatches(false); // Silent reload
-      }
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [matches]);
+  // Keep a stable ref to the latest matches so the polling interval
+  // can read it without being listed as a dependency (avoids infinite loop).
+  const matchesRef = useRef<any[]>(matches);
+  useEffect(() => { matchesRef.current = matches; }, [matches]);
 
   async function loadMatches(showLoader = true) {
     if (showLoader) setLoading(true);
@@ -41,10 +33,30 @@ export function ReportsArchive({ onOpenReport }: { onOpenReport: (report: any) =
     }
   }
 
-  // Trigger load matches on search or sort changes
+  // Initial load only (runs once on mount).
+  useEffect(() => {
+    loadMatches();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Stable polling interval — created once, uses ref to check latest matches.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const activeJobs = matchesRef.current.some(
+        (m) => m.status === 'processing' || m.status === 'pending'
+      );
+      if (activeJobs) {
+        loadMatches(false); // Silent reload only when jobs are active
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reload when search term or sort order changes.
   useEffect(() => {
     loadMatches(true);
-  }, [searchTerm, sortBy]);
+  }, [searchTerm, sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
 
   async function handleOpen(matchId: string, status: string) {
     if (status !== 'completed' && status !== 'done') {

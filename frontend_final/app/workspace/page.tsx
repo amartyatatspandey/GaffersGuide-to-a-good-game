@@ -16,11 +16,25 @@ import { getTracking } from '@/lib/api/jobs';
 import { getCoachAdvice, getEnrichedReport } from '@/lib/api/coach';
 import type { CoachAdviceResponse } from '@/lib/api/coach';
 import { debugSessionLog } from '@/lib/debugSessionLog';
+import { useAuth } from '@/components/AuthProvider';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 export default function WorkspacePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
   const [ingestionComplete, setIngestionComplete] = useState(false);
   const [currentView, setCurrentView] = useState<'dashboard' | 'matches' | 'match_setup' | 'player_mapping' | 'reports' | 'players' | 'dictionary'>('dashboard');
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login?next=/workspace");
+    }
+  }, [user, loading, router]);
+
   const [activeJob, setActiveJob] = useState<{ jobId: string; file: File; tracking: any; isHistorical?: boolean } | null>(null);
+
   const [coachAdvice, setCoachAdvice] = useState<CoachAdviceResponse | null>(null);
   const [coachError, setCoachError] = useState<string | null>(null);
   const coachDelayedRefetchSent = useRef<Set<string>>(new Set());
@@ -215,6 +229,19 @@ export default function WorkspacePage() {
     setIngestionComplete(true);
     setCurrentView('dashboard');
   };
+
+  if (loading) {
+    return (
+      <div className="h-screen w-screen bg-[#0a0f0a] flex flex-col items-center justify-center font-mono">
+        <Loader2 className="animate-spin text-emerald-500 mb-4" size={40} />
+        <p className="text-gray-500 text-xs uppercase tracking-widest">Verifying Coach Credentials...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#0a0f0a] text-gray-300 antialiased selection:bg-emerald-500/30 selection:text-emerald-300">

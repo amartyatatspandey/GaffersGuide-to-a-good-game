@@ -8,7 +8,12 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = BACKEND_ROOT / "data" / "gaffer.db"
+# DB_PATH is configurable via environment variable.
+# In production on Cloud Run, set DB_PATH to a Cloud SQL socket or a
+# Cloud Filestore-mounted path to achieve stateless multi-instance operation.
+# Local dev default: backend/data/gaffer.db
+_db_path_env = os.getenv("DB_PATH", "").strip()
+DB_PATH = Path(_db_path_env) if _db_path_env else BACKEND_ROOT / "data" / "gaffer.db"
 REPORTS_DIR = BACKEND_ROOT / "data" / "reports"
 UPLOADS_DIR = BACKEND_ROOT / "data" / "uploads"
 
@@ -68,6 +73,13 @@ class DatabaseService:
                     FOREIGN KEY (account_id) REFERENCES accounts(id)
                 );
                 """)
+
+                # Safe column migration: add user_id to matches if not exists
+                try:
+                    conn.execute("ALTER TABLE matches ADD COLUMN user_id VARCHAR(36);")
+                    LOGGER.info("Successfully added matches.user_id column.")
+                except Exception:
+                    pass # Already exists
                 
                 conn.execute("""
                 CREATE TABLE IF NOT EXISTS match_metrics (
@@ -83,6 +95,63 @@ class DatabaseService:
                 );
                 """)
 
+                # ── Multi-tenant Tables ───────────────────────────────────────
+                conn.execute("""
+                CREATE TABLE IF NOT EXISTS reports (
+                    id VARCHAR(36) PRIMARY KEY,
+                    match_id VARCHAR(36) NOT NULL,
+                    user_id VARCHAR(36) NOT NULL,
+                    filename VARCHAR(255) NOT NULL,
+                    video_title VARCHAR(255),
+                    flaw_count INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                """)
+
+                conn.execute("""
+                CREATE TABLE IF NOT EXISTS player_mappings (
+                    job_id VARCHAR(36) PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
+                    mapping_data TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                """)
+
+                conn.execute("""
+                CREATE TABLE IF NOT EXISTS chat_history (
+                    id VARCHAR(36) PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
+                    job_id VARCHAR(36),
+                    message TEXT NOT NULL,
+                    reply TEXT NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                """)
+
+                conn.execute("""
+                CREATE TABLE IF NOT EXISTS jobs (
+                    id VARCHAR(36) PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
+                    status VARCHAR(50) NOT NULL,
+                    current_step VARCHAR(100) NOT NULL,
+                    cv_engine VARCHAR(50) NOT NULL,
+                    llm_engine VARCHAR(50) NOT NULL,
+                    quality_profile VARCHAR(50),
+                    chunking_interval VARCHAR(100),
+                    result_path TEXT,
+                    tracking_overlay_path TEXT,
+                    tracking_data_path TEXT,
+                    error TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                """)
+                # ──────────────────────────────────────────────────────────────
+
                 # 2. Insert default tenant (Default Team account & user)
                 conn.execute("""
                 INSERT OR IGNORE INTO accounts (id, name)
@@ -93,6 +162,23 @@ class DatabaseService:
                 INSERT OR IGNORE INTO users (id, account_id, email, role)
                 VALUES ('default-user-id', 'default-account-id', 'coach@gaffersguide.com', 'coach');
                 """)
+
+                # Also seed the mock bypass user into database so foreign key checks pass
+                conn.execute("""
+                INSERT OR IGNORE INTO users (id, account_id, email, role)
+                VALUES ('local-dev-user', 'default-account-id', 'dev@localhost', 'coach');
+                """)
+
+                conn.execute("""
+                INSERT OR IGNORE INTO users (id, account_id, email, role)
+                VALUES ('pytest-bypass', 'default-account-id', 'test@gaffersguide.local', 'coach');
+                """)
+
+                # Backfill matches with missing user_id
+                conn.execute("""
+                UPDATE matches SET user_id = 'default-user-id' WHERE user_id IS NULL;
+                """)
+
             
             # 3. Migrate existing reports to DB
             with conn:
@@ -300,12 +386,13 @@ class DatabaseService:
     @classmethod
     def list_matches(
         cls, 
+        user_id: str,
         search: Optional[str] = None, 
         sort_by: str = "newest", 
         limit: int = 100, 
         offset: int = 0
     ) -> List[Dict[str, Any]]:
-        """Lists matches with cached metrics from the DB."""
+        """Lists matches belonging to a specific user with cached metrics from the DB."""
         conn = cls.get_connection()
         try:
             query = """
@@ -316,11 +403,12 @@ class DatabaseService:
                        mm.flaw_count
                 FROM matches m
                 LEFT JOIN match_metrics mm ON m.id = mm.match_id
+                WHERE m.user_id = ?
             """
-            params = []
+            params = [user_id]
             
             if search:
-                query += " WHERE m.name LIKE ? OR m.upload_date LIKE ?"
+                query += " AND (m.name LIKE ? OR m.upload_date LIKE ?)"
                 search_val = f"%{search}%"
                 params.extend([search_val, search_val])
             
@@ -340,9 +428,42 @@ class DatabaseService:
             conn.close()
 
     @classmethod
+    def get_match(cls, match_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves a single match details, verifying user ownership."""
+        conn = cls.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT m.*, 
+                       mm.tactical_power_red, mm.tactical_power_blue,
+                       mm.compactness_red, mm.compactness_blue,
+                       mm.transition_speed_red, mm.transition_speed_blue,
+                       mm.flaw_count
+                FROM matches m
+                LEFT JOIN match_metrics mm ON m.id = mm.match_id
+                WHERE m.id = ? AND m.user_id = ?
+            """, (match_id, user_id))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    @classmethod
+    def check_match_ownership(cls, match_id: str, user_id: str) -> bool:
+        """Return True if match exists and belongs to user_id."""
+        conn = cls.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM matches WHERE id = ? AND user_id = ?", (match_id, user_id))
+            return cursor.fetchone() is not None
+        finally:
+            conn.close()
+
+    @classmethod
     def create_match(
         cls, 
         match_id: str, 
+        user_id: str,
         name: str, 
         video_filename: str, 
         cv_engine: str, 
@@ -350,22 +471,22 @@ class DatabaseService:
         quality_profile: str, 
         chunking_interval: str
     ):
-        """Inserts a new match record into the database."""
+        """Inserts a new match record into the database owned by user_id."""
         conn = cls.get_connection()
         try:
             with conn:
                 conn.execute("""
                 INSERT INTO matches (
-                    id, account_id, name, status, video_filename,
+                    id, account_id, user_id, name, status, video_filename,
                     cv_engine, llm_engine, quality_profile, chunking_interval
-                ) VALUES (?, 'default-account-id', ?, 'pending', ?, ?, ?, ?, ?);
-                """, (match_id, name, video_filename, cv_engine, llm_engine, quality_profile, chunking_interval))
+                ) VALUES (?, 'default-account-id', ?, ?, 'pending', ?, ?, ?, ?, ?);
+                """, (match_id, user_id, name, video_filename, cv_engine, llm_engine, quality_profile, chunking_interval))
         finally:
             conn.close()
 
     @classmethod
     def update_match_status(cls, match_id: str, status: str, error: Optional[str] = None):
-        """Updates match status, setting analysis date if complete."""
+        """Updates match status, setting analysis date if complete. Used asynchronously."""
         conn = cls.get_connection()
         try:
             with conn:
@@ -386,7 +507,7 @@ class DatabaseService:
 
     @classmethod
     def update_match_metrics(cls, match_id: str, metrics: Dict[str, Any]):
-        """Inserts or replaces metrics for a match."""
+        """Inserts or replaces metrics for a match. Used asynchronously."""
         conn = cls.get_connection()
         try:
             with conn:
@@ -410,16 +531,135 @@ class DatabaseService:
             conn.close()
 
     @classmethod
-    def delete_match(cls, match_id: str) -> bool:
-        """Deletes match from DB."""
+    def delete_match(cls, match_id: str, user_id: str) -> bool:
+        """Deletes match from DB if owned by user_id."""
         conn = cls.get_connection()
         try:
             with conn:
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM matches WHERE id = ?;", (match_id,))
+                cursor.execute("DELETE FROM matches WHERE id = ? AND user_id = ?;", (match_id, user_id))
                 return cursor.rowcount > 0
         finally:
             conn.close()
+
+    # ── Player Mappings Ownership ─────────────────────────────────────────────
+    @classmethod
+    def get_player_mapping(cls, job_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get player mapping config if owned by user_id."""
+        conn = cls.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM player_mappings WHERE job_id = ? AND user_id = ?", (job_id, user_id))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    @classmethod
+    def save_player_mapping(cls, job_id: str, user_id: str, mapping_data: str) -> None:
+        """Create or update a player mapping config owned by user_id."""
+        conn = cls.get_connection()
+        try:
+            with conn:
+                conn.execute("""
+                INSERT INTO player_mappings (job_id, user_id, mapping_data, updated_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(job_id) DO UPDATE SET
+                    mapping_data = excluded.mapping_data,
+                    updated_at = CURRENT_TIMESTAMP;
+                """, (job_id, user_id, mapping_data))
+        finally:
+            conn.close()
+
+    # ── Chat History Ownership ────────────────────────────────────────────────
+    @classmethod
+    def get_chat_history(cls, job_id: Optional[str], user_id: str) -> List[Dict[str, Any]]:
+        """Get chat logs for a match owned by user_id."""
+        conn = cls.get_connection()
+        try:
+            cursor = conn.cursor()
+            if job_id:
+                cursor.execute("SELECT * FROM chat_history WHERE job_id = ? AND user_id = ? ORDER BY timestamp ASC", (job_id, user_id))
+            else:
+                cursor.execute("SELECT * FROM chat_history WHERE user_id = ? ORDER BY timestamp ASC", (user_id,))
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            conn.close()
+
+    @classmethod
+    def save_chat_message(cls, id: str, user_id: str, job_id: Optional[str], message: str, reply: str) -> None:
+        """Persist a chat message/reply pair owned by user_id."""
+        conn = cls.get_connection()
+        try:
+            with conn:
+                conn.execute("""
+                INSERT INTO chat_history (id, user_id, job_id, message, reply)
+                VALUES (?, ?, ?, ?, ?);
+                """, (id, user_id, job_id, message, reply))
+        finally:
+            conn.close()
+
+    # ── Job Store Ownership ───────────────────────────────────────────────────
+    @classmethod
+    def get_job(cls, job_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get job record owned by user_id."""
+        conn = cls.get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM jobs WHERE id = ? AND user_id = ?", (job_id, user_id))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    @classmethod
+    def save_job_record(
+        cls,
+        job_id: str,
+        user_id: str,
+        status: str,
+        current_step: str,
+        cv_engine: str,
+        llm_engine: str,
+        quality_profile: str,
+        chunking_interval: str
+    ) -> None:
+        """Initialize or save a new job record owned by user_id."""
+        conn = cls.get_connection()
+        try:
+            with conn:
+                conn.execute("""
+                INSERT INTO jobs (
+                    id, user_id, status, current_step, cv_engine, llm_engine, quality_profile, chunking_interval
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+                """, (job_id, user_id, status, current_step, cv_engine, llm_engine, quality_profile, chunking_interval))
+        finally:
+            conn.close()
+
+    @classmethod
+    def update_job_status_db(
+        cls,
+        job_id: str,
+        status: str,
+        current_step: str,
+        error: Optional[str] = None,
+        result_path: Optional[str] = None,
+        tracking_overlay_path: Optional[str] = None,
+        tracking_data_path: Optional[str] = None
+    ) -> None:
+        """Update job metrics. Used asynchronously without user context."""
+        conn = cls.get_connection()
+        try:
+            with conn:
+                conn.execute("""
+                UPDATE jobs
+                SET status = ?, current_step = ?, error = ?, result_path = ?, tracking_overlay_path = ?, tracking_data_path = ?
+                WHERE id = ?;
+                """, (status, current_step, error, result_path, tracking_overlay_path, tracking_data_path, job_id))
+        finally:
+            conn.close()
+
 
 
 def json_load_fail_safe(f) -> Optional[dict]:

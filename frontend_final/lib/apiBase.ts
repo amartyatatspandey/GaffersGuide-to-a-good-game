@@ -54,6 +54,10 @@ export function getAuthHeaders(): Record<string, string> {
     if (cloudApiKey) {
       headers["X-LLM-API-Key"] = cloudApiKey;
     }
+    const token = localStorage.getItem("gaffer-supabase-token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
   }
   return headers;
 }

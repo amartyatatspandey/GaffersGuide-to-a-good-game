@@ -6,6 +6,9 @@ import logging
 import os
 from pathlib import Path
 
+from services.observability import track_gemini_call
+
+
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -51,10 +54,12 @@ def generate_coaching_advice(prompt: str) -> str:
     # Default: current Flash on the Gemini API (`gemini-1.5-flash` IDs often 404 on v1beta).
     model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     model = genai.GenerativeModel(model_name)
-    response = model.generate_content(
-        prompt,
-        generation_config={"temperature": 0.35, "max_output_tokens": 600},
-    )
+    with track_gemini_call(model_name=model_name):
+        response = model.generate_content(
+            prompt,
+            generation_config={"temperature": 0.35, "max_output_tokens": 600},
+        )
+
     try:
         text = response.text
     except (ValueError, AttributeError) as exc:
