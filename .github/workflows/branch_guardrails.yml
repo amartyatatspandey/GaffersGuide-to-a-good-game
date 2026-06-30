@@ -1,18 +1,17 @@
-name: Branch Guardrails
-
 on:
   push:
     branches:
       - main
       - backend-dev
       - frontend-dev
+      - feature/fixture-intelligence
 
   pull_request:
     branches:
       - main
       - backend-dev
       - frontend-dev
-
+      - feature/fixture-intelligence
 jobs:
   backend-quality:
     name: Backend quality
