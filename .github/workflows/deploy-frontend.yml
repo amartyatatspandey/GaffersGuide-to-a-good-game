@@ -32,12 +32,14 @@ jobs:
       - name: Build and Push Frontend Image
         run: |
           docker build \
-            -f frontend_final/Dockerfile \
-            -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api/gaffers-guide-frontend:${{ github.sha }} \
-            -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api/gaffers-guide-frontend:latest \
-            --build-arg NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }} \
-            --build-arg NEXT_PUBLIC_API_KEY=${{ secrets.NEXT_PUBLIC_API_KEY }} \
-            frontend_final
+          -f frontend_final/Dockerfile \
+          -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api/gaffers-guide-frontend:${{ github.sha }} \
+          -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api/gaffers-guide-frontend:latest \
+          --build-arg NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }} \
+          --build-arg NEXT_PUBLIC_API_KEY=${{ secrets.NEXT_PUBLIC_API_KEY }} \
+          --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
+          --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
+          frontend_final
 
           docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api/gaffers-guide-frontend:${{ github.sha }}
           docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/gaffers-guide-api/gaffers-guide-frontend:latest
