@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 from pathlib import Path
 from typing import Callable, Literal, Optional, Protocol
 
@@ -12,6 +13,7 @@ import httpx
 
 from services.errors import EngineRoutingError
 from services.llm_router import LLMEngine
+from services.observability import perf_stage
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,9 +58,12 @@ class LocalCVRunner:
                     "Local video not found — downloading from GCS: %s → %s",
                     gcs_blob_name, tmp_path,
                 )
-                gcs_service.download_file(gcs_blob_name, tmp_path)
+                with perf_stage(LOGGER, job_id, "gcs_download", blob=gcs_blob_name):
+                    gcs_service.download_file(gcs_blob_name, tmp_path)
                 video_path = tmp_path
                 local_video_was_downloaded = True
+            except EngineRoutingError:
+                raise
             except Exception as gcs_err:  # noqa: BLE001
                 raise EngineRoutingError(
                     status_code=503,

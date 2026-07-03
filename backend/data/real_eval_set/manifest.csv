@@ -1,0 +1,47 @@
+clip_id,video_source,frame_range,heatmap_path,label
+clip_001,0812efcb80324fc3bab637e03e636b81.mp4,510-510,backend/data/real_eval_set/heatmaps/clip_001_heatmap.png,Inverted Full Backs
+clip_002,0812efcb80324fc3bab637e03e636b81.mp4,720-720,backend/data/real_eval_set/heatmaps/clip_002_heatmap.png,Inverted Full Backs
+clip_003,1b226175902d41da8d45266b53338b90.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_003_heatmap.png,Double Pivot
+clip_004,1b226175902d41da8d45266b53338b90.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_004_heatmap.png,UNCLEAR / SKIP
+clip_005,21b654fdbacb4f2f94e828bda3a75d1b.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_005_heatmap.png,4-3-3 High Press
+clip_006,21b654fdbacb4f2f94e828bda3a75d1b.mp4,450-450,backend/data/real_eval_set/heatmaps/clip_006_heatmap.png,4-3-3 High Press
+clip_007,286ae86054d74e25aeb1bf36d06796ca.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_007_heatmap.png,Double Pivot
+clip_008,286ae86054d74e25aeb1bf36d06796ca.mp4,390-390,backend/data/real_eval_set/heatmaps/clip_008_heatmap.png,Double Pivot
+clip_009,453cd113db474554bb187b8b32ab3df6.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_009_heatmap.png,UNCLEAR / SKIP
+clip_010,453cd113db474554bb187b8b32ab3df6.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_010_heatmap.png,Double Pivot
+clip_011,5a86c83f3f124ec79f97cf2a26bc5447.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_011_heatmap.png,Double Pivot
+clip_012,5a86c83f3f124ec79f97cf2a26bc5447.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_012_heatmap.png,Double Pivot
+clip_013,6a008d8e73894786a58e67cb19bac4fd.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_013_heatmap.png,Inverted Full Backs
+clip_014,6a008d8e73894786a58e67cb19bac4fd.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_014_heatmap.png,UNCLEAR / SKIP
+clip_015,6bb828094d3b48f8a17004ff7765bca8.mp4,510-510,backend/data/real_eval_set/heatmaps/clip_015_heatmap.png,4-2-3-1 Mid Block
+clip_016,6bb828094d3b48f8a17004ff7765bca8.mp4,720-720,backend/data/real_eval_set/heatmaps/clip_016_heatmap.png,3-5-2 Wing Backs
+clip_017,75c2d30e16384598a695846009b2c670.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_017_heatmap.png,Inverted Full Backs
+clip_018,75c2d30e16384598a695846009b2c670.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_018_heatmap.png,UNCLEAR / SKIP
+clip_019,81c342c45c2541e6bf8cdefb40566a3a.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_019_heatmap.png,Double Pivot
+clip_020,81c342c45c2541e6bf8cdefb40566a3a.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_020_heatmap.png,UNCLEAR / SKIP
+clip_021,820d2628d6ef46c3ab3fe67ab99ff0a3.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_021_heatmap.png,3-5-2 Wing Backs
+clip_022,820d2628d6ef46c3ab3fe67ab99ff0a3.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_022_heatmap.png,UNCLEAR / SKIP
+clip_023,8824743d00f14a589f22f525541994e2.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_023_heatmap.png,Double Pivot
+clip_024,8824743d00f14a589f22f525541994e2.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_024_heatmap.png,UNCLEAR / SKIP
+clip_025,90914711ee664a359878f7ad635dce14.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_025_heatmap.png,UNLABELED
+clip_026,90914711ee664a359878f7ad635dce14.mp4,450-450,backend/data/real_eval_set/heatmaps/clip_026_heatmap.png,UNLABELED
+clip_027,98fabf9a5e0a48738852fce23621e759.mp4,240-240,backend/data/real_eval_set/heatmaps/clip_027_heatmap.png,UNLABELED
+clip_028,98fabf9a5e0a48738852fce23621e759.mp4,390-390,backend/data/real_eval_set/heatmaps/clip_028_heatmap.png,UNLABELED
+clip_029,9c1f60b9a84a4107ae1888b062e38a62.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_029_heatmap.png,UNLABELED
+clip_030,9c1f60b9a84a4107ae1888b062e38a62.mp4,540-540,backend/data/real_eval_set/heatmaps/clip_030_heatmap.png,UNLABELED
+clip_031,ac5b803a80454cbea908be5119907026.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_031_heatmap.png,UNLABELED
+clip_032,ac5b803a80454cbea908be5119907026.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_032_heatmap.png,Inverted Full Backs
+clip_033,b8704738dbcf42a2b1390ce978ebc420.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_033_heatmap.png,Double Pivot
+clip_034,b8704738dbcf42a2b1390ce978ebc420.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_034_heatmap.png,UNCLEAR / SKIP
+clip_035,c79118b879f3498ca98199eaa9aac319.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_035_heatmap.png,Double Pivot
+clip_036,c79118b879f3498ca98199eaa9aac319.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_036_heatmap.png,UNCLEAR / SKIP
+clip_037,c8bb975f568f4571b71e7e07ee9552f5.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_037_heatmap.png,Double Pivot
+clip_038,c8bb975f568f4571b71e7e07ee9552f5.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_038_heatmap.png,UNCLEAR / SKIP
+clip_039,cd9f46a359f44976bef64138e840546d.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_039_heatmap.png,Double Pivot
+clip_040,cd9f46a359f44976bef64138e840546d.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_040_heatmap.png,UNCLEAR / SKIP
+clip_041,dea8f3c991bb4710b3e5e8515f65af27.mp4,270-270,backend/data/real_eval_set/heatmaps/clip_041_heatmap.png,4-2-3-1 Mid Block
+clip_042,dea8f3c991bb4710b3e5e8515f65af27.mp4,480-480,backend/data/real_eval_set/heatmaps/clip_042_heatmap.png,4-2-3-1 Mid Block
+clip_043,e867144fa7394a5d93e5ad9c7b35a89f.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_043_heatmap.png,Double Pivot
+clip_044,e867144fa7394a5d93e5ad9c7b35a89f.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_044_heatmap.png,UNCLEAR / SKIP
+clip_045,f4ba9f7eaa864dba8e594c407943b7f6.mp4,210-210,backend/data/real_eval_set/heatmaps/clip_045_heatmap.png,Double Pivot
+clip_046,f4ba9f7eaa864dba8e594c407943b7f6.mp4,360-360,backend/data/real_eval_set/heatmaps/clip_046_heatmap.png,UNCLEAR / SKIP

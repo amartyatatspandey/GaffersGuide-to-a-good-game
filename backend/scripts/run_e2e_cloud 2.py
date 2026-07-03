@@ -466,8 +466,8 @@ def run_cv_tracking_batched(
                         {
                             "id": row["id"],
                             "team_id": team_label,
-                            "x_pitch": float(rp[0]) if rp is not None else None,
-                            "y_pitch": float(rp[1]) if rp is not None else None,
+                            "x_pitch": float(rp[0]) / 10.0 - 52.5 if rp is not None else None,
+                            "y_pitch": float(rp[1]) / 10.0 - 34.0 if rp is not None else None,
                             "x_canvas": float((bbox[0] + bbox[2]) / 2.0),
                             "y_canvas": float((bbox[1] + bbox[3]) / 2.0),
                         }

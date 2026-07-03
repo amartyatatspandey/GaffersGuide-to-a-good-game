@@ -76,6 +76,7 @@ from services.observability import (
     set_correlation_id,
     gemini_monitor,
     upload_monitor,
+    perf_stage,
 )
 
 BACKEND_ROOT = Path(__file__).resolve().parent
@@ -616,6 +617,8 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine, *, gcs_bl
         except Exception:
             pass
 
+    _job_t0 = time.perf_counter()
+
     with _job_store_lock:
         rec = _job_store.get(job_id)
         if rec:
@@ -636,13 +639,14 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine, *, gcs_bl
 
     try:
         runner = CVRouterFactory.get(cv_engine)
-        report_path = await runner.run(
-            job_id=job_id,
-            video_path=video_path,
-            gcs_blob_name=gcs_blob_name,
-            progress_callback=progress_callback,
-            llm_engine=job_llm_engine,
-        )
+        with perf_stage(LOGGER, job_id, "cv_pipeline_total", cv_engine=cv_engine):
+            report_path = await runner.run(
+                job_id=job_id,
+                video_path=video_path,
+                gcs_blob_name=gcs_blob_name,
+                progress_callback=progress_callback,
+                llm_engine=job_llm_engine,
+            )
 
         report_path_p, overlay_path_p, tracking_path_p = _job_artifact_paths(job_id)
         res_p = str(report_path)
@@ -720,16 +724,62 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine, *, gcs_bl
                 f"{job_id}_threat_profiles.json":  gcs_service.export_blob_name(job_id, f"{job_id}_threat_profiles.json"),
             }
             output_dir = BACKEND_ROOT / "output"
+            _gcs_sync_t0 = time.perf_counter()
+            _gcs_sync_count = 0
             for local_name, blob_name in artifact_map.items():
                 local_file = output_dir / local_name
                 if local_file.is_file():
+                    _art_t0 = time.perf_counter()
                     gcs_service.upload_file(local_file, blob_name)
+                    LOGGER.info(
+                        "PERF_STAGE",
+                        extra={
+                            "job_id": job_id,
+                            "stage": "gcs_artifact_upload",
+                            "artifact": local_name,
+                            "duration_seconds": round(time.perf_counter() - _art_t0, 3),
+                            "status": "ok",
+                        },
+                    )
                     LOGGER.info("GCS export: %s → %s", local_name, blob_name)
+                    _gcs_sync_count += 1
+            LOGGER.info(
+                "PERF_STAGE",
+                extra={
+                    "job_id": job_id,
+                    "stage": "gcs_artifact_sync_total",
+                    "duration_seconds": round(time.perf_counter() - _gcs_sync_t0, 3),
+                    "artifacts_uploaded": _gcs_sync_count,
+                    "status": "ok",
+                },
+            )
         except Exception as gcs_err:  # noqa: BLE001
             LOGGER.warning("GCS artifact sync failed for job %s: %s", job_id, gcs_err)
 
+        LOGGER.info(
+            "PERF_STAGE",
+            extra={
+                "job_id": job_id,
+                "stage": "job_total",
+                "duration_seconds": round(time.perf_counter() - _job_t0, 3),
+                "status": "ok",
+            },
+        )
+
+
     except EngineRoutingError as exc:
         LOGGER.exception("Job %s failed with routing error", job_id)
+        LOGGER.info(
+            "PERF_STAGE",
+            extra={
+                "job_id": job_id,
+                "stage": "job_total",
+                "duration_seconds": round(time.perf_counter() - _job_t0, 3),
+                "status": "error",
+                "error_code": exc.code,
+            },
+        )
+
         with _job_store_lock:
             rec = _job_store.get(job_id)
             if rec:
@@ -744,6 +794,15 @@ async def _run_job(job_id: str, video_path: Path, cv_engine: CVEngine, *, gcs_bl
             LOGGER.error("DB Error: %s", db_err)
     except Exception as exc:  # noqa: BLE001
         LOGGER.exception("Job %s failed", job_id)
+        LOGGER.info(
+            "PERF_STAGE",
+            extra={
+                "job_id": job_id,
+                "stage": "job_total",
+                "duration_seconds": round(time.perf_counter() - _job_t0, 3),
+                "status": "error",
+            },
+        )
         with _job_store_lock:
             rec = _job_store.get(job_id)
             if rec:

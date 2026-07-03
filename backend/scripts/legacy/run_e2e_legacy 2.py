@@ -1030,8 +1030,8 @@ def run_cv_tracking(
                     {
                         "id": row["id"],
                         "team_id": team_label,
-                        "x_pitch": float(rp[0]) if rp is not None else None,
-                        "y_pitch": float(rp[1]) if rp is not None else None,
+                        "x_pitch": float(rp[0]) / 10.0 - 52.5 if rp is not None else None,
+                        "y_pitch": float(rp[1]) / 10.0 - 34.0 if rp is not None else None,
                         "x_canvas": x_canvas,
                         "y_canvas": y_canvas,
                     }
@@ -1103,6 +1103,7 @@ def _write_tracking_artifact(
             # pixels (scale=10 → 10 px ≈ 1 m on a 105×68 m pitch).
             "player_position_space": "meters",
             "radar_pixels_per_meter": 10,
+            "coord_space": "meters_centered",
         },
         "frames": [
             {

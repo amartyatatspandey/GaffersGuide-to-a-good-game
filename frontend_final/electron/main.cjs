@@ -60,9 +60,10 @@ function createWindow() {
 
   const loadUrl = resolveWorkspaceUrl();
   win.loadURL(loadUrl);
-  if (!app.isPackaged) {
-    win.webContents.openDevTools({ mode: "detach" });
-  }
+  // DevTools disabled by default in dev — open manually via View > Toggle Developer Tools if needed
+  // if (!app.isPackaged) {
+  //   win.webContents.openDevTools({ mode: "detach" });
+  // }
 }
 
 app.whenReady().then(() => {

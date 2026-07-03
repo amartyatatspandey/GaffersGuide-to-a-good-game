@@ -1,0 +1,139 @@
+clip_id,video_source,frame_range,heatmap_path,label
+clip_001,0812efcb80324fc3bab637e03e636b81.mp4,900-900,backend/data/cnn_baseline/raw_heatmaps/clip_001_heatmap.png,UNCLEAR / SKIP
+clip_002,0812efcb80324fc3bab637e03e636b81.mp4,1050-1050,backend/data/cnn_baseline/raw_heatmaps/clip_002_heatmap.png,UNCLEAR / SKIP
+clip_003,0812efcb80324fc3bab637e03e636b81.mp4,1230-1230,backend/data/cnn_baseline/raw_heatmaps/clip_003_heatmap.png,4-3-3 High Press
+clip_004,0812efcb80324fc3bab637e03e636b81.mp4,1620-1620,backend/data/cnn_baseline/raw_heatmaps/clip_004_heatmap.png,4-3-3 High Press
+clip_005,0812efcb80324fc3bab637e03e636b81.mp4,1770-1770,backend/data/cnn_baseline/raw_heatmaps/clip_005_heatmap.png,4-3-3 High Press
+clip_006,0812efcb80324fc3bab637e03e636b81.mp4,2040-2040,backend/data/cnn_baseline/raw_heatmaps/clip_006_heatmap.png,4-3-3 High Press
+clip_007,1b226175902d41da8d45266b53338b90.mp4,540-540,backend/data/cnn_baseline/raw_heatmaps/clip_007_heatmap.png,Double Pivot
+clip_008,1b226175902d41da8d45266b53338b90.mp4,780-780,backend/data/cnn_baseline/raw_heatmaps/clip_008_heatmap.png,UNCLEAR / SKIP
+clip_009,1b226175902d41da8d45266b53338b90.mp4,1200-1200,backend/data/cnn_baseline/raw_heatmaps/clip_009_heatmap.png,3-5-2 Wing Backs
+clip_010,1b226175902d41da8d45266b53338b90.mp4,1440-1440,backend/data/cnn_baseline/raw_heatmaps/clip_010_heatmap.png,3-5-2 Wing Backs
+clip_011,1b226175902d41da8d45266b53338b90.mp4,1620-1620,backend/data/cnn_baseline/raw_heatmaps/clip_011_heatmap.png,Inverted Full Backs
+clip_012,1b226175902d41da8d45266b53338b90.mp4,1770-1770,backend/data/cnn_baseline/raw_heatmaps/clip_012_heatmap.png,4-3-3 High Press
+clip_013,21b654fdbacb4f2f94e828bda3a75d1b.mp4,1080-1080,backend/data/cnn_baseline/raw_heatmaps/clip_013_heatmap.png,UNCLEAR / SKIP
+clip_014,21b654fdbacb4f2f94e828bda3a75d1b.mp4,1380-1380,backend/data/cnn_baseline/raw_heatmaps/clip_014_heatmap.png,4-3-3 High Press
+clip_015,21b654fdbacb4f2f94e828bda3a75d1b.mp4,1650-1650,backend/data/cnn_baseline/raw_heatmaps/clip_015_heatmap.png,4-3-3 High Press
+clip_016,21b654fdbacb4f2f94e828bda3a75d1b.mp4,1800-1800,backend/data/cnn_baseline/raw_heatmaps/clip_016_heatmap.png,4-3-3 High Press
+clip_017,21b654fdbacb4f2f94e828bda3a75d1b.mp4,1950-1950,backend/data/cnn_baseline/raw_heatmaps/clip_017_heatmap.png,3-5-2 Wing Backs
+clip_018,21b654fdbacb4f2f94e828bda3a75d1b.mp4,2100-2100,backend/data/cnn_baseline/raw_heatmaps/clip_018_heatmap.png,Double Pivot
+clip_019,286ae86054d74e25aeb1bf36d06796ca.mp4,570-570,backend/data/cnn_baseline/raw_heatmaps/clip_019_heatmap.png,UNCLEAR / SKIP
+clip_020,286ae86054d74e25aeb1bf36d06796ca.mp4,750-750,backend/data/cnn_baseline/raw_heatmaps/clip_020_heatmap.png,Double Pivot
+clip_021,286ae86054d74e25aeb1bf36d06796ca.mp4,1530-1530,backend/data/cnn_baseline/raw_heatmaps/clip_021_heatmap.png,3-5-2 Wing Backs
+clip_022,286ae86054d74e25aeb1bf36d06796ca.mp4,1800-1800,backend/data/cnn_baseline/raw_heatmaps/clip_022_heatmap.png,3-5-2 Wing Backs
+clip_023,286ae86054d74e25aeb1bf36d06796ca.mp4,1980-1980,backend/data/cnn_baseline/raw_heatmaps/clip_023_heatmap.png,4-2-3-1 Mid Block
+clip_024,286ae86054d74e25aeb1bf36d06796ca.mp4,2190-2190,backend/data/cnn_baseline/raw_heatmaps/clip_024_heatmap.png,4-2-3-1 Mid Block
+clip_025,453cd113db474554bb187b8b32ab3df6.mp4,570-570,backend/data/cnn_baseline/raw_heatmaps/clip_025_heatmap.png,UNCLEAR / SKIP
+clip_026,453cd113db474554bb187b8b32ab3df6.mp4,810-810,backend/data/cnn_baseline/raw_heatmaps/clip_026_heatmap.png,4-3-3 High Press
+clip_027,453cd113db474554bb187b8b32ab3df6.mp4,960-960,backend/data/cnn_baseline/raw_heatmaps/clip_027_heatmap.png,Inverted Full Backs
+clip_028,453cd113db474554bb187b8b32ab3df6.mp4,1110-1110,backend/data/cnn_baseline/raw_heatmaps/clip_028_heatmap.png,4-3-3 High Press
+clip_029,453cd113db474554bb187b8b32ab3df6.mp4,1710-1710,backend/data/cnn_baseline/raw_heatmaps/clip_029_heatmap.png,4-3-3 High Press
+clip_030,453cd113db474554bb187b8b32ab3df6.mp4,1890-1890,backend/data/cnn_baseline/raw_heatmaps/clip_030_heatmap.png,4-3-3 High Press
+clip_031,5a86c83f3f124ec79f97cf2a26bc5447.mp4,540-540,backend/data/cnn_baseline/raw_heatmaps/clip_031_heatmap.png,UNCLEAR / SKIP
+clip_032,5a86c83f3f124ec79f97cf2a26bc5447.mp4,690-690,backend/data/cnn_baseline/raw_heatmaps/clip_032_heatmap.png,4-3-3 High Press
+clip_033,5a86c83f3f124ec79f97cf2a26bc5447.mp4,960-960,backend/data/cnn_baseline/raw_heatmaps/clip_033_heatmap.png,Double Pivot
+clip_034,5a86c83f3f124ec79f97cf2a26bc5447.mp4,1110-1110,backend/data/cnn_baseline/raw_heatmaps/clip_034_heatmap.png,4-2-3-1 Mid Block
+clip_035,5a86c83f3f124ec79f97cf2a26bc5447.mp4,1710-1710,backend/data/cnn_baseline/raw_heatmaps/clip_035_heatmap.png,4-3-3 High Press
+clip_036,5a86c83f3f124ec79f97cf2a26bc5447.mp4,1890-1890,backend/data/cnn_baseline/raw_heatmaps/clip_036_heatmap.png,4-3-3 High Press
+clip_037,6a008d8e73894786a58e67cb19bac4fd.mp4,540-540,backend/data/cnn_baseline/raw_heatmaps/clip_037_heatmap.png,4-2-3-1 Mid Block
+clip_038,6a008d8e73894786a58e67cb19bac4fd.mp4,690-690,backend/data/cnn_baseline/raw_heatmaps/clip_038_heatmap.png,Double Pivot
+clip_039,6a008d8e73894786a58e67cb19bac4fd.mp4,1230-1230,backend/data/cnn_baseline/raw_heatmaps/clip_039_heatmap.png,3-5-2 Wing Backs
+clip_040,6a008d8e73894786a58e67cb19bac4fd.mp4,1440-1440,backend/data/cnn_baseline/raw_heatmaps/clip_040_heatmap.png,3-5-2 Wing Backs
+clip_041,6a008d8e73894786a58e67cb19bac4fd.mp4,1800-1800,backend/data/cnn_baseline/raw_heatmaps/clip_041_heatmap.png,3-5-2 Wing Backs
+clip_042,6a008d8e73894786a58e67cb19bac4fd.mp4,1980-1980,backend/data/cnn_baseline/raw_heatmaps/clip_042_heatmap.png,4-2-3-1 Mid Block
+clip_043,6bb828094d3b48f8a17004ff7765bca8.mp4,900-900,backend/data/cnn_baseline/raw_heatmaps/clip_043_heatmap.png,3-5-2 Wing Backs
+clip_044,6bb828094d3b48f8a17004ff7765bca8.mp4,1050-1050,backend/data/cnn_baseline/raw_heatmaps/clip_044_heatmap.png,Inverted Full Backs
+clip_045,6bb828094d3b48f8a17004ff7765bca8.mp4,1620-1620,backend/data/cnn_baseline/raw_heatmaps/clip_045_heatmap.png,4-2-3-1 Mid Block
+clip_046,6bb828094d3b48f8a17004ff7765bca8.mp4,1770-1770,backend/data/cnn_baseline/raw_heatmaps/clip_046_heatmap.png,4-3-3 High Press
+clip_047,6bb828094d3b48f8a17004ff7765bca8.mp4,2100-2100,backend/data/cnn_baseline/raw_heatmaps/clip_047_heatmap.png,Double Pivot
+clip_048,6bb828094d3b48f8a17004ff7765bca8.mp4,2790-2790,backend/data/cnn_baseline/raw_heatmaps/clip_048_heatmap.png,Inverted Full Backs
+clip_049,75c2d30e16384598a695846009b2c670.mp4,540-540,backend/data/cnn_baseline/raw_heatmaps/clip_049_heatmap.png,4-3-3 High Press
+clip_050,75c2d30e16384598a695846009b2c670.mp4,750-750,backend/data/cnn_baseline/raw_heatmaps/clip_050_heatmap.png,4-2-3-1 Mid Block
+clip_051,75c2d30e16384598a695846009b2c670.mp4,1230-1230,backend/data/cnn_baseline/raw_heatmaps/clip_051_heatmap.png,3-5-2 Wing Backs
+clip_052,75c2d30e16384598a695846009b2c670.mp4,1440-1440,backend/data/cnn_baseline/raw_heatmaps/clip_052_heatmap.png,3-5-2 Wing Backs
+clip_053,75c2d30e16384598a695846009b2c670.mp4,2010-2010,backend/data/cnn_baseline/raw_heatmaps/clip_053_heatmap.png,3-5-2 Wing Backs
+clip_054,75c2d30e16384598a695846009b2c670.mp4,2160-2160,backend/data/cnn_baseline/raw_heatmaps/clip_054_heatmap.png,4-2-3-1 Mid Block
+clip_055,81c342c45c2541e6bf8cdefb40566a3a.mp4,570-570,backend/data/cnn_baseline/raw_heatmaps/clip_055_heatmap.png,3-5-2 Wing Backs
+clip_056,81c342c45c2541e6bf8cdefb40566a3a.mp4,810-810,backend/data/cnn_baseline/raw_heatmaps/clip_056_heatmap.png,4-3-3 High Press
+clip_057,81c342c45c2541e6bf8cdefb40566a3a.mp4,1530-1530,backend/data/cnn_baseline/raw_heatmaps/clip_057_heatmap.png,3-5-2 Wing Backs
+clip_058,81c342c45c2541e6bf8cdefb40566a3a.mp4,1770-1770,backend/data/cnn_baseline/raw_heatmaps/clip_058_heatmap.png,Double Pivot
+clip_059,81c342c45c2541e6bf8cdefb40566a3a.mp4,2100-2100,backend/data/cnn_baseline/raw_heatmaps/clip_059_heatmap.png,Inverted Full Backs
+clip_060,81c342c45c2541e6bf8cdefb40566a3a.mp4,2340-2340,backend/data/cnn_baseline/raw_heatmaps/clip_060_heatmap.png,3-5-2 Wing Backs
+clip_061,820d2628d6ef46c3ab3fe67ab99ff0a3.mp4,540-540,backend/data/cnn_baseline/raw_heatmaps/clip_061_heatmap.png,Double Pivot
+clip_062,820d2628d6ef46c3ab3fe67ab99ff0a3.mp4,750-750,backend/data/cnn_baseline/raw_heatmaps/clip_062_heatmap.png,4-3-3 High Press
+clip_063,820d2628d6ef46c3ab3fe67ab99ff0a3.mp4,1230-1230,backend/data/cnn_baseline/raw_heatmaps/clip_063_heatmap.png,3-5-2 Wing Backs
+clip_064,820d2628d6ef46c3ab3fe67ab99ff0a3.mp4,1560-1560,backend/data/cnn_baseline/raw_heatmaps/clip_064_heatmap.png,Double Pivot
+clip_065,820d2628d6ef46c3ab3fe67ab99ff0a3.mp4,1800-1800,backend/data/cnn_baseline/raw_heatmaps/clip_065_heatmap.png,3-5-2 Wing Backs
+clip_066,820d2628d6ef46c3ab3fe67ab99ff0a3.mp4,2010-2010,backend/data/cnn_baseline/raw_heatmaps/clip_066_heatmap.png,4-3-3 High Press
+clip_067,8824743d00f14a589f22f525541994e2.mp4,540-540,backend/data/cnn_baseline/raw_heatmaps/clip_067_heatmap.png,UNCLEAR / SKIP
+clip_068,8824743d00f14a589f22f525541994e2.mp4,750-750,backend/data/cnn_baseline/raw_heatmaps/clip_068_heatmap.png,4-3-3 High Press
+clip_069,8824743d00f14a589f22f525541994e2.mp4,1230-1230,backend/data/cnn_baseline/raw_heatmaps/clip_069_heatmap.png,3-5-2 Wing Backs
+clip_070,8824743d00f14a589f22f525541994e2.mp4,1410-1410,backend/data/cnn_baseline/raw_heatmaps/clip_070_heatmap.png,3-5-2 Wing Backs
+clip_071,8824743d00f14a589f22f525541994e2.mp4,1740-1740,backend/data/cnn_baseline/raw_heatmaps/clip_071_heatmap.png,4-3-3 High Press
+clip_072,8824743d00f14a589f22f525541994e2.mp4,1950-1950,backend/data/cnn_baseline/raw_heatmaps/clip_072_heatmap.png,4-2-3-1 Mid Block
+clip_073,90914711ee664a359878f7ad635dce14.mp4,810-810,backend/data/cnn_baseline/raw_heatmaps/clip_073_heatmap.png,3-5-2 Wing Backs
+clip_074,90914711ee664a359878f7ad635dce14.mp4,1200-1200,backend/data/cnn_baseline/raw_heatmaps/clip_074_heatmap.png,3-5-2 Wing Backs
+clip_075,90914711ee664a359878f7ad635dce14.mp4,1620-1620,backend/data/cnn_baseline/raw_heatmaps/clip_075_heatmap.png,Double Pivot
+clip_076,90914711ee664a359878f7ad635dce14.mp4,2160-2160,backend/data/cnn_baseline/raw_heatmaps/clip_076_heatmap.png,4-2-3-1 Mid Block
+clip_077,90914711ee664a359878f7ad635dce14.mp4,2310-2310,backend/data/cnn_baseline/raw_heatmaps/clip_077_heatmap.png,4-3-3 High Press
+clip_078,90914711ee664a359878f7ad635dce14.mp4,2910-2910,backend/data/cnn_baseline/raw_heatmaps/clip_078_heatmap.png,Inverted Full Backs
+clip_079,98fabf9a5e0a48738852fce23621e759.mp4,570-570,backend/data/cnn_baseline/raw_heatmaps/clip_079_heatmap.png,4-3-3 High Press
+clip_080,98fabf9a5e0a48738852fce23621e759.mp4,810-810,backend/data/cnn_baseline/raw_heatmaps/clip_080_heatmap.png,4-2-3-1 Mid Block
+clip_081,98fabf9a5e0a48738852fce23621e759.mp4,960-960,backend/data/cnn_baseline/raw_heatmaps/clip_081_heatmap.png,3-5-2 Wing Backs
+clip_082,98fabf9a5e0a48738852fce23621e759.mp4,1200-1200,backend/data/cnn_baseline/raw_heatmaps/clip_082_heatmap.png,Double Pivot
+clip_083,98fabf9a5e0a48738852fce23621e759.mp4,1530-1530,backend/data/cnn_baseline/raw_heatmaps/clip_083_heatmap.png,3-5-2 Wing Backs
+clip_084,98fabf9a5e0a48738852fce23621e759.mp4,1740-1740,backend/data/cnn_baseline/raw_heatmaps/clip_084_heatmap.png,3-5-2 Wing Backs
+clip_085,9c1f60b9a84a4107ae1888b062e38a62.mp4,810-810,backend/data/cnn_baseline/raw_heatmaps/clip_085_heatmap.png,Inverted Full Backs
+clip_086,9c1f60b9a84a4107ae1888b062e38a62.mp4,1470-1470,backend/data/cnn_baseline/raw_heatmaps/clip_086_heatmap.png,3-5-2 Wing Backs
+clip_087,9c1f60b9a84a4107ae1888b062e38a62.mp4,1950-1950,backend/data/cnn_baseline/raw_heatmaps/clip_087_heatmap.png,UNCLEAR / SKIP
+clip_088,9c1f60b9a84a4107ae1888b062e38a62.mp4,3150-3150,backend/data/cnn_baseline/raw_heatmaps/clip_088_heatmap.png,3-5-2 Wing Backs
+clip_089,9c1f60b9a84a4107ae1888b062e38a62.mp4,3420-3420,backend/data/cnn_baseline/raw_heatmaps/clip_089_heatmap.png,3-5-2 Wing Backs
+clip_090,9c1f60b9a84a4107ae1888b062e38a62.mp4,3750-3750,backend/data/cnn_baseline/raw_heatmaps/clip_090_heatmap.png,Double Pivot
+clip_091,ac5b803a80454cbea908be5119907026.mp4,570-570,backend/data/cnn_baseline/raw_heatmaps/clip_091_heatmap.png,UNCLEAR / SKIP
+clip_092,ac5b803a80454cbea908be5119907026.mp4,810-810,backend/data/cnn_baseline/raw_heatmaps/clip_092_heatmap.png,4-2-3-1 Mid Block
+clip_093,ac5b803a80454cbea908be5119907026.mp4,1230-1230,backend/data/cnn_baseline/raw_heatmaps/clip_093_heatmap.png,3-5-2 Wing Backs
+clip_094,ac5b803a80454cbea908be5119907026.mp4,1530-1530,backend/data/cnn_baseline/raw_heatmaps/clip_094_heatmap.png,Double Pivot
+clip_095,ac5b803a80454cbea908be5119907026.mp4,1740-1740,backend/data/cnn_baseline/raw_heatmaps/clip_095_heatmap.png,3-5-2 Wing Backs
+clip_096,ac5b803a80454cbea908be5119907026.mp4,1890-1890,backend/data/cnn_baseline/raw_heatmaps/clip_096_heatmap.png,Double Pivot
+clip_097,b8704738dbcf42a2b1390ce978ebc420.mp4,540-540,backend/data/cnn_baseline/raw_heatmaps/clip_097_heatmap.png,4-2-3-1 Mid Block
+clip_098,b8704738dbcf42a2b1390ce978ebc420.mp4,690-690,backend/data/cnn_baseline/raw_heatmaps/clip_098_heatmap.png,UNCLEAR / SKIP
+clip_099,b8704738dbcf42a2b1390ce978ebc420.mp4,960-960,backend/data/cnn_baseline/raw_heatmaps/clip_099_heatmap.png,3-5-2 Wing Backs
+clip_100,b8704738dbcf42a2b1390ce978ebc420.mp4,1110-1110,backend/data/cnn_baseline/raw_heatmaps/clip_100_heatmap.png,4-2-3-1 Mid Block
+clip_101,b8704738dbcf42a2b1390ce978ebc420.mp4,1500-1500,backend/data/cnn_baseline/raw_heatmaps/clip_101_heatmap.png,3-5-2 Wing Backs
+clip_102,b8704738dbcf42a2b1390ce978ebc420.mp4,1710-1710,backend/data/cnn_baseline/raw_heatmaps/clip_102_heatmap.png,3-5-2 Wing Backs
+clip_103,c79118b879f3498ca98199eaa9aac319.mp4,540-540,backend/data/cnn_baseline/raw_heatmaps/clip_103_heatmap.png,UNCLEAR / SKIP
+clip_104,c79118b879f3498ca98199eaa9aac319.mp4,750-750,backend/data/cnn_baseline/raw_heatmaps/clip_104_heatmap.png,4-3-3 High Press
+clip_105,c79118b879f3498ca98199eaa9aac319.mp4,1200-1200,backend/data/cnn_baseline/raw_heatmaps/clip_105_heatmap.png,3-5-2 Wing Backs
+clip_106,c79118b879f3498ca98199eaa9aac319.mp4,1530-1530,backend/data/cnn_baseline/raw_heatmaps/clip_106_heatmap.png,Double Pivot
+clip_107,c79118b879f3498ca98199eaa9aac319.mp4,1800-1800,backend/data/cnn_baseline/raw_heatmaps/clip_107_heatmap.png,4-2-3-1 Mid Block
+clip_108,c79118b879f3498ca98199eaa9aac319.mp4,1950-1950,backend/data/cnn_baseline/raw_heatmaps/clip_108_heatmap.png,3-5-2 Wing Backs
+clip_109,c8bb975f568f4571b71e7e07ee9552f5.mp4,570-570,backend/data/cnn_baseline/raw_heatmaps/clip_109_heatmap.png,Double Pivot
+clip_110,c8bb975f568f4571b71e7e07ee9552f5.mp4,810-810,backend/data/cnn_baseline/raw_heatmaps/clip_110_heatmap.png,4-2-3-1 Mid Block
+clip_111,c8bb975f568f4571b71e7e07ee9552f5.mp4,960-960,backend/data/cnn_baseline/raw_heatmaps/clip_111_heatmap.png,3-5-2 Wing Backs
+clip_112,c8bb975f568f4571b71e7e07ee9552f5.mp4,1110-1110,backend/data/cnn_baseline/raw_heatmaps/clip_112_heatmap.png,Double Pivot
+clip_113,c8bb975f568f4571b71e7e07ee9552f5.mp4,1440-1440,backend/data/cnn_baseline/raw_heatmaps/clip_113_heatmap.png,3-5-2 Wing Backs
+clip_114,c8bb975f568f4571b71e7e07ee9552f5.mp4,1740-1740,backend/data/cnn_baseline/raw_heatmaps/clip_114_heatmap.png,Inverted Full Backs
+clip_115,cd9f46a359f44976bef64138e840546d.mp4,570-570,backend/data/cnn_baseline/raw_heatmaps/clip_115_heatmap.png,UNCLEAR / SKIP
+clip_116,cd9f46a359f44976bef64138e840546d.mp4,810-810,backend/data/cnn_baseline/raw_heatmaps/clip_116_heatmap.png,3-5-2 Wing Backs
+clip_117,cd9f46a359f44976bef64138e840546d.mp4,960-960,backend/data/cnn_baseline/raw_heatmaps/clip_117_heatmap.png,4-2-3-1 Mid Block
+clip_118,cd9f46a359f44976bef64138e840546d.mp4,1110-1110,backend/data/cnn_baseline/raw_heatmaps/clip_118_heatmap.png,Double Pivot
+clip_119,cd9f46a359f44976bef64138e840546d.mp4,1440-1440,backend/data/cnn_baseline/raw_heatmaps/clip_119_heatmap.png,Inverted Full Backs
+clip_120,cd9f46a359f44976bef64138e840546d.mp4,1740-1740,backend/data/cnn_baseline/raw_heatmaps/clip_120_heatmap.png,4-3-3 High Press
+clip_121,dea8f3c991bb4710b3e5e8515f65af27.mp4,660-660,backend/data/cnn_baseline/raw_heatmaps/clip_121_heatmap.png,3-5-2 Wing Backs
+clip_122,dea8f3c991bb4710b3e5e8515f65af27.mp4,1770-1770,backend/data/cnn_baseline/raw_heatmaps/clip_122_heatmap.png,4-3-3 High Press
+clip_123,dea8f3c991bb4710b3e5e8515f65af27.mp4,1980-1980,backend/data/cnn_baseline/raw_heatmaps/clip_123_heatmap.png,4-2-3-1 Mid Block
+clip_124,dea8f3c991bb4710b3e5e8515f65af27.mp4,2190-2190,backend/data/cnn_baseline/raw_heatmaps/clip_124_heatmap.png,4-2-3-1 Mid Block
+clip_125,dea8f3c991bb4710b3e5e8515f65af27.mp4,2970-2970,backend/data/cnn_baseline/raw_heatmaps/clip_125_heatmap.png,Inverted Full Backs
+clip_126,dea8f3c991bb4710b3e5e8515f65af27.mp4,3330-3330,backend/data/cnn_baseline/raw_heatmaps/clip_126_heatmap.png,UNCLEAR / SKIP
+clip_127,e867144fa7394a5d93e5ad9c7b35a89f.mp4,570-570,backend/data/cnn_baseline/raw_heatmaps/clip_127_heatmap.png,UNCLEAR / SKIP
+clip_128,e867144fa7394a5d93e5ad9c7b35a89f.mp4,810-810,backend/data/cnn_baseline/raw_heatmaps/clip_128_heatmap.png,UNCLEAR / SKIP
+clip_129,e867144fa7394a5d93e5ad9c7b35a89f.mp4,960-960,backend/data/cnn_baseline/raw_heatmaps/clip_129_heatmap.png,4-2-3-1 Mid Block
+clip_130,e867144fa7394a5d93e5ad9c7b35a89f.mp4,1110-1110,backend/data/cnn_baseline/raw_heatmaps/clip_130_heatmap.png,3-5-2 Wing Backs
+clip_131,e867144fa7394a5d93e5ad9c7b35a89f.mp4,1440-1440,backend/data/cnn_baseline/raw_heatmaps/clip_131_heatmap.png,Double Pivot
+clip_132,e867144fa7394a5d93e5ad9c7b35a89f.mp4,1650-1650,backend/data/cnn_baseline/raw_heatmaps/clip_132_heatmap.png,4-2-3-1 Mid Block
+clip_133,f4ba9f7eaa864dba8e594c407943b7f6.mp4,540-540,backend/data/cnn_baseline/raw_heatmaps/clip_133_heatmap.png,UNCLEAR / SKIP
+clip_134,f4ba9f7eaa864dba8e594c407943b7f6.mp4,690-690,backend/data/cnn_baseline/raw_heatmaps/clip_134_heatmap.png,Double Pivot
+clip_135,f4ba9f7eaa864dba8e594c407943b7f6.mp4,1440-1440,backend/data/cnn_baseline/raw_heatmaps/clip_135_heatmap.png,4-2-3-1 Mid Block
+clip_136,f4ba9f7eaa864dba8e594c407943b7f6.mp4,1980-1980,backend/data/cnn_baseline/raw_heatmaps/clip_136_heatmap.png,4-3-3 High Press
+clip_137,f4ba9f7eaa864dba8e594c407943b7f6.mp4,2130-2130,backend/data/cnn_baseline/raw_heatmaps/clip_137_heatmap.png,4-2-3-1 Mid Block
+clip_138,f4ba9f7eaa864dba8e594c407943b7f6.mp4,2280-2280,backend/data/cnn_baseline/raw_heatmaps/clip_138_heatmap.png,3-5-2 Wing Backs

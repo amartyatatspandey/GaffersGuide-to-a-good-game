@@ -136,14 +136,14 @@ class ZSLTacticalClassifier:
         points: list[tuple[float, float]],
         width: int = 1050,
         height: int = 680,
-        sigma: float = 18.0,
+        sigma: float = 10.0,
     ) -> np.ndarray:
         """
         Render a set of 2D points as a Gaussian positional heatmap.
 
         Returns a 3-channel uint8 RGB array with:
           • viridis-coloured player density overlaid on a pitch diagram
-          • σ = 18 px (sharper than the legacy 40 px, better CLIP discrimination)
+          • σ = 10 px (sharper than the legacy 40 px, better CLIP discrimination)
         """
         heatmap = np.zeros((height, width), dtype=np.float32)
 
@@ -200,7 +200,7 @@ class ZSLTacticalClassifier:
         Returns a list of cosine-similarity scores per tactical pattern.
 
         Rendering pipeline (v2):
-          1. Gaussian heatmap (σ=18 px) → viridis colour + pitch overlay
+          1. Gaussian heatmap (σ=10 px) → viridis colour + pitch overlay
           2. CLIP ViT-B/32 image encoder
           3. Cosine similarity vs. pre-encoded text features
         """
@@ -250,11 +250,15 @@ class ZSLTacticalClassifier:
         team_name = team_id
         all_points = []
         
+        # player.radar_pt is in centered meter-space: [-52.5, 52.5] for x, [-34.0, 34.0] for y.
+        # We transform it to top-left pixel space [0, 1050] and [0, 680] as expected by render_gaussian_heatmap.
         for frame in frames:
             points = []
             for player in frame.players:
                 if player.team == team_name and player.radar_pt is not None:
-                    points.append((player.radar_pt[0], player.radar_pt[1]))
+                    px_x = (player.radar_pt[0] + 52.5) * 10.0
+                    px_y = (player.radar_pt[1] + 34.0) * 10.0
+                    points.append((px_x, px_y))
             all_points.append(points)
 
         if not all_points:

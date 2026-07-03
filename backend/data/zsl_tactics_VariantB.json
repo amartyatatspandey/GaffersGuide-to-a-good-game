@@ -1,0 +1,292 @@
+{
+  "philosophies": [
+    {
+      "tags": [
+        "High Press",
+        "gegenpress",
+        "Lethargic Press"
+      ],
+      "author": "J\u00fcrgen Klopp",
+      "quote": "Gegenpressing is the best playmaker in the world.",
+      "tactical_translation": "Win the ball high in 5 seconds or less. Swarm the ball carrier with 3 players immediately after losing possession. Exploit the vertical space behind the press with direct, first-time passes to the striker.",
+      "fc_role_recommendations": [
+        "Advanced Forward",
+        "Box-to-Box Midfielder",
+        "Pressing Forward"
+      ]
+    },
+    {
+      "tags": [
+        "Positional Play",
+        "Midfield Disconnect",
+        "Half-space overloads"
+      ],
+      "author": "Pep Guardiola",
+      "quote": "In all team sports, the secret is to overload one side of the pitch so that the opponent must tilt its own defence to cope.",
+      "tactical_translation": "Invert both fullbacks into central midfield positions to outnumber the opposition. Use the false 9 to drop and receive between the lines. Circulate the ball patiently to force lateral movement before playing the vertical trigger pass.",
+      "fc_role_recommendations": [
+        "False 9",
+        "Inverted Fullback",
+        "Half-Winger (Mezzala)"
+      ]
+    },
+    {
+      "tags": [
+        "Low Block",
+        "Parked Bus",
+        "Counter-Attack"
+      ],
+      "author": "Jos\u00e9 Mourinho",
+      "quote": "He who has the ball has fear.",
+      "tactical_translation": "Drop into a deep 4-4-2 block and invite the opponent to press. Win possession with an aggressive interception and immediately play a vertical diagonal into space behind the opposition's high fullbacks. Hit fast and direct.",
+      "fc_role_recommendations": [
+        "Target Forward",
+        "Ball-Playing Defender",
+        "Wide Midfielder"
+      ]
+    },
+    {
+      "tags": [
+        "Low Block",
+        "Compact Defense",
+        "Simeone Low Block"
+      ],
+      "author": "Diego Simeone",
+      "quote": "Effort is non-negotiable.",
+      "tactical_translation": "Compress into a rigid 4-4-2 with both banks of four below the ball. Deny space in the central channels aggressively. On transition, play the ball wide quickly to isolated wingbacks running in behind.",
+      "fc_role_recommendations": [
+        "Defensive Midfielder",
+        "Wide Midfielder",
+        "Attacking Wingback"
+      ]
+    },
+    {
+      "tags": [
+        "Build-Up",
+        "Positional Rotation",
+        "Arteta Build-Up"
+      ],
+      "author": "Mikel Arteta",
+      "quote": "We have to be dominant, we have to control the game, and we have to dictate the rules.",
+      "tactical_translation": "Form a 3-2-5 structure in possession with inverted fullbacks controlling the central zones. Overload the left half-space to shift the opponent before switching to isolate the right winger. Cut inside and deliver to Zone 14.",
+      "fc_role_recommendations": [
+        "Inverted Fullback",
+        "Deep-Lying Playmaker",
+        "Inside Forward"
+      ]
+    },
+    {
+      "tags": [
+        "Positional Rotation",
+        "De Zerbi Positional Rotation",
+        "Wide Overlap"
+      ],
+      "author": "Roberto De Zerbi",
+      "quote": "If you receive the ball with the sole and from the front, you can play for the side you want.",
+      "tactical_translation": "Use the goalkeeper as an extra center-back to build numerical superiority. Play controlled, slow tempo balls to bait the press. Immediately exploit the space vacated by a pressing opponent with a penetrating vertical pass.",
+      "fc_role_recommendations": [
+        "Sweeper Keeper",
+        "Deep-Lying Playmaker",
+        "Shadow Striker"
+      ]
+    },
+    {
+      "tags": [
+        "Wingback Overloads",
+        "Conte Wingback Overloads",
+        "Wide Overlap"
+      ],
+      "author": "Antonio Conte",
+      "quote": "By occupying the centre, teams can switch the ball through it to different areas of the field.",
+      "tactical_translation": "Push both wingbacks into extremely wide and high positions to stretch the opposition's defensive block. Feed inside forwards cutting into the half-spaces between the displaced defenders. Create a 3v2 overload centrally.",
+      "fc_role_recommendations": [
+        "Attacking Wingback",
+        "Inside Forward",
+        "Box-to-Box Midfielder"
+      ]
+    },
+    {
+      "tags": [
+        "Tiki-Taka",
+        "Midfield Diamond"
+      ],
+      "author": "Johan Cruyff / Tiki-Taka",
+      "quote": "Playing football is very simple, but playing simple football is the hardest thing there is.",
+      "tactical_translation": "Maintain continuous triangular passing combinations at high tempo to retain the ball. Never play sideways if a forward pass is available. Create a +1 numerical superiority at every position on the pitch through rotational movement.",
+      "fc_role_recommendations": [
+        "Playmaker",
+        "Half-Winger (Mezzala)",
+        "False 9"
+      ]
+    },
+    {
+      "tags": [
+        "Total Football",
+        "Positional Fluidity"
+      ],
+      "author": "Rinus Michels",
+      "quote": "Football is war.",
+      "tactical_translation": "Every player must be capable of playing in any position. When a player leaves their zone, another must immediately fill it. Create total positional fluidity to disorient man-marking opponents.",
+      "fc_role_recommendations": [
+        "Complete Midfielder",
+        "Box-to-Box Midfielder",
+        "Complete Forward"
+      ]
+    },
+    {
+      "tags": [
+        "Direct Verticality",
+        "Counter-Attack",
+        "Transition speed"
+      ],
+      "author": "Ralph Hasenh\u00fcttl",
+      "quote": "This is the time we can move to the ball, put pressure on the guy who gets it.",
+      "tactical_translation": "Win the ball and immediately play forward without recycling. Prioritize the vertical pass at all times. Time the press trigger from set positions to maximize energy efficiency.",
+      "fc_role_recommendations": [
+        "Advanced Forward",
+        "Shadow Striker",
+        "Wide Midfielder"
+      ]
+    },
+    {
+      "tags": [
+        "False 9 Structures",
+        "Midfield Disconnect"
+      ],
+      "author": "Lionel Messi Era / False 9",
+      "quote": "The best players make the most difficult things look simple.",
+      "tactical_translation": "Drop the centre forward deep to receive between the opposition's midfield and defence. This drags a centre-back out of position, creating space for wide players to run in behind. Use the false 9 as the primary link player.",
+      "fc_role_recommendations": [
+        "False 9",
+        "Inside Forward",
+        "Half-Winger (Mezzala)"
+      ]
+    },
+    {
+      "tags": [
+        "Box Midfield",
+        "Midfield Disconnect",
+        "Press resistance"
+      ],
+      "author": "Marcello Lippi",
+      "quote": "The midfield is the engine room of the team.",
+      "tactical_translation": "Pack the central four midfielders into a box formation to create a physical barrier through the centre. Use the box to win second balls and distribute quickly. Protect the defensive line from direct central penetration.",
+      "fc_role_recommendations": [
+        "Box-to-Box Midfielder",
+        "Holding Midfielder",
+        "Playmaker"
+      ]
+    },
+    {
+      "tags": [
+        "Rest Defense",
+        "Over-Stretched Formation"
+      ],
+      "author": "Pep Guardiola / Structured Defense",
+      "quote": "We organise ourselves to win the ball back immediately.",
+      "tactical_translation": "Before losing the ball in attack, ensure two midfielders are positioned behind the ball line. One fullback must stay deep. The false 9 drops to cut off the counter-attack. Never allow a 3v2 break against.",
+      "fc_role_recommendations": [
+        "Inverted Fullback",
+        "Holding Midfielder",
+        "False 9"
+      ]
+    },
+    {
+      "tags": [
+        "Press traps",
+        "Lethargic Press",
+        "Midfield Diamond"
+      ],
+      "author": "Unai Emery",
+      "quote": "If the central midfielders were close and narrow, they would press forwards.",
+      "tactical_translation": "Drop into a passive mid-block to invite the opponent wide. Once the ball is played to the fullback, immediately collapse with three players using the touchline as the fourth defender. Win the ball and counter centrally.",
+      "fc_role_recommendations": [
+        "Wide Midfielder",
+        "Holding Midfielder",
+        "Pressing Forward"
+      ]
+    },
+    {
+      "tags": [
+        "High Press",
+        "Suicidal High Line",
+        "gegenpress"
+      ],
+      "author": "Marcelo Bielsa",
+      "quote": "High-intensity pressing, fluid attacking movements, and meticulous preparation.",
+      "tactical_translation": "Man-mark every opposition player from the goalkeeper upward. Press in coordinated waves triggered by the ball carrier facing their own goal. The moment possession is lost, all ten outfield players sprint toward the ball zone.",
+      "fc_role_recommendations": [
+        "Inside Forward",
+        "Box-to-Box Midfielder",
+        "Advanced Forward"
+      ]
+    },
+    {
+      "tags": [
+        "Counter-Attack",
+        "Transition speed",
+        "Low Block"
+      ],
+      "author": "Atletico Madrid Counter",
+      "quote": "Compact defending, devastating attacking.",
+      "tactical_translation": "Maintain a deep compact block of eight behind the ball. Absorb the opposition's press patiently. Win the ball and release the striker immediately with a direct ball in behind the high opposition defensive line.",
+      "fc_role_recommendations": [
+        "Target Forward",
+        "Defensive Midfielder",
+        "Attacking Wingback"
+      ]
+    }
+  ],
+  "tactical_patterns": [
+    {
+      "name": "4-3-3 High Press",
+      "tags": [
+        "High Press",
+        "4-3-3",
+        "gegenpress",
+        "front three"
+      ],
+      "description": "An aerial map showing eleven players positioned high in the opponent's territory, featuring three forwards spread wide at the top, a midfield line of three in the center, and a flat backline of four situated near the halfway line."
+    },
+    {
+      "name": "4-2-3-1 Mid Block",
+      "tags": [
+        "Mid Block",
+        "4-2-3-1",
+        "double pivot",
+        "compact midfield"
+      ],
+      "description": "A tactical layout displaying a dense horizontal bank of four defenders, two deep central midfielders positioned close to each other, three attacking players spread laterally, and a lone striker positioned furthest forward."
+    },
+    {
+      "name": "3-5-2 Wing Backs",
+      "tags": [
+        "3-5-2",
+        "wing backs",
+        "three at the back",
+        "wide overload"
+      ],
+      "description": "A player distribution map highlighting a trio of defenders grouped in the own box, a wide five-man midfield stretched out to the absolute margins of the field, and a pair of forward strikers positioned together in the attacking zone."
+    },
+    {
+      "name": "Double Pivot",
+      "tags": [
+        "Double Pivot",
+        "double holding midfield",
+        "6",
+        "deep midfield pair"
+      ],
+      "description": "A visual lineup featuring a flat four-man defensive line, two central holding midfielders positioned as a distinct side-by-side pair, three advanced players, and two central attackers."
+    },
+    {
+      "name": "Inverted Full Backs",
+      "tags": [
+        "Inverted Full Backs",
+        "falseback",
+        "narrow fullbacks",
+        "midfield overload"
+      ],
+      "description": "A vertical channel overload map showing player density concentrated down the middle column of the pitch, with fullbacks inverted inside, leaving the wide flanks completely open and empty."
+    }
+  ]
+}

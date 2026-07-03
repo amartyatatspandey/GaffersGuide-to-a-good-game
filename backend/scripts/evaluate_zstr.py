@@ -154,6 +154,15 @@ FORMATION_TEMPLATES: dict[str, list[tuple[float, float]]] = {
 
 FORMATION_NAMES: list[str] = list(FORMATION_TEMPLATES.keys())
 
+# Fixed baseline similarity means from seed=999 synthetic calibration set
+CALIBRATION_MEANS = {
+    "4-3-3 High Press": 0.3447,
+    "4-2-3-1 Mid Block": 0.3204,
+    "3-5-2 Wing Backs": 0.2941,
+    "Double Pivot": 0.3217,
+    "Inverted Full Backs": 0.3341
+}
+
 
 def metres_to_pixels(
     points_m: list[tuple[float, float]]
@@ -215,6 +224,7 @@ def run_evaluation(
     tau: float = 0.25,
     seed: int = 42,
     out_path: Path | None = None,
+    calibrate: bool = False,
 ) -> dict[str, Any]:
     """
     Full evaluation pipeline.
@@ -296,7 +306,12 @@ def run_evaluation(
             pred_argmax.append("No Match")
             pred_tau.append("No Match")
             continue
-        best_name = max(score_dict, key=lambda k: score_dict[k])
+        if calibrate:
+            cal_dict = {name: val - CALIBRATION_MEANS[name] for name, val in score_dict.items()}
+        else:
+            cal_dict = score_dict
+            
+        best_name = max(cal_dict, key=lambda k: cal_dict[k])
         best_score = score_dict[best_name]
         pred_argmax.append(best_name)
         pred_tau.append(best_name if best_score >= tau else "No Match")
@@ -420,7 +435,7 @@ def print_results_table(results: dict[str, Any]) -> None:
     print(f"  Cosine-Sim τ       : {tau}")
     print(f"  Coord Jitter σ     : 3.0 m (Gaussian)")
     print(f"  Pitch Space        : 105 × 68 m  →  1050 × 680 px canvas")
-    print(f"  Heatmap σ          : 18 px (viridis + pitch lines overlay)")
+    print(f"  Heatmap σ          : 10 px (viridis + pitch lines overlay)")
     print()
 
     # ── Overall accuracy ──────────────────────────────────────────────────────
@@ -539,12 +554,17 @@ def main() -> None:
         default=str(BACKEND_ROOT / "output" / "zstr_eval_results.json"),
         help="Output JSON path",
     )
+    parser.add_argument(
+        "--calibrate", action="store_true",
+        help="Apply logit calibration using fixed baseline means",
+    )
     args = parser.parse_args()
 
     results = run_evaluation(
         n_clips=args.n_clips,
         tau=args.tau,
         seed=args.seed,
+        calibrate=args.calibrate,
     )
 
     print_results_table(results)

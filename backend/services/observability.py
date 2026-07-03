@@ -438,3 +438,48 @@ def track_upload_event(
             phase,
             extra=extra,
         )
+
+
+# ── Pipeline Performance Stage Timer ─────────────────────────────────────────
+_PERF_LOGGER = logging.getLogger("gaffer.perf")
+
+
+@contextmanager
+def perf_stage(
+    logger: logging.Logger,
+    job_id: str,
+    stage: str,
+    **extra: Any,
+) -> Generator[None, None, None]:
+    """
+    Exception-safe performance timing context-manager for pipeline stages.
+
+    Emits a single structured ``PERF_STAGE`` log on exit containing:
+        job_id, stage, duration_seconds, status ("ok" | "error")
+
+    Cloud Logging compatible — works with ``StructuredJSONFormatter``.
+    Safe alongside ``await`` — the context-manager is synchronous but
+    the body may contain ``await`` expressions.
+
+    Usage::
+
+        with perf_stage(LOGGER, job_id, "gcs_download", blob=blob_name):
+            gcs_service.download_file(blob_name, dest_path)
+    """
+    t0 = time.perf_counter()
+    status = "ok"
+    try:
+        yield
+    except Exception:
+        status = "error"
+        raise
+    finally:
+        duration = round(time.perf_counter() - t0, 3)
+        log_extra: dict[str, Any] = {
+            "job_id": job_id,
+            "stage": stage,
+            "duration_seconds": duration,
+            "status": status,
+        }
+        log_extra.update(extra)
+        logger.info("PERF_STAGE", extra=log_extra)

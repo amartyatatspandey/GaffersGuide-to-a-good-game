@@ -6,6 +6,7 @@ import logging
 import multiprocessing
 import os
 import sys
+import time
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -67,6 +68,31 @@ from scripts.run_calibrator_on_video import ensure_homography_json_for_video
 from scripts.global_refiner import GlobalRefiner
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _log_worker_perf(
+    stage: str,
+    chunk_idx: int,
+    duration_seconds: float,
+    **extra: object,
+) -> None:
+    """
+    Emit a PERF_STAGE JSON log entry from a subprocess worker to stdout.
+
+    Cloud Run captures all stdout from child processes.  Using plain
+    ``print()`` with JSON avoids importing the main process's logging
+    config inside the spawned subprocess.
+    """
+    entry = {
+        "severity": "INFO",
+        "message": "PERF_STAGE",
+        "stage": stage,
+        "chunk_idx": chunk_idx,
+        "duration_seconds": round(duration_seconds, 3),
+        "status": "ok",
+    }
+    entry.update(extra)  # type: ignore[arg-type]
+    print(json.dumps(entry, default=str), flush=True)
 
 
 class VideoChunkManager:
@@ -176,6 +202,8 @@ def run_cv_chunk_worker(
     logger = logging.getLogger(f"Worker-{chunk_idx}")
     logger.info("Initializing CV worker for range [%d, %d]", start_frame, end_frame)
 
+    _chunk_t0 = time.perf_counter()
+
     from ultralytics import YOLO
     import supervision as sv
 
@@ -188,6 +216,7 @@ def run_cv_chunk_worker(
     use_half = selected_device in ("cuda", "mps")
 
     # Load YOLOv11 Model fresh inside subprocess
+    _model_t0 = time.perf_counter()
     model = YOLO(str(MODEL_PATH))
     if use_half and torch is not None:
         if selected_device == "cuda" and torch.cuda.is_available():
@@ -197,12 +226,14 @@ def run_cv_chunk_worker(
                 use_half = False
 
     primary_ball_class_ids = _resolve_primary_ball_class_ids(model)
+    _log_worker_perf("worker_model_load", chunk_idx, time.perf_counter() - _model_t0)
     tracker = sv.ByteTrack()
     classifier = TeamClassifier()
     healer = HybridIDHealer()
     flow_estimator = DownscaledOpticalFlowEstimator(max_width=flow_max_width)
 
     # Memory-Safe Video Reading: Seek to specific frame using OpenCV
+    _cap_t0 = time.perf_counter()
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise RuntimeError(f"Could not open video in subprocess: {video_path}")
@@ -212,6 +243,8 @@ def run_cv_chunk_worker(
     actual_pos = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
     if actual_pos != start_frame:
         logger.warning("Requested seek to %d, but OpenCV ended up at %d", start_frame, actual_pos)
+    _log_worker_perf("worker_video_open_seek", chunk_idx, time.perf_counter() - _cap_t0,
+                     start_frame=start_frame)
 
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -228,6 +261,8 @@ def run_cv_chunk_worker(
     processed_count = 0
 
     frame_step = int(os.getenv("FRAME_STEP", "1"))
+
+    _inference_total_s = 0.0  # cumulative YOLO inference wall-time
 
     def get_batches():
         idx = 0
@@ -262,6 +297,7 @@ def run_cv_chunk_worker(
 
         results = []
         if inference_frames:
+            _inf_t0 = time.perf_counter()
             try:
                 results = model(inference_frames, **kwargs)
             except Exception:
@@ -270,6 +306,7 @@ def run_cv_chunk_worker(
                     results = model(inference_frames, **kwargs)
                 else:
                     raise
+            _inference_total_s += time.perf_counter() - _inf_t0
 
         for offset, frame in enumerate(batch_frames):
             frame_idx = start_frame + offset_idx + offset
@@ -499,6 +536,12 @@ def run_cv_chunk_worker(
         
     _clear_device_cache(selected_device)
     cap.release()
+
+    _log_worker_perf(
+        "worker_chunk_total", chunk_idx, time.perf_counter() - _chunk_t0,
+        frames_processed=processed_count,
+        inference_total_seconds=round(_inference_total_s, 3),
+    )
 
     # Serialize output structure safely back to the main process
     return {
@@ -907,6 +950,8 @@ async def run_e2e_parallel(
     if prereq_gaps:
         raise FileNotFoundError(format_pipeline_prerequisite_errors(prereq_gaps))
 
+    _pipeline_t0 = time.perf_counter()
+
     # Setup paths
     out_dir = BACKEND_ROOT / "output"
     tracking_overlay_path = out_dir / f"{output_prefix}_tracking_overlay.mp4"
@@ -939,7 +984,19 @@ async def run_e2e_parallel(
         c_list = c_manager.calculate_chunks()
         return h_json, c_list, c_manager.fps
 
+    _stage_t0 = time.perf_counter()
     homography_json, chunks, video_fps = await asyncio.to_thread(_prepare_data)
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "calibration",
+            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+            "num_chunks": len(chunks),
+            "video_fps": video_fps,
+            "status": "ok",
+        },
+    )
 
     if progress_callback is not None:
         progress_callback("Tracking Players (Parallel: 0%)")
@@ -952,9 +1009,21 @@ async def run_e2e_parallel(
         batch_size=batch_size,
         flow_max_width=flow_max_width,
     )
+    _stage_t0 = time.perf_counter()
     chunk_results = await executor.execute_parallel(
         homography_json=homography_json,
         progress_callback=progress_callback,
+    )
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "parallel_cv_tracking",
+            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+            "num_chunks": len(chunks),
+            "num_chunk_results": len(chunk_results),
+            "status": "ok",
+        },
     )
 
     if progress_callback is not None:
@@ -974,7 +1043,18 @@ async def run_e2e_parallel(
         )
         return raw_frames
 
+    _stage_t0 = time.perf_counter()
     raw_frames = await asyncio.to_thread(_merge_chunks)
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "chunk_merge",
+            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+            "merged_frames": len(raw_frames),
+            "status": "ok",
+        },
+    )
 
     if progress_callback is not None:
         progress_callback("Spatial Math")
@@ -1018,7 +1098,18 @@ async def run_e2e_parallel(
             
         return refined_frames, metrics_timeline, ball_data_quality
 
+    _stage_t0 = time.perf_counter()
     refined_frames, metrics, ball_data_quality = await asyncio.to_thread(_run_spatial_math)
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "spatial_math",
+            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+            "metrics_frames": len(metrics),
+            "status": "ok",
+        },
+    )
 
     # ── Event Intelligence Layer ──────────────────────────────────────────────
     # Runs asynchronously after spatial math. Failure is non-fatal — the existing
@@ -1068,7 +1159,17 @@ async def run_e2e_parallel(
                 "Event Intelligence Layer failed (non-fatal): %s", exc, exc_info=True
             )
 
+    _stage_t0 = time.perf_counter()
     await asyncio.to_thread(_run_event_layer)
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "event_layer",
+            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+            "status": "ok",
+        },
+    )
     # ── End Event Intelligence Layer ──────────────────────────────────────────
 
     if progress_callback is not None:
@@ -1099,7 +1200,18 @@ async def run_e2e_parallel(
             
         return triggers
 
+    _stage_t0 = time.perf_counter()
     triggers = await asyncio.to_thread(_run_tactical_engine)
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "tactical_engine",
+            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+            "num_triggers": len(triggers),
+            "status": "ok",
+        },
+    )
 
     if progress_callback is not None:
         progress_callback("Synthesizing Advice")
@@ -1115,8 +1227,21 @@ async def run_e2e_parallel(
         )
         return reliability_pct, guard_status, prompt_records
 
+    _stage_t0 = time.perf_counter()
     reliability_pct, guard_status, prompt_records = await asyncio.to_thread(_run_synthesis)
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "synthesis",
+            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+            "num_prompt_records": len(prompt_records),
+            "guard_status": guard_status,
+            "status": "ok",
+        },
+    )
 
+    _llm_t0 = time.perf_counter()
     if guard_status == "abort":
         final_cards = _final_cards_llm_skipped_low_reliability(
             prompt_records, reliability_pct, len(metrics), len(raw_frames)
@@ -1141,6 +1266,18 @@ async def run_e2e_parallel(
                     "overriding to cloud LLM (Ollama is not available on Cloud Run)."
                 )
             final_cards = await run_llm(prompt_records)
+
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "llm_calls",
+            "duration_seconds": round(time.perf_counter() - _llm_t0, 3),
+            "guard_status": guard_status,
+            "num_prompt_records": len(prompt_records),
+            "status": "ok",
+        },
+    )
 
     # Safety net: inject baseline summary if empty
     if not final_cards and metrics:
@@ -1174,8 +1311,19 @@ async def run_e2e_parallel(
             "llm_error": None,
         }]
 
+    _stage_t0 = time.perf_counter()
     with report_output_path.open("w", encoding="utf-8") as f:
         json.dump(final_cards, f, indent=2, ensure_ascii=False)
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "report_json_write",
+            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+            "num_cards": len(final_cards),
+            "status": "ok",
+        },
+    )
 
     # ── Report Enrichment step (non-fatal) ──────────────────────────────────
     def _run_report_enrichment():
@@ -1189,8 +1337,30 @@ async def run_e2e_parallel(
         except Exception as exc:
             LOGGER.warning("Report enrichment failed (non-fatal): %s", exc, exc_info=True)
 
+    _stage_t0 = time.perf_counter()
     await asyncio.to_thread(_run_report_enrichment)
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "report_enrichment",
+            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+            "status": "ok",
+        },
+    )
     # ─────────────────────────────────────────────────────────────────────────
+
+    LOGGER.info(
+        "PERF_STAGE",
+        extra={
+            "job_id": output_prefix,
+            "stage": "pipeline_total",
+            "duration_seconds": round(time.perf_counter() - _pipeline_t0, 3),
+            "num_raw_frames": len(raw_frames),
+            "num_final_cards": len(final_cards),
+            "status": "ok",
+        },
+    )
 
     if progress_callback is not None:
         progress_callback("Completed")

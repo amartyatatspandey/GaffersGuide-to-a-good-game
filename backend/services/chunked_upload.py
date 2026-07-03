@@ -22,6 +22,7 @@ import logging
 import os
 import shutil
 import threading
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -32,7 +33,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Request
 
 from pydantic import BaseModel
 
-from services.observability import track_upload_event
+from services.observability import track_upload_event, perf_stage
 
 LOGGER = logging.getLogger(__name__)
 
@@ -304,12 +305,13 @@ async def complete_upload(
     chunks_path = _chunks_dir(upload_id)
     final_size = 0
     try:
-        with final_path.open("wb") as f_out:
-            for idx in range(session.total_chunks):
-                chunk_file = chunks_path / f"chunk_{idx:06d}.bin"
-                with chunk_file.open("rb") as f_in:
-                    shutil.copyfileobj(f_in, f_out, length=COPY_BUFFER)
-        
+        with perf_stage(LOGGER, job_id, "upload_reassembly", total_chunks=session.total_chunks):
+            with final_path.open("wb") as f_out:
+                for idx in range(session.total_chunks):
+                    chunk_file = chunks_path / f"chunk_{idx:06d}.bin"
+                    with chunk_file.open("rb") as f_in:
+                        shutil.copyfileobj(f_in, f_out, length=COPY_BUFFER)
+
         final_size = final_path.stat().st_size
         track_upload_event("complete", job_id=job_id, size_bytes=final_size)
 
@@ -333,7 +335,8 @@ async def complete_upload(
     try:
         from services import gcs_service  # local import avoids circular deps
         gcs_blob_name = gcs_service.upload_blob_name(job_id, ext)
-        gcs_service.upload_file(final_path, gcs_blob_name, delete_local=True)
+        with perf_stage(LOGGER, job_id, "upload_gcs_sync", size_bytes=final_size, blob=gcs_blob_name):
+            gcs_service.upload_file(final_path, gcs_blob_name, delete_local=True)
         track_upload_event("gcs_sync", job_id=job_id, size_bytes=final_size)
         LOGGER.info("Video uploaded to GCS: %s", gcs_blob_name)
     except Exception as gcs_err:  # noqa: BLE001
