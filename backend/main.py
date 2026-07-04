@@ -216,10 +216,21 @@ async def _create_job_from_chunked_upload(
 
 _register_chunked_job_creator(_create_job_from_chunked_upload)
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://gaffers-guide-frontend-63021576072.us-central1.run.app",
+]
+
+extra_origins = os.getenv("CORS_ALLOW_ORIGINS", "")
+if extra_origins:
+    ALLOWED_ORIGINS.extend(
+        [x.strip() for x in extra_origins.split(",") if x.strip()]
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ALLOW_ORIGINS", "*").split(","),
-    allow_credentials=False,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
