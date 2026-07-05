@@ -58,18 +58,15 @@ export async function initUpload(
   totalChunks: number,
 ): Promise<InitUploadResponse> {
   const base = getApiBaseUrl();
+  const form = new FormData();
+  form.append('filename', filename);
+  form.append('total_size', totalSize.toString());
+  form.append('total_chunks', totalChunks.toString());
 
   const res = await fetch(`${base}/api/v1/upload/init`, {
     method: 'POST',
-    headers: {
-      ...getAuthHeaders(),
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      filename,
-      total_size: totalSize,
-      total_chunks: totalChunks,
-    }),
+    headers: getAuthHeaders(),
+    body: form,
   });
 
   if (!res.ok) {

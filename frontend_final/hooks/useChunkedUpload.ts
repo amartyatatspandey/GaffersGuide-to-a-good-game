@@ -121,25 +121,32 @@ export function useChunkedUpload(): ChunkedUploadState {
       let uploadId: string;
       let alreadyReceived: Set<number>;
 
-      // Check if we have a previous upload_id to resume
-      const prevUploadId = uploadIdRef.current;
-      if (prevUploadId) {
-        try {
-          const status = await getUploadStatus(prevUploadId);
-          uploadId = prevUploadId;
-          alreadyReceived = new Set(status.received_chunks);
-          setChunksUploaded(alreadyReceived.size);
-          setProgress((alreadyReceived.size / numChunks) * 100);
-        } catch {
-          // Previous session expired — start fresh
+      try {
+        // Check if we have a previous upload_id to resume
+        const prevUploadId = uploadIdRef.current;
+        if (prevUploadId) {
+          try {
+            const status = await getUploadStatus(prevUploadId);
+            uploadId = prevUploadId;
+            alreadyReceived = new Set(status.received_chunks);
+            setChunksUploaded(alreadyReceived.size);
+            setProgress((alreadyReceived.size / numChunks) * 100);
+          } catch {
+            // Previous session expired — start fresh
+            const initRes = await initUpload(file.name, file.size, numChunks);
+            uploadId = initRes.upload_id;
+            alreadyReceived = new Set();
+          }
+        } else {
           const initRes = await initUpload(file.name, file.size, numChunks);
           uploadId = initRes.upload_id;
           alreadyReceived = new Set();
         }
-      } else {
-        const initRes = await initUpload(file.name, file.size, numChunks);
-        uploadId = initRes.upload_id;
-        alreadyReceived = new Set();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setPhase('error');
+        setError(`Failed to initialize upload: ${msg}`);
+        throw err;
       }
 
       uploadIdRef.current = uploadId;
