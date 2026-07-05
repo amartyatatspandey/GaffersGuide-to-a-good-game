@@ -63,9 +63,14 @@ export async function initUpload(
   form.append('total_size', totalSize.toString());
   form.append('total_chunks', totalChunks.toString());
 
+  const authHeaders = getAuthHeaders();
+  console.log('[UPLOAD DEBUG] getApiBaseUrl():', base);
+  console.log('[UPLOAD DEBUG] getAuthHeaders():', authHeaders);
+  console.log('[UPLOAD DEBUG] process.env.NEXT_PUBLIC_API_KEY:', process.env.NEXT_PUBLIC_API_KEY);
+
   const res = await fetch(`${base}/api/v1/upload/init`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: authHeaders,
     body: form,
   });
 
