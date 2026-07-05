@@ -366,6 +366,25 @@ async def _request_logging_middleware(request: Request, call_next):
 
 
 
+def _get_cors_headers(request: Request) -> dict[str, str]:
+    headers = {}
+    origin = request.headers.get("origin")
+    if origin:
+        is_allowed = False
+        if "ALLOWED_ORIGINS" in globals():
+            is_allowed = origin in ALLOWED_ORIGINS
+        else:
+            is_allowed = "localhost" in origin or origin.endswith(".run.app")
+            
+        if is_allowed or "localhost" in origin or origin.endswith(".run.app"):
+            headers["Access-Control-Allow-Origin"] = origin
+            headers["Access-Control-Allow-Credentials"] = "true"
+            headers["Access-Control-Allow-Headers"] = request.headers.get("Access-Control-Request-Headers", "*")
+            headers["Access-Control-Allow-Methods"] = "*"
+    return headers
+
+
+
 @app.middleware("http")
 async def _rate_limit_middleware(request: Request, call_next):
     path = request.url.path
@@ -408,7 +427,8 @@ async def _rate_limit_middleware(request: Request, call_next):
         request.state.rate_limited = True
         return JSONResponse(
             status_code=429,
-            content=get_error_response_content("general", general_rpm)
+            content=get_error_response_content("general", general_rpm),
+            headers=_get_cors_headers(request)
         )
         
     # Daily Analysis Rate Limiting for expensive Gemini/analysis endpoints
@@ -438,7 +458,8 @@ async def _rate_limit_middleware(request: Request, call_next):
                 request.state.rate_limited = True
                 return JSONResponse(
                     status_code=429,
-                    content=get_error_response_content("analysis_anonymous", anon_limit)
+                    content=get_error_response_content("analysis_anonymous", anon_limit),
+                    headers=_get_cors_headers(request)
                 )
                 
         elif tier == "authenticated":
@@ -455,7 +476,8 @@ async def _rate_limit_middleware(request: Request, call_next):
                 request.state.rate_limited = True
                 return JSONResponse(
                     status_code=429,
-                    content=get_error_response_content("analysis_authenticated", auth_limit)
+                    content=get_error_response_content("analysis_authenticated", auth_limit),
+                    headers=_get_cors_headers(request)
                 )
                 
         # Premium/System bypass daily limit check (unlimited)
@@ -511,7 +533,11 @@ async def _auth_middleware(request: Request, call_next):
                 else:
                     LOGGER.critical("SUPABASE_JWT_SECRET is missing. Cannot verify JWT signature in production.")
                     from fastapi.responses import JSONResponse
-                    return JSONResponse(status_code=401, content={"detail": "Unauthorized: JWT verification secret is missing on server"})
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Unauthorized: JWT verification secret is missing on server"},
+                        headers=_get_cors_headers(request)
+                    )
 
             
             request.state.user = payload
@@ -521,10 +547,18 @@ async def _auth_middleware(request: Request, call_next):
             return await call_next(request)
         except jwt.ExpiredSignatureError:
             from fastapi.responses import JSONResponse
-            return JSONResponse(status_code=401, content={"detail": "Token has expired"})
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Token has expired"},
+                headers=_get_cors_headers(request)
+            )
         except jwt.InvalidTokenError as e:
             from fastapi.responses import JSONResponse
-            return JSONResponse(status_code=401, content={"detail": f"Invalid token: {str(e)}"})
+            return JSONResponse(
+                status_code=401,
+                content={"detail": f"Invalid token: {str(e)}"},
+                headers=_get_cors_headers(request)
+            )
 
     # Treat as anonymous user if credentials are missing
     bypass_auth = (
@@ -549,7 +583,11 @@ async def _auth_middleware(request: Request, call_next):
     )
     if is_protected_route and request.state.user.get("role") == "anonymous":
         from fastapi.responses import JSONResponse
-        return JSONResponse(status_code=401, content={"detail": "Unauthorized: Authentication token is missing or invalid"})
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Unauthorized: Authentication token is missing or invalid"},
+            headers=_get_cors_headers(request)
+        )
 
     return await call_next(request)
 
