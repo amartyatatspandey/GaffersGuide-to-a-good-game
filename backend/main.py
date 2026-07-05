@@ -497,11 +497,11 @@ async def _auth_middleware(request: Request, call_next):
         request.state.user = {"sub": "pytest-bypass", "email": "test@gaffersguide.local", "role": "service_role"}
         return await call_next(request)
         
-    api_key_env = os.getenv("API_KEY")
-    req_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    api_key_env = (os.getenv("API_KEY") or "").strip()
+    req_key = (request.headers.get("x-api-key") or request.query_params.get("api_key") or "").strip()
     
     # 1. API Key Auth
-    if api_key_env and req_key == api_key_env:
+    if api_key_env and req_key and req_key == api_key_env:
         request.state.user = {"sub": "system-api-key", "email": "system@gaffersguide.local", "role": "service_role"}
         llm_key = request.headers.get("x-llm-api-key")
         if llm_key:
@@ -2009,8 +2009,8 @@ async def production_metrics(request: Request) -> dict[str, Any]:
     Requires authentication via API key.
     """
     # Simple api key verification (similar to _auth_middleware)
-    api_key_env = os.getenv("API_KEY")
-    req_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    api_key_env = (os.getenv("API_KEY") or "").strip()
+    req_key = (request.headers.get("x-api-key") or request.query_params.get("api_key") or "").strip()
     if api_key_env and req_key != api_key_env:
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Forbidden: Invalid API key")
