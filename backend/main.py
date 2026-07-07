@@ -500,7 +500,7 @@ async def _auth_middleware(request: Request, call_next):
     api_key_env = (os.getenv("API_KEY") or "").strip()
     req_key = (request.headers.get("x-api-key") or request.query_params.get("api_key") or "").strip()
     
-    raise Exception("MIDDLEWARE_VERSION_JULY7")  # TEMP DEBUG - REMOVE AFTER TEST
+   # TEMP DEBUG - REMOVE AFTER TEST
     # 1. API Key Auth
     if api_key_env and req_key and req_key == api_key_env:
         request.state.user = {"sub": "system-api-key", "email": "system@gaffersguide.local", "role": "service_role"}
