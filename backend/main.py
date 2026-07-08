@@ -275,9 +275,14 @@ async def _shutdown_managed_ollama() -> None:
 _JWKS_CLIENTS = {}
 
 def _decode_and_verify_supabase_token(token: str, jwt_secret: str | None) -> dict[str, Any]:
+    """Verify a Supabase JWT using either HS256 (symmetric secret) or ES256/RS256 (JWKS).
+
+    Supabase projects using the modern asymmetric key system issue ES256 tokens.
+    The public key is fetched from:  {iss}/.well-known/jwks.json
+    where ``iss`` is the JWT issuer claim, e.g.
+        https://<project-ref>.supabase.co/auth/v1
+    """
     import jwt
-    import os
-    from typing import Any
     try:
         unverified_header = jwt.get_unverified_header(token)
         alg = unverified_header.get("alg", "HS256")
@@ -285,6 +290,7 @@ def _decode_and_verify_supabase_token(token: str, jwt_secret: str | None) -> dic
         alg = "HS256"
 
     if alg == "HS256" and jwt_secret:
+        # Legacy symmetric verification
         return jwt.decode(
             token,
             jwt_secret,
@@ -292,18 +298,29 @@ def _decode_and_verify_supabase_token(token: str, jwt_secret: str | None) -> dic
             audience="authenticated"
         )
     elif alg in ("RS256", "ES256"):
-        unverified_payload = jwt.decode(token, options={"verify_signature": False})
+        # Modern asymmetric verification via JWKS
+        # Decode without verification to extract the issuer
+        unverified_payload = jwt.decode(
+            token,
+            options={"verify_signature": False},
+            algorithms=["RS256", "ES256"],
+        )
         iss = unverified_payload.get("iss")
         if not iss:
             raise jwt.InvalidTokenError("Missing issuer (iss) claim for asymmetric verification")
-        
-        jwks_url = f"{iss.rstrip('/')}/jwks"
+
+        # Build the standard JWKS discovery URL
+        # Supabase iss is like: https://<ref>.supabase.co/auth/v1
+        # JWKS endpoint:        https://<ref>.supabase.co/auth/v1/.well-known/jwks.json
+        jwks_url = f"{iss.rstrip('/')}/.well-known/jwks.json"
         global _JWKS_CLIENTS
         if jwks_url not in _JWKS_CLIENTS:
             from jwt import PyJWKClient
-            _JWKS_CLIENTS[jwks_url] = PyJWKClient(jwks_url)
+            # cache_keys=True avoids a network round-trip per request
+            _JWKS_CLIENTS[jwks_url] = PyJWKClient(jwks_url, cache_keys=True)
         jwks_client = _JWKS_CLIENTS[jwks_url]
-        
+
+        # Resolve the key matching the token's kid header
         signing_key = jwks_client.get_signing_key_from_jwt(token)
         return jwt.decode(
             token,
@@ -312,6 +329,7 @@ def _decode_and_verify_supabase_token(token: str, jwt_secret: str | None) -> dic
             audience="authenticated"
         )
     elif jwt_secret:
+        # Unknown algorithm but we have a secret — try it
         return jwt.decode(
             token,
             jwt_secret,
@@ -325,7 +343,7 @@ def _decode_and_verify_supabase_token(token: str, jwt_secret: str | None) -> dic
             os.getenv("BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes")
         )
         if "pytest" in sys.modules or bypass_auth:
-            return jwt.decode(token, options={"verify_signature": False})
+            return jwt.decode(token, options={"verify_signature": False}, algorithms=["RS256", "ES256", "HS256"])
         else:
             raise jwt.InvalidTokenError("SUPABASE_JWT_SECRET is missing and token is not asymmetric")
 
@@ -553,7 +571,6 @@ async def _auth_middleware(request: Request, call_next):
     api_key_env = (os.getenv("API_KEY") or "").strip()
     req_key = (request.headers.get("x-api-key") or request.query_params.get("api_key") or "").strip()
     
-   # TEMP DEBUG - REMOVE AFTER TEST
     # 1. API Key Auth
     if api_key_env and req_key and req_key == api_key_env:
         request.state.user = {"sub": "system-api-key", "email": "system@gaffersguide.local", "role": "service_role"}
