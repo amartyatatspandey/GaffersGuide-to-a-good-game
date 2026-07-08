@@ -272,6 +272,64 @@ async def _shutdown_managed_ollama() -> None:
     stop_ollama_for_app_lifecycle()
 
 
+_JWKS_CLIENTS = {}
+
+def _decode_and_verify_supabase_token(token: str, jwt_secret: str | None) -> dict[str, Any]:
+    import jwt
+    import os
+    from typing import Any
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+        alg = unverified_header.get("alg", "HS256")
+    except Exception:
+        alg = "HS256"
+
+    if alg == "HS256" and jwt_secret:
+        return jwt.decode(
+            token,
+            jwt_secret,
+            algorithms=["HS256"],
+            audience="authenticated"
+        )
+    elif alg in ("RS256", "ES256"):
+        unverified_payload = jwt.decode(token, options={"verify_signature": False})
+        iss = unverified_payload.get("iss")
+        if not iss:
+            raise jwt.InvalidTokenError("Missing issuer (iss) claim for asymmetric verification")
+        
+        jwks_url = f"{iss.rstrip('/')}/jwks"
+        global _JWKS_CLIENTS
+        if jwks_url not in _JWKS_CLIENTS:
+            from jwt import PyJWKClient
+            _JWKS_CLIENTS[jwks_url] = PyJWKClient(jwks_url)
+        jwks_client = _JWKS_CLIENTS[jwks_url]
+        
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        return jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256", "ES256"],
+            audience="authenticated"
+        )
+    elif jwt_secret:
+        return jwt.decode(
+            token,
+            jwt_secret,
+            algorithms=[alg],
+            audience="authenticated"
+        )
+    else:
+        import sys
+        bypass_auth = (
+            os.getenv("NEXT_PUBLIC_BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes") or
+            os.getenv("BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes")
+        )
+        if "pytest" in sys.modules or bypass_auth:
+            return jwt.decode(token, options={"verify_signature": False})
+        else:
+            raise jwt.InvalidTokenError("SUPABASE_JWT_SECRET is missing and token is not asymmetric")
+
+
 def verify_ws_auth(websocket: WebSocket) -> bool:
     import sys
     if "pytest" in sys.modules and not websocket.query_params.get("x-test-force-auth"):
@@ -285,13 +343,8 @@ def verify_ws_auth(websocket: WebSocket) -> bool:
     token = websocket.query_params.get("token")
     if token:
         try:
-            import jwt
             jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
-            if jwt_secret:
-                jwt.decode(token, jwt_secret, algorithms=["HS256"], audience="authenticated")
-            else:
-                LOGGER.warning("SUPABASE_JWT_SECRET is not configured. Decoding JWT without signature verification.")
-                jwt.decode(token, options={"verify_signature": False})
+            _decode_and_verify_supabase_token(token, jwt_secret)
             return True
         except Exception as exc:
             LOGGER.warning("WebSocket verification failed: %s", exc)
@@ -513,33 +566,10 @@ async def _auth_middleware(request: Request, call_next):
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
+        import jwt
         try:
-            import jwt
             jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
-            if jwt_secret:
-                payload = jwt.decode(
-                    token,
-                    jwt_secret,
-                    algorithms=["HS256"],
-                    audience="authenticated"
-                )
-            else:
-                import sys
-                bypass_auth = (
-                    os.getenv("NEXT_PUBLIC_BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes") or
-                    os.getenv("BYPASS_AUTH", "").strip().lower() in ("1", "true", "yes")
-                )
-                if "pytest" in sys.modules or bypass_auth:
-                    payload = jwt.decode(token, options={"verify_signature": False})
-                else:
-                    LOGGER.critical("SUPABASE_JWT_SECRET is missing. Cannot verify JWT signature in production.")
-                    from fastapi.responses import JSONResponse
-                    return JSONResponse(
-                        status_code=401,
-                        content={"detail": "Unauthorized: JWT verification secret is missing on server"},
-                        headers=_get_cors_headers(request)
-                    )
-
+            payload = _decode_and_verify_supabase_token(token, jwt_secret)
             
             request.state.user = payload
             llm_key = request.headers.get("x-llm-api-key")
