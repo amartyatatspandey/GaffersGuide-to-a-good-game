@@ -5,7 +5,6 @@ import { Sidebar } from './components/Sidebar';
 import { Hopper } from './components/Hopper';
 import TacticalDashboard from './components/TacticalDashboard';
 import { ReportsArchive } from './components/ReportsArchive';
-import { DictionaryTab } from './components/DictionaryTab';
 import { PlayerReports } from './components/PlayerReports';
 import { MatchesHub } from './components/MatchesHub';
 import { MatchSetup } from './components/MatchSetup';
@@ -48,6 +47,7 @@ export default function WorkspacePage() {
     if (typeof window === "undefined") return;
     if (!localStorage.getItem("gaffer-engine-type")) {
       localStorage.setItem("gaffer-engine-type", "cloud");
+      window.dispatchEvent(new CustomEvent("gaffer-engine-changed"));
     }
     if (!localStorage.getItem("gaffer-ollama-model")) {
       localStorage.setItem("gaffer-ollama-model", "llama3");
@@ -119,9 +119,9 @@ export default function WorkspacePage() {
       setIngestionComplete(true);
       try {
         const llmPref =
-          typeof window !== 'undefined' && localStorage.getItem('gaffer-engine-type') === 'cloud'
-            ? 'cloud'
-            : 'local';
+          typeof window !== 'undefined' && localStorage.getItem('gaffer-engine-type') === 'local'
+            ? 'local'
+            : 'cloud';
         const advice = await getCoachAdvice(jobId, llmPref);
         try {
           const enrichedCards = await getEnrichedReport(jobId);
@@ -166,9 +166,9 @@ export default function WorkspacePage() {
       void (async () => {
         try {
           const llmPref =
-            typeof window !== 'undefined' && localStorage.getItem('gaffer-engine-type') === 'cloud'
-              ? 'cloud'
-              : 'local';
+            typeof window !== 'undefined' && localStorage.getItem('gaffer-engine-type') === 'local'
+              ? 'local'
+              : 'cloud';
           const advice = await getCoachAdvice(jobId, llmPref);
           try {
             const enrichedCards = await getEnrichedReport(jobId);
@@ -251,13 +251,6 @@ export default function WorkspacePage() {
         <div className="flex-1 relative flex flex-col min-w-0 bg-[#050805]">
           {currentView === 'reports' ? (
             <ReportsArchive onOpenReport={handleOpenReport} />
-          ) : currentView === 'dictionary' ? (
-            <DictionaryTab 
-              dictionary={dictionary} 
-              useAltNames={useAltNames} 
-              onUpdateDictionary={handleUpdateDictionary} 
-              onToggleAltNames={handleToggleAltNames} 
-            />
           ) : currentView === 'players' ? (
             <PlayerReports 
               job={activeJob} 

@@ -91,7 +91,7 @@ export default function TacticalDashboard({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const syncEngine = () => {
-      const pref = localStorage.getItem("gaffer-engine-type") === "cloud" ? "cloud" : "local";
+      const pref = localStorage.getItem("gaffer-engine-type") === "local" ? "local" : "cloud";
       setLlmEngine(pref);
     };
     syncEngine();
@@ -1462,7 +1462,7 @@ export default function TacticalDashboard({
               </div>
             </div>
             <div className="flex items-center gap-4 text-[10px] font-mono text-gray-600">
-               <span>Engine: {llmEngine === 'cloud' ? 'Cloud (Gemini / OpenAI)' : 'Ollama / Llama 3'}</span>
+               <span>AI Tactical Assistant</span>
                <span className="h-1 w-1 bg-gray-800 rounded-full" />
                <span>Context: Active Phase</span>
             </div>
