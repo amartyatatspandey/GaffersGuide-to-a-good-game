@@ -1,9 +1,0 @@
-{
-  "/_global-error/page": "/_global-error",
-  "/_not-found/page": "/_not-found",
-  "/api/debug-log/route": "/api/debug-log",
-  "/api/workspace/chat/route": "/api/workspace/chat",
-  "/favicon.ico/route": "/favicon.ico",
-  "/page": "/",
-  "/workspace/page": "/workspace"
-}
