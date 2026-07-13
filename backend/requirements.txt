@@ -38,3 +38,7 @@ google-cloud-storage>=2.16.0
 
 # Redis Support (for production rate limiting)
 redis>=5.0.0
+
+# Benchmarking & Profiling
+psutil>=6.0.0
+pynvml>=11.5.0

@@ -11,7 +11,10 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, Generator
+from contextlib import contextmanager
+
+from core.interfaces import PipelineObserver
 
 import cv2
 import numpy as np
@@ -68,6 +71,34 @@ from scripts.run_calibrator_on_video import ensure_homography_json_for_video
 from scripts.global_refiner import GlobalRefiner
 
 LOGGER = logging.getLogger(__name__)
+
+@contextmanager
+def pipeline_stage(profiler: PipelineObserver | None, stage_id: str, job_id: str, fallback_stage_name: str) -> Generator[dict[str, Any], None, None]:
+    extra: dict[str, Any] = {}
+    if profiler:
+        with profiler.stage(stage_id) as timer:
+            yield extra
+            if timer:
+                timer.extra.update(extra)
+    else:
+        _t0 = time.perf_counter()
+        status = "ok"
+        try:
+            yield extra
+        except Exception:
+            status = "error"
+            raise
+        finally:
+            LOGGER.info(
+                "PERF_STAGE",
+                extra={
+                    "job_id": job_id,
+                    "stage": fallback_stage_name,
+                    "duration_seconds": round(time.perf_counter() - _t0, 3),
+                    "status": status,
+                    **extra
+                }
+            )
 
 
 def _log_worker_perf(
@@ -932,6 +963,7 @@ async def run_e2e_parallel(
     enable_zsl: bool = False,
     target_chunk_duration: float = 900.0,
     min_overlap: float = 2.0,
+    profiler: PipelineObserver | None = None,
 ) -> Path:
     """
     Parallel version of run_e2e_with_zsl.
@@ -984,19 +1016,12 @@ async def run_e2e_parallel(
         c_list = c_manager.calculate_chunks()
         return h_json, c_list, c_manager.fps
 
-    _stage_t0 = time.perf_counter()
-    homography_json, chunks, video_fps = await asyncio.to_thread(_prepare_data)
-    LOGGER.info(
-        "PERF_STAGE",
-        extra={
-            "job_id": output_prefix,
-            "stage": "calibration",
-            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+    with pipeline_stage(profiler, "stage.calibration", output_prefix, "calibration") as extra:
+        homography_json, chunks, video_fps = await asyncio.to_thread(_prepare_data)
+        extra.update({
             "num_chunks": len(chunks),
             "video_fps": video_fps,
-            "status": "ok",
-        },
-    )
+        })
 
     if progress_callback is not None:
         progress_callback("Tracking Players (Parallel: 0%)")
@@ -1009,22 +1034,17 @@ async def run_e2e_parallel(
         batch_size=batch_size,
         flow_max_width=flow_max_width,
     )
-    _stage_t0 = time.perf_counter()
-    chunk_results = await executor.execute_parallel(
-        homography_json=homography_json,
-        progress_callback=progress_callback,
-    )
-    LOGGER.info(
-        "PERF_STAGE",
-        extra={
-            "job_id": output_prefix,
-            "stage": "parallel_cv_tracking",
-            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+    with pipeline_stage(profiler, "stage.parallel_cv", output_prefix, "parallel_cv_tracking") as extra:
+        chunk_results = await executor.execute_parallel(
+            homography_json=homography_json,
+            progress_callback=progress_callback,
+        )
+        extra.update({
             "num_chunks": len(chunks),
             "num_chunk_results": len(chunk_results),
-            "status": "ok",
-        },
-    )
+        })
+        if profiler:
+            profiler.merge_worker_results(chunk_results)
 
     if progress_callback is not None:
         progress_callback("Merging Chunk Results")
@@ -1043,18 +1063,11 @@ async def run_e2e_parallel(
         )
         return raw_frames
 
-    _stage_t0 = time.perf_counter()
-    raw_frames = await asyncio.to_thread(_merge_chunks)
-    LOGGER.info(
-        "PERF_STAGE",
-        extra={
-            "job_id": output_prefix,
-            "stage": "chunk_merge",
-            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+    with pipeline_stage(profiler, "stage.chunk_merge", output_prefix, "chunk_merge") as extra:
+        raw_frames = await asyncio.to_thread(_merge_chunks)
+        extra.update({
             "merged_frames": len(raw_frames),
-            "status": "ok",
-        },
-    )
+        })
 
     if progress_callback is not None:
         progress_callback("Spatial Math")
@@ -1098,18 +1111,11 @@ async def run_e2e_parallel(
             
         return refined_frames, metrics_timeline, ball_data_quality
 
-    _stage_t0 = time.perf_counter()
-    refined_frames, metrics, ball_data_quality = await asyncio.to_thread(_run_spatial_math)
-    LOGGER.info(
-        "PERF_STAGE",
-        extra={
-            "job_id": output_prefix,
-            "stage": "spatial_math",
-            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+    with pipeline_stage(profiler, "stage.spatial_math", output_prefix, "spatial_math") as extra:
+        refined_frames, metrics, ball_data_quality = await asyncio.to_thread(_run_spatial_math)
+        extra.update({
             "metrics_frames": len(metrics),
-            "status": "ok",
-        },
-    )
+        })
 
     # ── Event Intelligence Layer ──────────────────────────────────────────────
     # Runs asynchronously after spatial math. Failure is non-fatal — the existing
@@ -1159,17 +1165,8 @@ async def run_e2e_parallel(
                 "Event Intelligence Layer failed (non-fatal): %s", exc, exc_info=True
             )
 
-    _stage_t0 = time.perf_counter()
-    await asyncio.to_thread(_run_event_layer)
-    LOGGER.info(
-        "PERF_STAGE",
-        extra={
-            "job_id": output_prefix,
-            "stage": "event_layer",
-            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
-            "status": "ok",
-        },
-    )
+    with pipeline_stage(profiler, "stage.event_intelligence", output_prefix, "event_layer"):
+        await asyncio.to_thread(_run_event_layer)
     # ── End Event Intelligence Layer ──────────────────────────────────────────
 
     if progress_callback is not None:
@@ -1200,18 +1197,11 @@ async def run_e2e_parallel(
             
         return triggers
 
-    _stage_t0 = time.perf_counter()
-    triggers = await asyncio.to_thread(_run_tactical_engine)
-    LOGGER.info(
-        "PERF_STAGE",
-        extra={
-            "job_id": output_prefix,
-            "stage": "tactical_engine",
-            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+    with pipeline_stage(profiler, "stage.metrics_timeline", output_prefix, "tactical_engine") as extra:
+        triggers = await asyncio.to_thread(_run_tactical_engine)
+        extra.update({
             "num_triggers": len(triggers),
-            "status": "ok",
-        },
-    )
+        })
 
     if progress_callback is not None:
         progress_callback("Synthesizing Advice")
@@ -1227,57 +1217,42 @@ async def run_e2e_parallel(
         )
         return reliability_pct, guard_status, prompt_records
 
-    _stage_t0 = time.perf_counter()
-    reliability_pct, guard_status, prompt_records = await asyncio.to_thread(_run_synthesis)
-    LOGGER.info(
-        "PERF_STAGE",
-        extra={
-            "job_id": output_prefix,
-            "stage": "synthesis",
-            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+    with pipeline_stage(profiler, "stage.llm_advice", output_prefix, "synthesis") as extra:
+        reliability_pct, guard_status, prompt_records = await asyncio.to_thread(_run_synthesis)
+        extra.update({
             "num_prompt_records": len(prompt_records),
             "guard_status": guard_status,
-            "status": "ok",
-        },
-    )
+        })
 
-    _llm_t0 = time.perf_counter()
-    if guard_status == "abort":
-        final_cards = _final_cards_llm_skipped_low_reliability(
-            prompt_records, reliability_pct, len(metrics), len(raw_frames)
-        )
-    else:
-        _is_cloud_run = bool(os.getenv("K_SERVICE", "").strip())
-        LOGGER.info(
-            "LLM ENGINE DEBUG: provider=%s quality=%s mode=%s (cloud_run=%s guard_status=%s)",
-            llm_engine, "n/a", "parallel_pipeline", _is_cloud_run, guard_status,
-        )
-        if llm_engine == "local" and not _is_cloud_run:
-            # Local dev path: use Ollama (must be installed and running locally)
-            from scripts.llm_router import ensure_ollama_available
-            await ensure_ollama_available()
-            from scripts.e2e_llm_local import run_llm_local
-            final_cards = await run_llm_local(prompt_records)
+    with pipeline_stage(profiler, "stage.report_assembly", output_prefix, "llm_calls") as extra:
+        if guard_status == "abort":
+            final_cards = _final_cards_llm_skipped_low_reliability(
+                prompt_records, reliability_pct, len(metrics), len(raw_frames)
+            )
         else:
-            # Cloud Run path OR explicit cloud engine: use Gemini/OpenAI
-            if llm_engine == "local" and _is_cloud_run:
-                LOGGER.warning(
-                    "LLM ENGINE DEBUG: llm_engine='local' requested but K_SERVICE is set — "
-                    "overriding to cloud LLM (Ollama is not available on Cloud Run)."
-                )
-            final_cards = await run_llm(prompt_records)
-
-    LOGGER.info(
-        "PERF_STAGE",
-        extra={
-            "job_id": output_prefix,
-            "stage": "llm_calls",
-            "duration_seconds": round(time.perf_counter() - _llm_t0, 3),
+            _is_cloud_run = bool(os.getenv("K_SERVICE", "").strip())
+            LOGGER.info(
+                "LLM ENGINE DEBUG: provider=%s quality=%s mode=%s (cloud_run=%s guard_status=%s)",
+                llm_engine, "n/a", "parallel_pipeline", _is_cloud_run, guard_status,
+            )
+            if llm_engine == "local" and not _is_cloud_run:
+                # Local dev path: use Ollama (must be installed and running locally)
+                from scripts.llm_router import ensure_ollama_available
+                await ensure_ollama_available()
+                from scripts.e2e_llm_local import run_llm_local
+                final_cards = await run_llm_local(prompt_records)
+            else:
+                # Cloud Run path OR explicit cloud engine: use Gemini/OpenAI
+                if llm_engine == "local" and _is_cloud_run:
+                    LOGGER.warning(
+                        "LLM ENGINE DEBUG: llm_engine='local' requested but K_SERVICE is set — "
+                        "overriding to cloud LLM (Ollama is not available on Cloud Run)."
+                    )
+                final_cards = await run_llm(prompt_records)
+        extra.update({
             "guard_status": guard_status,
             "num_prompt_records": len(prompt_records),
-            "status": "ok",
-        },
-    )
+        })
 
     # Safety net: inject baseline summary if empty
     if not final_cards and metrics:
@@ -1311,19 +1286,12 @@ async def run_e2e_parallel(
             "llm_error": None,
         }]
 
-    _stage_t0 = time.perf_counter()
-    with report_output_path.open("w", encoding="utf-8") as f:
-        json.dump(final_cards, f, indent=2, ensure_ascii=False)
-    LOGGER.info(
-        "PERF_STAGE",
-        extra={
-            "job_id": output_prefix,
-            "stage": "report_json_write",
-            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
+    with pipeline_stage(profiler, "stage.report_assembly", output_prefix, "report_json_write") as extra:
+        with report_output_path.open("w", encoding="utf-8") as f:
+            json.dump(final_cards, f, indent=2, ensure_ascii=False)
+        extra.update({
             "num_cards": len(final_cards),
-            "status": "ok",
-        },
-    )
+        })
 
     # ── Report Enrichment step (non-fatal) ──────────────────────────────────
     def _run_report_enrichment():
@@ -1337,17 +1305,8 @@ async def run_e2e_parallel(
         except Exception as exc:
             LOGGER.warning("Report enrichment failed (non-fatal): %s", exc, exc_info=True)
 
-    _stage_t0 = time.perf_counter()
-    await asyncio.to_thread(_run_report_enrichment)
-    LOGGER.info(
-        "PERF_STAGE",
-        extra={
-            "job_id": output_prefix,
-            "stage": "report_enrichment",
-            "duration_seconds": round(time.perf_counter() - _stage_t0, 3),
-            "status": "ok",
-        },
-    )
+    with pipeline_stage(profiler, "stage.report_assembly", output_prefix, "report_enrichment"):
+        await asyncio.to_thread(_run_report_enrichment)
     # ─────────────────────────────────────────────────────────────────────────
 
     LOGGER.info(

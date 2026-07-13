@@ -480,6 +480,14 @@ def perf_stage(
             "stage": stage,
             "duration_seconds": duration,
             "status": status,
+            "schema_version": "perf.v1",
+            "module_id": extra.get("module_id", "MOD-UNK"),
+            "worker_pid": os.getpid(),
         }
+        
+        # Don't duplicate module_id if passed in extra
+        if "module_id" in extra:
+            del extra["module_id"]
+            
         log_extra.update(extra)
         logger.info("PERF_STAGE", extra=log_extra)

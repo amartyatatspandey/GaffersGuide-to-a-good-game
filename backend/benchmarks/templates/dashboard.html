@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaffer's Guide Benchmark Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; color: #212529; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { border-bottom: 2px solid #dee2e6; padding-bottom: 10px; margin-bottom: 20px; }
+        .card { background: #fff; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card-header { font-size: 1.25rem; font-weight: 600; margin-bottom: 15px; color: #495057; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background-color: #f1f3f5; font-weight: 600; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; }
+        .badge-success { background-color: #d4edda; color: #155724; }
+        .badge-warning { background-color: #fff3cd; color: #856404; }
+        .badge-danger { background-color: #f8d7da; color: #721c24; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .metric-box { background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border: 1px solid #e9ecef; }
+        .metric-value { font-size: 1.5rem; font-weight: bold; color: #007bff; margin-top: 5px; }
+        .metric-label { font-size: 0.9rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gaffer's Guide Benchmark Dashboard</h1>
+        
+        <div class="card">
+            <div class="card-header">Recent Benchmark Runs</div>
+            <table id="runsTable">
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Version</th>
+                        <th>Date</th>
+                        <th>Hardware</th>
+                        <th>End-to-End</th>
+                        <th>Peak RAM</th>
+                        <th>FPS</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="runsTableBody">
+                    <!-- Populated via JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Stage Timing Breakdown (ms)</div>
+            <div class="chart-container">
+                <canvas id="stageChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">Regression History</div>
+            <table id="regressionsTable">
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Severity</th>
+                        <th>Metric</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody id="regressionsTableBody">
+                    <!-- Populated via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Data Injection Point for generator script -->
+    <script id="benchmarkData" type="application/json">
+        []
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dataEl = document.getElementById('benchmarkData');
+            let runs = [];
+            try {
+                runs = JSON.parse(dataEl.textContent || "[]");
+            } catch (e) {
+                console.error("Failed to parse benchmark data:", e);
+            }
+            
+            if (runs.length === 0) {
+                document.getElementById('runsTableBody').innerHTML = '<tr><td colspan="8" style="text-align: center;">No benchmark runs found.</td></tr>';
+                return;
+            }
+            
+            // Sort runs newest first by timestamp
+            runs.sort((a, b) => new Date(b.timestamp_utc) - new Date(a.timestamp_utc));
+            
+            // 1. Populate Runs Table
+            const tbody = document.getElementById('runsTableBody');
+            runs.forEach(run => {
+                const tr = document.createElement('tr');
+                const agg = run.aggregate || {};
+                const hw = run.hardware_profile || {};
+                
+                let statusBadge = '<span class="badge badge-success">Pass</span>';
+                if (run.regression_flags && run.regression_flags.length > 0) {
+                    const hasCrit = run.regression_flags.some(f => f.severity === 'CRITICAL');
+                    if (hasCrit) {
+                        statusBadge = '<span class="badge badge-danger">Critical</span>';
+                    } else {
+                        statusBadge = '<span class="badge badge-warning">Warning</span>';
+                    }
+                }
+                
+                const e2eSec = (agg.end_to_end_ms / 1000).toFixed(1);
+                
+                tr.innerHTML = `
+                    <td><code>${run.benchmark_run_id.substring(0, 8)}</code></td>
+                    <td><code>${run.pipeline_version}</code></td>
+                    <td>${new Date(run.timestamp_utc).toLocaleString()}</td>
+                    <td>${hw.cpu_model || 'Unknown'}</td>
+                    <td>${e2eSec} s</td>
+                    <td>${agg.peak_ram_mb} MB</td>
+                    <td>${agg.overall_fps.toFixed(1)}</td>
+                    <td>${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            // 2. Populate Regressions Table
+            const regBody = document.getElementById('regressionsTableBody');
+            let hasRegressions = false;
+            runs.forEach(run => {
+                if (run.regression_flags && run.regression_flags.length > 0) {
+                    hasRegressions = true;
+                    run.regression_flags.forEach(f => {
+                        const tr = document.createElement('tr');
+                        const badgeClass = f.severity === 'CRITICAL' ? 'badge-danger' : 'badge-warning';
+                        tr.innerHTML = `
+                            <td><code>${run.benchmark_run_id.substring(0, 8)}</code></td>
+                            <td><span class="badge ${badgeClass}">${f.severity}</span></td>
+                            <td><code>${f.metric_id}</code></td>
+                            <td>${f.description}</td>
+                        `;
+                        regBody.appendChild(tr);
+                    });
+                }
+            });
+            if (!hasRegressions) {
+                regBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No regressions recorded in history.</td></tr>';
+            }
+            
+            // 3. Render Stage Chart (Reverse runs to show chronological left-to-right)
+            const chronoRuns = [...runs].reverse();
+            const labels = chronoRuns.map(r => r.pipeline_version + '\n' + r.benchmark_run_id.substring(0,6));
+            
+            const stagesToTrack = [
+                {id: 'calibration_ms', label: 'Calibration'},
+                {id: 'parallel_cv_ms', label: 'Parallel CV'},
+                {id: 'chunk_merge_ms', label: 'Merge'},
+                {id: 'spatial_math_ms', label: 'Spatial Math'},
+                {id: 'llm_total_ms', label: 'LLM Advice'}
+            ];
+            
+            const datasets = stagesToTrack.map((stage, idx) => {
+                const colors = ['#007bff', '#28a745', '#17a2b8', '#ffc107', '#6f42c1'];
+                return {
+                    label: stage.label,
+                    data: chronoRuns.map(r => (r.aggregate[stage.id] || 0) / 1000), // convert to seconds
+                    backgroundColor: colors[idx % colors.length]
+                };
+            });
+            
+            const ctx = document.getElementById('stageChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: { 
+                            stacked: true,
+                            title: { display: true, text: 'Seconds' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: { mode: 'index', intersect: false }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
