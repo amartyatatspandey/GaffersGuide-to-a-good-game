@@ -50,6 +50,7 @@ from services.chunked_upload import (
     register_job_creator as _register_chunked_job_creator,
     router as chunked_upload_router,
 )
+from routers.fixtures import router as fixtures_router
 from services.cv_router import CVEngine, CVRouterFactory
 from services.errors import EngineRoutingError
 from services.beta_job_store import BetaJobRecord, BetaJobStore
@@ -130,6 +131,7 @@ app = FastAPI(
 if os.getenv("CHUNKED_UPLOAD_LOCAL_DIR", "").strip():
     _configure_chunked_upload_dir(Path(os.getenv("CHUNKED_UPLOAD_LOCAL_DIR")))
 app.include_router(chunked_upload_router)
+app.include_router(fixtures_router)
 
 
 async def _create_job_from_chunked_upload(

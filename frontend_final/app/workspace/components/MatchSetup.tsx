@@ -1,11 +1,13 @@
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   UploadCloud, Search, Users, Shield, CheckCircle,
   FileVideo, ArrowRight, ArrowLeft, Settings, Trash,
-  Plus, Edit3, Save, X, Activity
+  Plus, Edit3, Save, X, Activity, Loader2
 } from 'lucide-react';
-import { getFixtureLineup } from '@/lib/services/fixtureImportService';
+import { getFixtureLineup } from '@/lib/services/footballApi';
+import { useMatchSearch } from '@/hooks/useMatchSearch';
+import type { FixtureSearchResult } from '@/types/lineup';
 
 interface MatchSetupPlayer {
   id: string;
@@ -32,16 +34,6 @@ interface MatchSetupData {
   team_b: TeamSetup;
   created_at: string;
 }
-
-// ── Mock Fixture Database ─────────────────────────────────────────────
-const MOCK_FIXTURES = [
-  { id: 'fix-1', name: 'PSG vs Inter', competition: 'Champions League Final' },
-  { id: 'fix-2', name: 'Real Madrid vs Man City', competition: 'Champions League Semi-Final' },
-  { id: 'fix-3', name: 'Arsenal vs Chelsea', competition: 'Premier League' },
-  { id: 'fix-4', name: 'Barcelona vs Real Madrid', competition: 'La Liga (El Clásico)' },
-  { id: 'fix-5', name: 'Bayern Munich vs Dortmund', competition: 'Bundesliga (Der Klassiker)' },
-  { id: 'fix-6', name: 'AC Milan vs Inter Milan', competition: 'Serie A (Derby della Madonnina)' },
-];
 
 // ── Mock Initial Players Generators ───────────────────────────────────
 function getMockRoster(teamName: string, isTeamA: boolean): MatchSetupPlayer[] {
@@ -92,9 +84,20 @@ export function MatchSetup() {
   const [videoFile, setVideoFile] = useState<{ name: string; size: string; duration: string } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // ── Step 2 State: Fixture ───────────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFixture, setSelectedFixture] = useState<{ name: string; competition: string } | null>(null);
+  // ── Step 2 State: Fixture (live search via useMatchSearch) ───────────
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    results: searchResults,
+    loading: searchLoading,
+    error: searchError,
+    hasSearched: searchHasSearched,
+  } = useMatchSearch();
+  const [selectedFixture, setSelectedFixture] = useState<FixtureSearchResult | null>(null);
+  const [lineupLoading, setLineupLoading] = useState(false);
+  const [lineupError, setLineupError] = useState<string | null>(null);
+  const [lineupReady, setLineupReady] = useState(false);
+  const pendingFixtureRef = useRef<FixtureSearchResult | null>(null);
 
   // ── Step 3 & 4 State: Lineups & Verification ────────────────────────
   const [teamAName, setTeamAName] = useState('Paris Saint-Germain');
@@ -102,10 +105,8 @@ export function MatchSetup() {
   const [teamAFormation, setTeamAFormation] = useState('4-4-2');
   const [teamBFormation, setTeamBFormation] = useState('3-5-2');
 
-  const defaultLineup = getFixtureLineup('fix-1');
-
-  const [teamAPlayers, setTeamAPlayers] = useState<MatchSetupPlayer[]>(() => (defaultLineup?.team_a.players as any[]) || getMockRoster('PSG', true));
-  const [teamBPlayers, setTeamBPlayers] = useState<MatchSetupPlayer[]>(() => (defaultLineup?.team_b.players as any[]) || getMockRoster('Inter', false));
+  const [teamAPlayers, setTeamAPlayers] = useState<MatchSetupPlayer[]>(() => getMockRoster('Team A', true));
+  const [teamBPlayers, setTeamBPlayers] = useState<MatchSetupPlayer[]>(() => getMockRoster('Team B', false));
 
   // Editing state for table verifier
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
@@ -158,32 +159,33 @@ export function MatchSetup() {
   };
 
   // ── Step 2 Handlers ──────────────────────────────────────────────────
-  const filteredFixtures = useMemo(() => {
-    if (!searchQuery.trim()) return MOCK_FIXTURES;
-    return MOCK_FIXTURES.filter(f =>
-      f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      f.competition.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [searchQuery]);
-
-  const handleSelectFixture = (fix: { id: string; name: string; competition: string }) => {
+  const handleSelectFixture = async (fix: FixtureSearchResult) => {
+    pendingFixtureRef.current = fix;
     setSelectedFixture(fix);
-    const importedData = getFixtureLineup(fix.id);
-    if (importedData) {
-      setTeamAName(importedData.team_a.name);
-      setTeamBName(importedData.team_b.name);
-      setTeamAFormation(importedData.team_a.formation);
-      setTeamBFormation(importedData.team_b.formation);
-      setTeamAPlayers(importedData.team_a.players as any[]);
-      setTeamBPlayers(importedData.team_b.players as any[]);
-    } else {
-      const parts = fix.name.split(' vs ');
-      const homeName = parts[0] || 'Team A';
-      const awayName = parts[1] || 'Team B';
-      setTeamAName(homeName);
-      setTeamBName(awayName);
-      setTeamAPlayers(getMockRoster(homeName, true));
-      setTeamBPlayers(getMockRoster(awayName, false));
+    setLineupLoading(true);
+    setLineupError(null);
+    setLineupReady(false);
+
+    try {
+      const lineup = await getFixtureLineup(fix.id);
+      setTeamAName(lineup.team_a.name);
+      setTeamBName(lineup.team_b.name);
+      setTeamAFormation(lineup.team_a.formation);
+      setTeamBFormation(lineup.team_b.formation);
+      setTeamAPlayers(lineup.team_a.players);
+      setTeamBPlayers(lineup.team_b.players);
+      setLineupReady(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Football data service unavailable.';
+      setLineupError(msg);
+    } finally {
+      setLineupLoading(false);
+    }
+  };
+
+  const handleLineupRetry = () => {
+    if (pendingFixtureRef.current) {
+      void handleSelectFixture(pendingFixtureRef.current);
     }
   };
 
@@ -291,6 +293,9 @@ export function MatchSetup() {
     setSelectedFixture(null);
     setSearchQuery('');
     setSuccessMsg(null);
+    setLineupLoading(false);
+    setLineupError(null);
+    setLineupReady(false);
   };
 
   // ── Helper UI Layout variables ────────────────────────────────────────
@@ -366,7 +371,9 @@ export function MatchSetup() {
       <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 flex flex-col justify-between max-w-6xl mx-auto w-full">
         
         {/* Step-specific views */}
-        <div className="flex-1 flex flex-col justify-center min-h-[380px] my-4">
+        {/* justify-start for step 4 (tall tables) so rows are not cut off above
+            the scroll origin; justify-center for shorter steps 1-3 & 5. */}
+        <div className={`flex-1 flex flex-col min-h-[380px] my-4 ${step === 4 ? 'justify-start' : 'justify-center'}`}>
           
           {/* STEP 1: Upload Video */}
           {step === 1 && (
@@ -459,20 +466,33 @@ export function MatchSetup() {
 
               <div className="border border-gray-900 bg-black/20 rounded-xl overflow-hidden max-h-[250px] overflow-y-auto">
                 <div className="bg-black/40 px-4 py-2 border-b border-gray-900 text-[10px] font-mono text-gray-600 uppercase tracking-widest">
-                  Fixtures Found ({filteredFixtures.length})
+                  Fixtures Found ({searchResults.length})
                 </div>
-                {filteredFixtures.length === 0 ? (
+                {searchLoading ? (
+                  <div className="p-8 text-center text-xs text-gray-500 font-mono flex items-center justify-center gap-2">
+                    <Loader2 size={13} className="animate-spin text-emerald-500" />
+                    Searching fixtures...
+                  </div>
+                ) : searchError ? (
+                  <div className="p-8 text-center text-xs text-red-400 font-mono">
+                    {searchError}
+                  </div>
+                ) : searchQuery.trim().length < 2 ? (
                   <div className="p-8 text-center text-xs text-gray-600 font-mono">
-                    No fixtures match &quot;{searchQuery}&quot;
+                    Type at least 2 characters to search fixtures.
+                  </div>
+                ) : searchHasSearched && searchResults.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-gray-600 font-mono">
+                    No matches found. Try another team name.
                   </div>
                 ) : (
-                  filteredFixtures.map(fix => {
-                    const isSelected = selectedFixture?.name === fix.name;
+                  searchResults.map(fix => {
+                    const isSelected = selectedFixture?.id === fix.id;
                     return (
                       <button
                         key={fix.id}
                         id={`select-fixture-${fix.id}`}
-                        onClick={() => handleSelectFixture(fix)}
+                        onClick={() => { void handleSelectFixture(fix); }}
                         className={`w-full flex items-center justify-between px-4 py-3.5 border-b border-gray-900/50 text-left transition-all ${
                           isSelected 
                             ? 'bg-[#111a12]/50 text-emerald-400' 
@@ -492,6 +512,34 @@ export function MatchSetup() {
                 )}
               </div>
 
+              {/* Lineup fetch status strips */}
+              {lineupLoading && (
+                <div className="bg-black/30 border border-gray-900 rounded-xl px-4 py-3 flex items-center gap-3 text-xs font-mono text-gray-400">
+                  <Loader2 size={13} className="animate-spin text-emerald-500 shrink-0" />
+                  Loading official lineup...
+                </div>
+              )}
+              {lineupError && (
+                <div className="bg-red-950/20 border border-red-900/40 rounded-xl px-4 py-3 flex items-center justify-between gap-4">
+                  <span className="text-xs font-mono text-red-400 min-w-0 truncate">{lineupError}</span>
+                  <button
+                    onClick={handleLineupRetry}
+                    className="shrink-0 text-[10px] font-mono font-bold px-3 py-1.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+              {selectedFixture && lineupReady && (
+                <div className="bg-[#0a120a] border border-emerald-500/20 rounded-xl px-4 py-3 text-[10px] font-mono text-gray-500 flex flex-wrap gap-x-5 gap-y-1">
+                  <span className="text-emerald-400 font-bold">{selectedFixture.competition}</span>
+                  {selectedFixture.date && (
+                    <span>{new Date(selectedFixture.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  )}
+                  {selectedFixture.venue && <span>{selectedFixture.venue}</span>}
+                </div>
+              )}
+
               {/* Custom Fixture Fallback */}
               <div className="bg-[#0a0f0a] border border-gray-900 p-5 rounded-xl flex flex-col gap-4">
                 <span className="text-[10px] font-mono text-gray-500 uppercase tracking-wider block">Custom Fixture Entry</span>
@@ -504,7 +552,9 @@ export function MatchSetup() {
                       value={teamAName}
                       onChange={e => {
                         setTeamAName(e.target.value);
-                        setSelectedFixture({ name: `${e.target.value} vs ${teamBName}`, competition: 'Custom Fixture' });
+                        setSelectedFixture({ id: '', name: `${e.target.value} vs ${teamBName}`, competition: 'Custom Fixture', date: '', homeTeam: e.target.value, awayTeam: teamBName });
+                        setLineupReady(true);
+                        setLineupError(null);
                       }}
                       className="bg-black/40 border border-gray-900 rounded-lg p-2 text-xs text-gray-300 font-mono focus:outline-none focus:border-emerald-500/50"
                     />
@@ -517,7 +567,9 @@ export function MatchSetup() {
                       value={teamBName}
                       onChange={e => {
                         setTeamBName(e.target.value);
-                        setSelectedFixture({ name: `${teamAName} vs ${e.target.value}`, competition: 'Custom Fixture' });
+                        setSelectedFixture({ id: '', name: `${teamAName} vs ${e.target.value}`, competition: 'Custom Fixture', date: '', homeTeam: teamAName, awayTeam: e.target.value });
+                        setLineupReady(true);
+                        setLineupError(null);
                       }}
                       className="bg-black/40 border border-gray-900 rounded-lg p-2 text-xs text-gray-300 font-mono focus:outline-none focus:border-emerald-500/50"
                     />
@@ -558,7 +610,7 @@ export function MatchSetup() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <span className="text-[9px] font-mono text-gray-600 uppercase tracking-wider block mb-2">Starting XI</span>
-                      <div className="space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                      <div className="space-y-1.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
                         {teamAPlayers.filter(p => p.isStarting).map(p => (
                           <div key={p.id} className="flex items-center justify-between bg-black/30 border border-gray-900/40 rounded px-2 py-1 text-xs">
                             <span className="font-mono text-[10px] text-gray-600 bg-gray-900 px-1.5 py-0.5 rounded mr-2 shrink-0">{p.number}</span>
@@ -609,7 +661,7 @@ export function MatchSetup() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <span className="text-[9px] font-mono text-gray-600 uppercase tracking-wider block mb-2">Starting XI</span>
-                      <div className="space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                      <div className="space-y-1.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
                         {teamBPlayers.filter(p => p.isStarting).map(p => (
                           <div key={p.id} className="flex items-center justify-between bg-black/30 border border-gray-900/40 rounded px-2 py-1 text-xs">
                             <span className="font-mono text-[10px] text-gray-600 bg-gray-900 px-1.5 py-0.5 rounded mr-2 shrink-0">{p.number}</span>
@@ -956,13 +1008,13 @@ export function MatchSetup() {
             onClick={() => setStep(step + 1)}
             disabled={
               (step === 1 && !videoFile) ||
-              (step === 2 && !selectedFixture) ||
+              (step === 2 && (!selectedFixture || !lineupReady)) ||
               step === 5 ||
               !!successMsg
             }
             className={`flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-xs font-mono font-bold transition-all ${
               (step === 1 && !videoFile) ||
-              (step === 2 && !selectedFixture) ||
+              (step === 2 && (!selectedFixture || !lineupReady)) ||
               step === 5 ||
               successMsg
                 ? 'bg-gray-950 text-gray-650 border border-gray-900 cursor-not-allowed'
